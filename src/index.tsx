@@ -1,17 +1,30 @@
-import React from 'react';
-import ReactDOM from 'react-dom';
-import './index.css';
-import App from './App';
-import reportWebVitals from './reportWebVitals';
+import React, { useEffect, useState, RefObject } from "react";
+import { createRef } from "react";
+import ReactDOM from "react-dom";
+import { createEditor } from "./rete";
 
-ReactDOM.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-  document.getElementById('root')
-);
+// import "./styles.css";
 
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals();
+function Editor() {
+
+  const divRef: RefObject<HTMLInputElement> = createRef()
+
+  useEffect(() => {
+    divRef.current && createEditor(divRef.current);
+  })
+
+  return (
+    <div
+      style={{
+        width: "100vw",
+        height: "100vh"
+      }}
+      ref={divRef}
+    />
+  );
+}
+
+
+
+const rootElement = document.getElementById("root");
+ReactDOM.render(<Editor />, rootElement);

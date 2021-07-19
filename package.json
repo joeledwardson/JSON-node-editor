@@ -13,6 +13,10 @@
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-scripts": "4.0.3",
+    "rete": "^1.4.5",
+    "rete-area-plugin": "^0.2.1",
+    "rete-connection-plugin": "^0.9.0",
+    "rete-react-render-plugin": "^0.2.1",
     "typescript": "^4.1.2",
     "web-vitals": "^1.0.1"
   },
