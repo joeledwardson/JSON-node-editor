@@ -1,18 +1,29 @@
 import React, { useState, useEffect, useCallback, useRef, ComponentProps } from "react";
 import Rete, {Node, Emitter,  NodeEditor, Output} from "rete";
-import { MyControl } from "./control";
 import { Component } from "rete/types/engine";
 import { EventsTypes } from "rete/types/core/events";
 import { Plugin } from "rete/types/core/plugin";
 import {WorkerInputs, WorkerOutputs, NodeData} from "rete/types/core/data";
+import { NumComponent, AddComponent } from "./mycomponents";
 
 
 const ReactRenderPlugin: any = require("rete-react-render-plugin");
 const AreaPlugin: any = require("rete-area-plugin");
 const ConnectionPlugin: any = require("rete-connection-plugin");
+const ContextAreaPlugin: any = require("rete-context-menu-plugin").default;
 
 
-var numSocket = new Rete.Socket("Number value");
+
+export var numSocket = new Rete.Socket("Number value");
+
+// declare abstract class MyComponent extends Rete.Component {
+//   my_builder(node: Node): Node;
+//   builder(node: Node): Promise<void> {
+//     this.my_builder(node);
+//     return new Promise<void>((res) => ;
+//   }
+// }
+
 
 class NumControl extends Rete.Control {
   emitter: NodeEditor;
@@ -66,73 +77,6 @@ class NumControl extends Rete.Control {
   }
 }
 
-class NumComponent extends Rete.Component {
-  constructor() {
-    super("Number");
-  }
-
-  builder(node: Node): Node {
-    console.log("running Number builder...");
-    var out1 = new Rete.Output("num", "Number", numSocket);
-    if (this.editor) {
-      var ctrl = new MyControl(this.editor, "num", "hello");
-      return node.addControl(ctrl).addOutput(out1);
-    }
-    return node;    
-  }
-
-  worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {
-    outputs["num"] = node.data.num;
-  }
-}
-
-
-
-class AddComponent extends Rete.Component {
-
-  constructor() {
-    super("Add");
-    // this.data.component = MyNode; // optional
-  }
-
-  builder(node: Node): Node {
-  
-    console.log("running add builder...");
-    var inp1 = new Rete.Input("num1", "Number", numSocket);
-    var inp2 = new Rete.Input("num2", "Number2", numSocket);
-    var out = new Rete.Output("num", "Number", numSocket);
-
-    if (this.editor) {
-      inp1.addControl(new NumControl(this.editor, "num1", node));
-      inp2.addControl(new NumControl(this.editor, "num2", node));
-
-      return node
-        .addInput(inp1)
-        .addInput(inp2)
-        .addControl(new NumControl(this.editor, "preview", node, true))
-        .addOutput(out);
-    } else {
-      console.warn("editor is null");
-      return node;
-    }
-
-  }
-
-  worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {
-    let n1: number = (inputs["num1"].length ? inputs["num1"][0] : node.data.num1) as number;
-    let n2: number = (inputs["num2"].length ? inputs["num2"][0] : node.data.num2) as number;
-    let sum: number = n1 + n2;
-
-    if(this.editor) {
-      (this.editor.nodes
-      .find((n) => n.id == node.id)?.controls.
-      get("preview") as NumControl)?.setValue(sum);
-      outputs["num"] = sum;
-    }
-
-  }
-}
-
 export async function createEditor(container: HTMLElement) {
   var components = [new NumComponent(), new AddComponent()];
 
@@ -140,6 +84,10 @@ export async function createEditor(container: HTMLElement) {
   var editor = new Rete.NodeEditor("demo@0.1.0", container);
   editor.use(ConnectionPlugin.default);
   editor.use(ReactRenderPlugin.default);
+  editor.use(ContextAreaPlugin, {
+    scaleExtent: true,
+    translateExtent: true
+  });
 
   var engine = new Rete.Engine("demo@0.1.0");
 
