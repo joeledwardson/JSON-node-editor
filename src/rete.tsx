@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, ComponentProps } from "react";
 import Rete, {Node, Emitter,  NodeEditor, Output} from "rete";
+import { MyControl } from "./control";
 import { Component } from "rete/types/engine";
 import { EventsTypes } from "rete/types/core/events";
 import { Plugin } from "rete/types/core/plugin";
@@ -73,8 +74,11 @@ class NumComponent extends Rete.Component {
   builder(node: Node): Node {
     console.log("running Number builder...");
     var out1 = new Rete.Output("num", "Number", numSocket);
-    var ctrl = new NumControl(this.editor as NodeEditor, "num", node);
-    return node.addControl(ctrl).addOutput(out1);
+    if (this.editor) {
+      var ctrl = new MyControl(this.editor, "num", "hello");
+      return node.addControl(ctrl).addOutput(out1);
+    }
+    return node;    
   }
 
   worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {
