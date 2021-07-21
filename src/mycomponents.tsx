@@ -1,17 +1,36 @@
 import Rete, { Node } from "rete";
+import React from 'react';
+import { myNumSocket  } from "./mysocket";
 import { MyControl } from "./mycontrols";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
-import { numSocket } from "./rete";
+import { MyNode } from "./mynode";
 
 
-export class NumComponent extends Rete.Component {
+
+
+abstract class ReteReactComponent extends Rete.Component {
+  update?: () => Promise<void>; // update() is declared at load time by rete react render plugin implementation
+  render?: "react";
+  data: {component?: typeof React.Component}; // "data" property passed to renderer, which if it has "component" is used for component rendering
+  constructor(name: string, component?: typeof React.Component) {
+    super(name);
+    this.data = {
+      component: component
+    }
+  }
+}
+
+
+export { ReteReactComponent };
+
+export class NumComponent extends ReteReactComponent {
   constructor() {
-    super("Number");
+    super("Number", MyNode);
   }
 
   async builder(node: Node): Promise<void> {
     console.log("running Number builder...");
-    var out1 = new Rete.Output("num", "Number", numSocket);
+    var out1 = new Rete.Output("num", "Number", myNumSocket);
     if (!this.editor) {
       throw new Error('this.editor is null in NumComponent!');
     }
@@ -27,19 +46,17 @@ export class NumComponent extends Rete.Component {
 
 
 
-export class AddComponent extends Rete.Component {
-
+export class AddComponent extends ReteReactComponent {
     constructor() {
-      super("Add");
-      // this.data.component = MyNode; // optional
+      super("Add", MyNode);
     }
   
     async builder(node: Node): Promise<void> {
     
       console.log("running add builder...");
-      var inp1 = new Rete.Input("num1", "Number", numSocket);
-      var inp2 = new Rete.Input("num2", "Number2", numSocket);
-      var out = new Rete.Output("num", "Number", numSocket);
+      var inp1 = new Rete.Input("num1", "Number", myNumSocket);
+      var inp2 = new Rete.Input("num2", "Number2", myNumSocket);
+      var out = new Rete.Output("num", "Number", myNumSocket);
   
       if (!this.editor) {
         throw new Error('this.editor is null in AddCOmponent!'); 

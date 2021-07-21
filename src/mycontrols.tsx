@@ -1,6 +1,6 @@
-import React, { FormEventHandler } from "react";
-import { NodeEditor } from "rete";
-import { Control } from "rete";
+import React from "react";
+import { NodeEditor, Control } from "rete";
+
 
 type ControlProps = {
     value: any;
@@ -26,24 +26,30 @@ class MyReactControl extends React.Component<ControlProps> {
   }
 }
 
-export class MyControl extends Control {
-    
-    component: typeof MyReactControl;
 
-    // update() is declared at load time by rete react render plugin implementation
-    update: any;
+export class ReteReactControl extends Control {
+  update?: () => Promise<void>; // update() is declared at load time by rete react render plugin implementation
+  render?: "react";
+  component: typeof React.Component; // "component" property must be specified for control, used to render Control (defined below) div inner
+  constructor(component: typeof React.Component, key: string) {
+    super(key);
+    this.component = component;
+  }
+}
+
+
+export class MyControl extends ReteReactControl {
     props: ControlProps;
 
     // function to update control value passed into react component itself
     controlValueChange(key: string, data: unknown): void {
       this.props.value = data;  // update props value used to update control value when re-rendering
       this.putData(key, data);  //  put into node data objects for connections
-      this.update();  // re-render
+      this.update && this.update();  // re-render
     }
 
     constructor(emitter: NodeEditor, key: string, value: number) {
-        super(key);
-        this.component = MyReactControl;
+        super(MyReactControl, key);
         this.props = {
             emitter,
             id: key,

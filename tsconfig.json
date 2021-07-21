@@ -6,8 +6,11 @@
       "dom.iterable",
       "esnext"
     ],
+    "typeRoots": [
+      "customTypes",
+      "node_modules/@types"
+    ],
     "allowJs": true,
-    "checkJs": false,
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
@@ -21,6 +24,10 @@
     "noEmit": true,
     "jsx": "react-jsx"
   },
+  "exclude": [
+    "node_modules",
+    "customTypes"
+  ],
   "include": [
     "src"
   ]

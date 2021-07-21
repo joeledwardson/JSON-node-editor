@@ -3851,7 +3851,7 @@ cssstyle@^2.2.0:
   dependencies:
     cssom "~0.3.6"
 
-csstype@^3.0.2:
+csstype@^3.0.2, csstype@^3.0.8:
   version "3.0.8"
   resolved "https://registry.yarnpkg.com/csstype/-/csstype-3.0.8.tgz#d2266a792729fb227cd216fb572f43728e1ad340"
   integrity sha512-jXKhWqXPmlUeoQnF/EhTtTl4C9SnrxSH/jZUih3jmO6lBKr99rP3/+FmrMj4EFpOXzMtXHAZkd3x0E6h6Fgflw==
@@ -9439,6 +9439,11 @@ rete-context-menu-plugin@^0.6.0-rc.1:
   dependencies:
     lodash-es "^4.17.15"
     vue "^2.5.17"
+
+rete-history-plugin@^0.2.2:
+  version "0.2.2"
+  resolved "https://registry.yarnpkg.com/rete-history-plugin/-/rete-history-plugin-0.2.2.tgz#e8c9036e75be4cc2d95b6c43837ecf6ad6116208"
+  integrity sha512-FkPd5Z9WV7pGVHKEF7n+9aeY52MjJ9gQQUlQE45TGjffU2mVdUkx6P8fMtQw04089tD8N4SLJwiy8TkHqlAGWQ==
 
 rete-react-render-plugin@^0.2.1:
   version "0.2.1"

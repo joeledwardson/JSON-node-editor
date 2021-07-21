@@ -1,9 +1,14 @@
-import React, { useEffect, useState, RefObject } from "react";
+import { useEffect, RefObject } from "react";
 import { createRef } from "react";
 import ReactDOM from "react-dom";
 import { createEditor } from "./rete";
+import CSS from 'csstype';
 
 // import "./styles.css";
+const containerStyle: CSS.Properties = {
+  width: "100vw",
+  height: "100vh"
+}
 
 function Editor() {
 
@@ -15,10 +20,7 @@ function Editor() {
 
   return (
     <div
-      style={{
-        width: "100vw",
-        height: "100vh"
-      }}
+      style={containerStyle}
       ref={divRef}
     />
   );
