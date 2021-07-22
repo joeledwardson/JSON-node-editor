@@ -1,12 +1,11 @@
 import React from "react";
-import Rete, { Node } from "rete";
+import Rete, { Node, Output } from "rete";
 import { myNumSocket } from "./mysocket";
-import { ReteReactControl } from "./mycontrols";
+import { BaseControl, MyControl, MyBoolInput } from "./mycontrols";
 import { ReteReactComponent  } from "./mycomponents";
 import { NodeEditor, Control } from "rete";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
 import { MyNode  } from "./mynode";
-import { async } from "q";
 
 
 
@@ -27,7 +26,7 @@ class PlusButtonComponent extends React.Component<PlusButtonProps> {
     }
 }
 
-class PlusButtonControl extends ReteReactControl {
+class PlusButtonControl extends BaseControl {
     props: PlusButtonProps
     constructor(props: PlusButtonProps) {
         super(PlusButtonComponent, "List");
@@ -38,24 +37,30 @@ class PlusButtonControl extends ReteReactControl {
 
 export class FirstComponent extends ReteReactComponent {
     constructor() {	
-        super('AddOutput');
+        super('AddOutput', MyNode);
     }
 
     builder(node: Node): Promise<void> {
-        node.meta.letter = '`';
-        const gLetter = () => node.meta.letter as string;
+     
+        const editor: NodeEditor | null = this.editor;
+        // node.meta.letter = '`';
+        // const gLetter = () => node.meta.letter as string;
 
-        const buttonPressed = async () => {
-            const btnIndex: string = String(node.outputs.size);
-            node.addOutput(new Rete.Output(btnIndex, 'Number ' + btnIndex, myNumSocket));
-            await node.update();
-            setTimeout(() => 
-                {this.editor?.view.updateConnections({node})},
-                10
-            );
-        }
-        node.addControl(new PlusButtonControl({emitter: this.editor, valueChanger: buttonPressed}));
-        return new Promise<void>(res => res());
+        // const buttonPressed = async () => {
+        //     const btnIndex: string = String(node.outputs.size);
+        //     node.addOutput(new Rete.Output(btnIndex, 'Number ' + btnIndex, myNumSocket));
+        //     await node.update();
+        //     setTimeout(() => 
+        //         {this.editor?.view.updateConnections({node})},
+        //         10
+        //     );
+        // }
+        // node.addControl(new PlusButtonControl({emitter: this.editor, valueChanger: buttonPressed}));
+        return new Promise<void>(res => {
+            editor && node.addControl(new MyControl(editor, "boolTestControl", null, MyBoolInput));
+            node.addOutput(new Output('0', 'Number 0', myNumSocket));
+            res();
+        });
     }
 
     worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {

@@ -1,7 +1,7 @@
 import Rete, { Node } from "rete";
 import React from 'react';
 import { myNumSocket  } from "./mysocket";
-import { MyControl } from "./mycontrols";
+import { MyControl, MyNumberInput } from "./mycontrols";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
 import { MyNode } from "./mynode";
 
@@ -25,7 +25,7 @@ export { ReteReactComponent };
 
 export class NumComponent extends ReteReactComponent {
   constructor() {
-    super("Number", MyNode);
+    super("Number");
   }
 
   async builder(node: Node): Promise<void> {
@@ -34,7 +34,7 @@ export class NumComponent extends ReteReactComponent {
     if (!this.editor) {
       throw new Error('this.editor is null in NumComponent!');
     }
-    var ctrl = new MyControl(this.editor, "num", 0);
+    var ctrl = new MyControl(this.editor, "num", 0, MyNumberInput);
     node.addControl(ctrl).addOutput(out1);
     return new Promise(resolve => resolve());
   }
@@ -48,7 +48,7 @@ export class NumComponent extends ReteReactComponent {
 
 export class AddComponent extends ReteReactComponent {
     constructor() {
-      super("Add", MyNode);
+      super("Add");
     }
   
     async builder(node: Node): Promise<void> {
@@ -62,13 +62,13 @@ export class AddComponent extends ReteReactComponent {
         throw new Error('this.editor is null in AddCOmponent!'); 
       }
   
-      inp1.addControl(new MyControl(this.editor, "num1", 0));
-      inp2.addControl(new MyControl(this.editor, "num2", 0));
+      inp1.addControl(new MyControl(this.editor, "num1", 0, MyNumberInput));
+      inp2.addControl(new MyControl(this.editor, "num2", 0, MyNumberInput));
   
       node
         .addInput(inp1)
         .addInput(inp2)
-        .addControl(new MyControl(this.editor, "preview", 0))
+        .addControl(new MyControl(this.editor, "preview", 0, MyNumberInput))
         .addOutput(out);
       
       return new Promise(resolve => resolve());
