@@ -18,7 +18,7 @@ type PlusButtonProps = {
 class PlusButtonComponent extends React.Component<PlusButtonProps> {
     onChange(event: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
       this.props.valueChanger();
-      this.props.emitter?.trigger("process");
+    //   this.props.emitter?.trigger("process");
     }
     render() {
       return (
@@ -42,20 +42,22 @@ export class FirstComponent extends ReteReactComponent {
     }
 
     builder(node: Node): Promise<void> {
-        node.meta.letter = '`';
-        const gLetter = () => node.meta.letter as string;
-
-        const buttonPressed = async () => {
-            const btnIndex: string = String(node.outputs.size);
-            node.addOutput(new Rete.Output(btnIndex, 'Number ' + btnIndex, myNumSocket));
-            await node.update();
-            setTimeout(() => 
-                {this.editor?.view.updateConnections({node})},
-                10
-            );
-        }
-        node.addControl(new PlusButtonControl({emitter: this.editor, valueChanger: buttonPressed}));
-        return new Promise<void>(res => res());
+        return new Promise<void>(res => {
+            node.meta.letter = '`';
+            const gLetter = () => node.meta.letter as string;
+    
+            const buttonPressed = async () => {
+                const btnIndex: string = String(node.outputs.size);
+                node.addOutput(new Rete.Output(btnIndex, 'Number ' + btnIndex, myNumSocket));
+                await node.update();
+                setTimeout(() => 
+                    {this.editor?.view.updateConnections({node})},
+                    10
+                );
+            }
+            node.addControl(new PlusButtonControl({emitter: this.editor, valueChanger: buttonPressed}));    
+            res()
+        });
     }
 
     worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {
