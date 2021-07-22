@@ -8,42 +8,54 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus, faTrash, faArrowUp, faArrowDown } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "react-bootstrap";
 import { Connection } from "rete";
+import { CSSProperties } from "react";
+import { faChevronUp, faChevronDown } from "@fortawesome/free-solid-svg-icons";
+
+
+const lowPad : CSSProperties = {
+  padding: "0.1rem 0.3rem",
+}
+
+const svgStyle : CSSProperties = {
+  display: "block" // stop extra space being added inside button from SVG element
+}
+
+const minPad : CSSProperties = {
+  padding: ".5rem",
+}
 
 export class MyNode extends NodeComponent {
 
-  async addOutput(key: string, outputIndex: number, add: boolean = true): Promise<void> {
-    return new Promise(res => {
-      console.log("output key " + outputIndex + " pressed, adding: " + add);
+  async addOutput(idx: number, action: "add" | "remove" | "moveUp" | "moveDown"): Promise<void> {
+    return new Promise((res, rej) => {
+      console.log("output key " + idx + " pressed, action: " + action);
       const node: ReteNode = this.props.node;
 
       // get existing outputs into list format
-      let outputVals: Array<Output> = Array.from(node.outputs.values());
-      console.log(`found ${outputVals.length} existing outputs`);
+      let lst: Array<Output> = Array.from(node.outputs.values());
+      console.log(`found ${lst.length} existing outputs`);
 
       // nodes that have a connection to the output that will need to be updated
-      let affectedNodes: Set<ReteNode> = new Set<ReteNode>([node]);
+      let nds: Set<ReteNode> = new Set<ReteNode>([node]);
 
-      if (add) {
+      if (action === "add") {
         // index in output list for new output follows output pressed, generate unique string for key
-        const newIndex: number = outputIndex + 1;
+        const newIndex: number = idx + 1;
         const newKey: string = uuidv4();
 
         // create new output (don't set title yet as will be added further down), and insert at correct position in list
-        const newOutput: Output = new Output(newKey, "", myNumSocket);
-        outputVals.splice(newIndex, 0, newOutput);
+        const newOutput: Output = new Output(newKey, newKey, myNumSocket);
+        lst.splice(newIndex, 0, newOutput);
       
-      } else {
-
-        // get output using its key
-        const output = node.outputs.get(key);
-
-        if( output === undefined ) {
-          console.warn(`couldnt find output "${key}"`);
-        } else {
+      } else if (action === "remove") {
+        
+        if (idx >= 0 && idx < lst.length) {
+          // get output using its index
+          const output = lst[idx];
 
           // register each node which has an input connected to the output being deleted
           output.connections.forEach((c: Connection): void => {
-            c.input.node && affectedNodes.add(c.input.node);
+            c.input.node && nds.add(c.input.node);
           })
 
           // remove connections from view
@@ -51,20 +63,47 @@ export class MyNode extends NodeComponent {
 
           // remove output from node
           node.removeOutput(output);
-        }
-      
-        // remove output from processing list
-        outputVals.splice(outputIndex, 1);
+                
+          // remove output from processing list
+          lst.splice(idx, 1);
 
+        } else {
+          console.error(`couldnt delete output form index, out of range "${idx}"`);
+        }
+
+      } else if (action === "moveUp") {
+        if( idx > 0 && idx < lst.length ) {
+          
+          // pop element out and move "up" (up on screen, down in list index)
+          const output = lst[idx];
+          lst.splice(idx, 1);
+          lst.splice(idx - 1, 0, output);
+
+        } else {
+          // couldnt find element
+          console.warn(`cant move output index up "${idx}"`);
+        }
+      } else if (action === "moveDown") {
+        if( idx >= 0 && (idx + 1) < lst.length ) {
+          
+          // pop element out and move "down" (down on screen, up in list index)
+          // remove next element and insert behind 
+          const nextOutput = lst[idx + 1];
+          lst.splice(idx + 1, 1);
+          lst.splice(idx, 0, nextOutput);
+
+        } else {
+          // couldnt find element
+          console.warn(`cant move output index down "${idx}"`);
+        }
       }
       
       // clear map of stored outputs
       node.outputs.clear();
 
       // re-add outputs to node
-      outputVals.map((o: Output, i: number) => {
+      lst.map((o: Output, i: number) => {
         o.node = null; // clear node so can be re-added by addOutput() function without triggering error
-        o.name = "Number " + String(i+1); // update title with index from re-ordering
         node.addOutput(o)
       });
 
@@ -73,7 +112,7 @@ export class MyNode extends NodeComponent {
 
       // for each affected node update its connections
       setTimeout(() => 
-        affectedNodes.forEach(n => this.props.editor?.view.updateConnections({node: n})),
+        nds.forEach(n => this.props.editor?.view.updateConnections({node: n})),
         10
       );
       res();
@@ -95,24 +134,36 @@ export class MyNode extends NodeComponent {
             {/* <div><input type="number">{String(index)}</input></div> */}
             <div className="output-title">
               <div style={{display: 'flex', alignItems: 'center'}}>
+                <div className="me-1" style={{display: 'flex', flexDirection: 'column'}}>
+                  <div>
+                    <button onClick={() => this.addOutput(index, "moveUp")} style={lowPad}>
+                      <i style={svgStyle} className="fas fa-chevron-up fa-xs"></i>
+                    </button>
+                  </div>
+                  <div>
+                    <button onClick={() => this.addOutput(index, "moveDown")} style={lowPad}>
+                      <i style={svgStyle} className="fas fa-chevron-down fa-xs"></i>
+                    </button>
+                  </div>
+                  
+                  {/* <FontAwesomeIcon size="sm" icon={faChevronUp} />  
+<FontAwesomeIcon size="sm" icon={faChevronDown} /> */}
+                </div>
 
-                {/* <div style={{display: 'flex', flexDirection: 'column'}}>
-                  <button>d</button>
-                  <button></button> */}
-                <Button size="sm" style={{padding: 0}}>
-                  <FontAwesomeIcon size="1x" icon={faArrowUp} />
+                {/* <Button size="sm" style={noPad} className="me-1" variant="light">
+                  <FontAwesomeIcon size="sm" icon={faArrowUp} />
                 </Button>
-                <Button size="sm">
+                <Button size="sm" style={noPad} className="me-1" variant="light">
                   <FontAwesomeIcon icon={faArrowDown} />
-                </Button>
+                </Button> */}
                 {/* </div> */}
-                <Button className="me-1" variant="light" size="sm" onClick={() => this.addOutput(output.key, index, true)} >
+                <Button style={minPad} variant="light" className="me-1" size="sm" onClick={() => this.addOutput(index, "add")} >
                   <FontAwesomeIcon icon={faPlus} />
                 </Button>
-                <Button variant="warning" size="sm" onClick={() => this.addOutput(output.key, index, false)}>
+                <Button style={minPad} variant="warning" size="sm" onClick={() => this.addOutput(index, "remove")}>
                   <FontAwesomeIcon icon={faTrash} />
                 </Button>
-                <span className="ms-2">Item-{index}</span>
+                <span className="ms-2">#{output.key.slice(0, 3)}</span>
               </div>
             </div>
             <Socket

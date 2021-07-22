@@ -3,7 +3,9 @@ import { createRef } from "react";
 import ReactDOM from "react-dom";
 import { createEditor } from "./rete";
 import CSS from 'csstype';
+const fontawesomeTypes = require('@fortawesome/fontawesome-free/js/all');
 const bootStrapTypes = require('bootstrap/dist/css/bootstrap.min.css');
+
 
 // import "./styles.css";
 const containerStyle: CSS.Properties = {
