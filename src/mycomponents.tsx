@@ -1,6 +1,6 @@
 import Rete, { Input, Node } from "rete";
 import { socketDictKey, sockets } from "./mysocket";
-import { ControlNumber, ControlText, ControlButton,  } from "./mycontrols";
+import { ControlNumber, ControlText, ControlButton, ControlSelect } from "./mycontrols";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
 import { ComponentBase } from "./rete-react";
 import { socketNumber } from "./mysocket";
@@ -103,6 +103,13 @@ export class ComponentDict extends ComponentBase {
   }
 }
 
+const valueTypes = [
+  "String",
+  "Number",
+  "Dictionary",
+  "List",
+  "None"
+]
 
 // Rete component for dict key
 export class ComponentDictKey extends ComponentBase {
@@ -116,6 +123,11 @@ export class ComponentDictKey extends ComponentBase {
       if( editor ) {
         node.addInput(new Input("parent", "Parent", socketDictKey));
         node.addControl(new ControlText(editor, "dictKey", ""));
+        node.addControl(new ControlSelect(editor, "typeSelect", null, 
+          valueTypes.map(v => {return {
+            label: v,
+            value: v
+        }})));
       } else {
         console.error('cant build node, editor not defined');
       }
@@ -123,5 +135,7 @@ export class ComponentDictKey extends ComponentBase {
     });
   }
 
-  worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {}
+  worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {
+    console.log("pls");
+  }
 }
