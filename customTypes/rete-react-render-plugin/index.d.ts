@@ -22,7 +22,7 @@ declare module 'rete-react-render-plugin' {
         bindControl: bindControl
     }
 
-    interface SocketProps {
+    export interface SocketProps {
         type: string,
         socket: ReteSocket,
         io: IO,
@@ -40,7 +40,8 @@ declare module 'rete-react-render-plugin' {
         render(): JSX.Element;
     }  
 
-    export declare class Socket extends ReactComponent<SocketProps> {
+    export declare class Socket<T extends SocketProps> extends ReactComponent<T> {
+        createRef(el: HTMLElement): void;
         render(): JSX.Element;
     }
 

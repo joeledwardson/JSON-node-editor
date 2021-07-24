@@ -1,74 +1,58 @@
-import Rete, { Node } from "rete";
-import React from 'react';
-import { myNumSocket  } from "./mysocket";
-import { MyControl, MyNumberInput } from "./mycontrols";
+import Rete, { Input, Node } from "rete";
+import { socketDictKey, sockets } from "./mysocket";
+import { ControlNumber, ControlText, ControlButton,  } from "./mycontrols";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
-import { MyNode } from "./mynode";
-
-
-
-
-abstract class ReteReactComponent extends Rete.Component {
-  update?: () => Promise<void>; // update() is declared at load time by rete react render plugin implementation
-  render?: "react";
-  data: {component?: typeof React.Component}; // "data" property passed to renderer, which if it has "component" is used for component rendering
-  constructor(name: string, component?: typeof React.Component) {
-    super(name);
-    this.data = {
-      component: component
-    }
-  }
-}
-
-
-export { ReteReactComponent };
-
-export class NumComponent extends ReteReactComponent {
+import { ComponentBase } from "./rete-react";
+import { socketNumber } from "./mysocket";
+import { NodeEditor } from "rete";
+import { DisplayBase, DisplayList, listOutputAction } from "./myreactcomponents";
+ 
+// Rete component for a single number - has a number input with control and a number output
+export class ComponentNum extends ComponentBase {
   constructor() {
-    super("Number");
+    super("Number", DisplayBase);
   }
 
   async builder(node: Node): Promise<void> {
     console.log("running Number builder...");
-    var out1 = new Rete.Output("num", "Number", myNumSocket);
+    var out1 = new Rete.Output("outputNum", "Number",  socketNumber);
     if (!this.editor) {
       throw new Error('this.editor is null in NumComponent!');
     }
-    var ctrl = new MyControl(this.editor, "num", 0, MyNumberInput);
+    var ctrl = new ControlNumber(this.editor, "inputNum", 0);
     node.addControl(ctrl).addOutput(out1);
     return new Promise(resolve => resolve());
   }
 
   worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {
-    outputs["num"] = node.data.num;
+    outputs["outputNum"] = node.data["inputNum"];
   }
 }
 
-
-
-export class AddComponent extends ReteReactComponent {
+// Rete component for adding 2 numbers - has 2 number inputs with controls and a number output
+export class ComponentAdd extends ComponentBase {
     constructor() {
-      super("Add");
+      super("Add", DisplayBase);
     }
   
     async builder(node: Node): Promise<void> {
     
       console.log("running add builder...");
-      var inp1 = new Rete.Input("num1", "Number", myNumSocket);
-      var inp2 = new Rete.Input("num2", "Number2", myNumSocket);
-      var out = new Rete.Output("num", "Number", myNumSocket);
+      var inp1 = new Rete.Input("num1", "Number", socketNumber);
+      var inp2 = new Rete.Input("num2", "Number2", socketNumber);
+      var out = new Rete.Output("num", "Number", socketNumber);
   
       if (!this.editor) {
         throw new Error('this.editor is null in AddCOmponent!'); 
       }
   
-      inp1.addControl(new MyControl(this.editor, "num1", 0, MyNumberInput));
-      inp2.addControl(new MyControl(this.editor, "num2", 0, MyNumberInput));
+      inp1.addControl(new ControlNumber(this.editor, "num1", 0));
+      inp2.addControl(new ControlNumber(this.editor, "num2", 0));
   
       node
         .addInput(inp1)
         .addInput(inp2)
-        .addControl(new MyControl(this.editor, "preview", 0, MyNumberInput))
+        .addControl(new ControlNumber(this.editor, "preview", 0))
         .addOutput(out);
       
       return new Promise(resolve => resolve());
@@ -81,11 +65,63 @@ export class AddComponent extends ReteReactComponent {
       let sum: number = (+n1) +  (+n2);
   
       if(this.editor) {
-          let previewCtrl = this.editor.nodes.find((n) => n.id == node.id)?.controls.get("preview") as MyControl;
+          let previewCtrl = this.editor.nodes.find((n) => n.id == node.id)?.controls.get("preview") as ControlNumber;
           previewCtrl && previewCtrl.controlValueChange("preview", sum);
           outputs["num"] = sum;
       }
   
     }
-  }
+}
   
+// Rete component holding a list
+export class ComponentDict extends ComponentBase {
+  constructor() {	
+      super('Dict', DisplayList);
+  }
+
+  builder(node: Node): Promise<void> {
+    const editor: NodeEditor | null = this.editor;
+    return new Promise<void>(res => {
+      if( editor ) {
+        // add control to add output
+        const adderControl: ControlButton = new ControlButton(
+            "OutputAdder", "+", () => listOutputAction(editor, node, node.outputs.size, "add")
+        );
+        node.addControl(adderControl);
+
+        // add 1 output
+        // listOutputAction(editor, node, 0, "add");
+      } else {
+        console.error('cant build node, editor not defined');
+      }
+      res();
+    });
+  }
+
+  worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {
+      ; // pass
+  }
+}
+
+
+// Rete component for dict key
+export class ComponentDictKey extends ComponentBase {
+  constructor() {	
+      super('Dict Key', DisplayBase);
+  }
+
+  builder(node: Node): Promise<void> {
+    const editor: NodeEditor | null = this.editor;
+    return new Promise<void>(res => {
+      if( editor ) {
+        node.addInput(new Input("parent", "Parent", socketDictKey));
+        node.addControl(new ControlText(editor, "dictKey", ""));
+      } else {
+        console.error('cant build node, editor not defined');
+      }
+      res();
+    });
+  }
+
+  worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {}
+}
