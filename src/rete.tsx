@@ -1,5 +1,5 @@
 import Rete from "rete";
-import { ComponentNum, ComponentAdd, ComponentDict, ComponentDictKey } from "./mycomponents";
+import MyComponents from "./mycomponents";
 import ReactRenderPlugin from 'rete-react-render-plugin';
 import AreaPlugin from 'rete-area-plugin';
 import ConnectionPlugin from 'rete-connection-plugin';
@@ -7,14 +7,24 @@ import ContextMenuPlugin, {ContextParams} from 'rete-context-menu-plugin';
 import HistoryPlugin from 'rete-history-plugin';
 
 
+const AdvancedSelectionPlugin = require('@mbraun/rete-advanced-selection-plugin').default;
+const SelectionPlugin: any = require('rete-drag-selection-plugin').default; 
+
+
 export async function createEditor(container: HTMLElement) {
   var components = [
-    new ComponentNum(), 
-    new ComponentAdd(), 
-    new ComponentDict(),
-    new ComponentDictKey()
+    new MyComponents.ComponentNum(), 
+    // new MyComponents.ComponentAdd(), 
+    new MyComponents.ComponentDict(),
+    new MyComponents.ComponentDictKey(),
+    new MyComponents.ComponentText(),
+    new MyComponents.ComponentBool(),
+    new MyComponents.ComponentNull(),
+    new MyComponents.ComponentList(),
+    new MyComponents.ComponentListItem()
   ];
 
+  // TODO - shift drag select not working
   console.log("creating editor...");
   var editor = new Rete.NodeEditor("demo@0.1.0", container);
   editor.use(ReactRenderPlugin);
@@ -22,6 +32,8 @@ export async function createEditor(container: HTMLElement) {
   editor.use(ConnectionPlugin);
   editor.use(ContextMenuPlugin);
   editor.use(HistoryPlugin);
+  editor.use(SelectionPlugin, { enabled: true });
+  editor.use(AdvancedSelectionPlugin);
 
   var engine = new Rete.Engine("demo@0.1.0");
 
@@ -32,28 +44,28 @@ export async function createEditor(container: HTMLElement) {
 
   var n1 = await components[0].createNode({ num: 2 });
   var n2 = await components[0].createNode({ num: 3 });
-  var add = await components[1].createNode();
-  var o = await components[2].createNode({});
-  var dk = await components[3].createNode({});
+  // var add = await components[1].createNode();
+  var o = await components[1].createNode({});
+  var dk = await components[2].createNode({});
 
   n1.position = [80, 200];
   n2.position = [80, 400];
-  add.position = [500, 240];
+  // add.position = [500, 240];
 
   editor.addNode(n1);
   editor.addNode(n2);
-  editor.addNode(add);
+  // editor.addNode(add);
   editor.addNode(o);
   editor.addNode(dk);
 
-  function editorConnect(o: string, i: string): void  {
-    const o1 = n1.outputs.get(o);
-    const i1 = add.inputs.get(i);
-    o1 && i1 && editor.connect(o1, i1);
-  }
+  // function editorConnect(o: string, i: string): void  {
+  //   const o1 = n1.outputs.get(o);
+  //   const i1 = add.inputs.get(i);
+  //   o1 && i1 && editor.connect(o1, i1);
+  // }
 
-  editorConnect("num", "num1");
-  editorConnect("num", "num2");
+  // editorConnect("num", "num1");
+  // editorConnect("num", "num2");
 
   editor.on(
     ["process", "nodecreated", "noderemoved", "connectioncreated", "connectionremoved"],

@@ -1,4 +1,4 @@
-import { Control, Input, NodeEditor, Output } from "rete";
+import { Control, Input, NodeEditor, Output, Socket as ReteSocket } from "rete";
 import { Node as NodeComponent, Control as ControlComponent } from "rete-react-render-plugin";
 import { Node as ReteNode } from "rete";
 import { v4 as uuidv4 } from 'uuid';
@@ -8,7 +8,7 @@ import { Button } from "react-bootstrap";
 import { Connection } from "rete";
 import { CSSProperties } from "react";
 import { StylableSocket } from "./rete-react";
-import { sockets, socketDictKey } from "./mysocket";
+import MySocket, { sockets } from "./mysocket";
 
 const outputStyle: CSSProperties = {
   // visibility: "hidden"
@@ -32,6 +32,7 @@ type ListAction = "add" | "remove" | "moveUp" | "moveDown";
 export async function listOutputAction(
   editor: NodeEditor,
   node: ReteNode, 
+  SocketType: ReteSocket,
   idx: number, 
   action: ListAction
 ): Promise<void> {
@@ -50,7 +51,7 @@ export async function listOutputAction(
       const newIndex: number = idx + 1; // index in output list for new output follows output pressed
       const newKey: string = uuidv4(); // generate unique string for key
 
-      const newOutput: Output = new Output(newKey, newKey, socketDictKey); // create new output with unique key
+      const newOutput: Output = new Output(newKey, newKey, SocketType); // create new output with unique key
       lst.splice(newIndex, 0, newOutput);  // insert new output into list
     
     } else if (action === "remove") {
@@ -132,8 +133,6 @@ export async function listOutputAction(
 
 export class DisplayBase extends NodeComponent {
 
-  listOutputAction = async (idx: number, action:ListAction) => listOutputAction(this.props.editor, this.props.node, idx, action);
-
   getTitle(): JSX.Element {
     return <div className="title">{this.props.node.name}</div>
   }
@@ -201,11 +200,14 @@ export class DisplayBase extends NodeComponent {
 }
 
 
-export class DisplayList extends DisplayBase {
-  listOutputAction = async (idx: number, action:ListAction) => listOutputAction(this.props.editor, this.props.node, idx, action);
+export class DisplayDict extends DisplayBase {
+  listOutputAction = async (idx: number, action:ListAction) => listOutputAction(
+    this.props.editor, this.props.node, MySocket.dictKeySocket, idx, action
+  );
+
   getOutput(output: Output, index: number): JSX.Element {
     return <div className="output" key={output.key}>
-      <div className="output-title" style={outputStyle}>
+      <div className="output-title hidden-node-item" style={outputStyle}>
         <div style={{display: 'flex', alignItems: 'center'}}>
           <div className="me-1" style={{display: 'flex', flexDirection: 'column'}}>
             <div>
@@ -237,4 +239,11 @@ export class DisplayList extends DisplayBase {
       />
     </div>
   }
+}
+
+
+export class DisplayList extends DisplayDict {
+  listOutputAction = async (idx: number, action:ListAction) => listOutputAction(
+    this.props.editor, this.props.node, MySocket.listItemSocket, idx, action
+  );
 }

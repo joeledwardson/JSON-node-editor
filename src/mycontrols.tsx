@@ -4,6 +4,7 @@ import { Form } from 'react-bootstrap';
 import { ReteControlBase } from './rete-react';
 import { Button } from "react-bootstrap";
 import TextareaAutosize from 'react-textarea-autosize';
+import { CSSProperties } from 'react';
 
 // base interface for any HTML element with a "value" attribute
 interface HTMLTarget {
@@ -16,6 +17,8 @@ interface CtrlInputProps {
     id: string;
     emitter: NodeEditor;
     valueChanger: (key: string, data: unknown) => void;
+    style?: CSSProperties;
+    className?: string
 };
 
 // React component classes used in controls for entering data
@@ -34,13 +37,20 @@ export class CtrlDisplayBase<T extends CtrlInputProps> extends React.Component<T
     this.props.emitter.trigger("process");
   }
 
+  baseRenderKwargs() {
+    return {
+      style: this.props.style,
+      className: "input-group bold-input " + (this.props.className ?? ""),
+      value: this.props.value,
+      onChange: <Type extends HTMLTarget>(e: React.FormEvent<Type>) => this.onChange(e)
+    }
+  }
+
   render() {
     return (
       <input 
         type={this.getInputType()} 
-        className="input-group" 
-        value={this.props.value} 
-        onChange={(e) => this.onChange(e)}
+        {...this.baseRenderKwargs()}
       />
     );
   }
@@ -52,13 +62,12 @@ export class CtrlDisplayNumber extends CtrlDisplayBase<CtrlInputProps> {
 
 export class CtrlDisplayText extends CtrlDisplayBase<CtrlInputProps> {
   render() {
+    const baseKwargs = {...this.baseRenderKwargs(), style: undefined} // dont pass style as textarea doesn't accept CSSProperties?
     return (
       <TextareaAutosize
         rows={1}
         autoFocus
-        className="input-group" 
-        value={this.props.value} 
-        onChange={(e) => this.onChange(e)}
+        {...baseKwargs}
       />
     );
   }
@@ -67,17 +76,17 @@ export class CtrlDisplayText extends CtrlDisplayBase<CtrlInputProps> {
 export class CtrlDisplayBool extends CtrlDisplayBase<CtrlInputProps> {
   render() {
     return (
-      <div>
-        <Form.Select 
-          aria-label="Boolean Input" 
-          onChange={(e) => this.onChange<HTMLSelectElement>(e)}
-          value={this.props.value}
-        >
-          <option>Select a value</option>
-          <option value={1} >True</option>
-          <option value={0} >False</option>
-        </Form.Select>
-      </div>
+      <select
+        className="form-select bold-input"
+        aria-label="Boolean Input" 
+        onChange={(e) => this.onChange<HTMLSelectElement>(e)}
+        value={this.props.value}
+        style={{fontWeight: "bold", fontSize: "large"}}
+      >
+        <option>Select a value</option>
+        <option className="bold-input" value={1} >True</option>
+        <option className="bold-input" value={0} >False</option>
+      </select>
     )
   }
 }
@@ -87,7 +96,7 @@ export class ControlBase extends ReteControlBase {
     props: CtrlInputProps;
 
     // function to update control value passed into react component itself
-    controlValueChange(key: string, data: unknown): void {
+    controlValueChange(key: string, data: any): void {
       this.props.value = data;  // update props value used to update control value when re-rendering
       this.putData(key, data);  //  put into node data objects for connections
       this.update && this.update();  // re-render
@@ -98,13 +107,17 @@ export class ControlBase extends ReteControlBase {
       key: string, 
       value: any, 
       controlComponent: typeof CtrlDisplayBase, 
+      style?: CSSProperties,
+      className?: string,
     ) {
         super(controlComponent, key);
         this.props = {
             emitter,
             id: key,
             value,
-            valueChanger: (key: string, data: unknown) => this.controlValueChange(key, data)
+            valueChanger: (key: string, data: unknown) => this.controlValueChange(key, data),
+            style,
+            className,
         };
     }
 }
@@ -127,23 +140,22 @@ export class ControlBool extends ControlBase {
   }
 }
 
+export type OptionLabel = {label: string, value: string | number}
 interface CtrlSelectProps extends CtrlInputProps {
-  options: Array<{label: string, value: string | number}>
+  options: Array<OptionLabel>
 }
 export class CtrlDisplaySelect extends CtrlDisplayBase<CtrlSelectProps> {
   render() {
+    const typeList: Array<OptionLabel> = [{value: "", label: "Select a type..."}, ...this.props.options];
     return (
-      <div>
-        <Form.Select 
-          aria-label="Select" 
-          onChange={(e) => this.onChange<HTMLSelectElement>(e)}
-          value={this.props.value}
-        >
-          {this.props.options.map(opt => {
-            <option value={opt.value}>{opt.label}</option>
-          })}
-        </Form.Select>
-      </div>
+      <Form.Select 
+        aria-label="Select" 
+        onChange={(e) => this.onChange<HTMLSelectElement>(e)}
+        value={this.props.value ?? ""}
+        className={this.props.className}
+      >
+        {typeList.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+      </Form.Select>
     )
   }
 }
@@ -153,15 +165,22 @@ export class ControlSelect extends ControlBase {
     emitter: NodeEditor, 
     key: string, 
     value: any,
-    options: Array<{label: string, value: string | number}>
+    options: Array<OptionLabel>,
+    valueChanger?: (control: ReteControlBase,  key: string, data: any) => void,
+    className?: string
   ) {
     super(emitter, key, value, CtrlDisplaySelect);
+    let _valueChanger = (key: string, data: any) => this.controlValueChange(key, data);
+    if( valueChanger)  {
+      _valueChanger = (key: string, data: any) => valueChanger(this, key, data);
+    }
     this.props = {
         emitter,
         id: key,
         value,
-        valueChanger: (key: string, data: unknown) => this.controlValueChange(key, data),
-        options: options
+        valueChanger: _valueChanger,
+        options: options,
+        className
     };
   }
 }
@@ -198,4 +217,13 @@ export class ControlButton extends ReteControlBase {
           onButtonClick: onButtonClick
       }
   }
+}
+
+export default {
+  ControlBase,
+  ControlNumber,
+  ControlText,
+  ControlBool,
+  ControlSelect,
+  ControlButton,
 }

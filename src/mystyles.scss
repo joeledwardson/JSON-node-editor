@@ -1,12 +1,24 @@
-.socket-dict-key {
+@import 'output from ~rete';
+@import 'input from ~rete';
+
+.Dictionary Key Socket {
     background: green;
 }
-// .output-title {
-//     background: green;
-// }
+
+.node {
+    width: 4rem;
+}
+
+.hidden-node-item {
+    visibility: hidden;
+}
+
 
 .node:hover * {
-    // background: green;
     visibility: visible;
-    // display: inline-block !important;
+}
+
+.bold-input {
+    font-size: large;
+    font-weight: bold;
 }

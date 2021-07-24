@@ -5,23 +5,29 @@ type SocketHolder = {
     colour: string
 }
 
+// colours stolen from Kelly's 22 colours minus black and white
 const colours: Array<string> = [
-    "#F8B195",
-    "#F67280",
-    "#C06C84",
-    "#6C5B7B",
-    "#355C7D",
-    "#99B898",
-    "#FECEAB",
-    "#FF847C",
-    "#E84A5F",
-    "#2A363B",
-    "#A8E6CE",
-    "#DCEDC2",
-    "#FFD3B5",
-    "#FFAAA6",
-    "#FF8C94"
-]
+    '#F3C300',
+    '#875692',
+    '#F38400', 
+    '#A1CAF1', 
+    '#BE0032', 
+    '#C2B280', 
+    '#848482', 
+    '#885600', 
+    '#E68FAC', 
+    '#0067A5', 
+    '#F99379', 
+    '#604E97', 
+    '#F6A600', 
+    '#B3446C', 
+    '#DCD300', 
+    '#882D17', 
+    '#8DB600', 
+    '#654522', 
+    '#E25822', 
+    '#2B3D26'
+];
 export let sockets = new Map<string, SocketHolder>()
 
 
@@ -36,10 +42,32 @@ function addSocket(name: string) {
     }
 }
 
-addSocket("socket-number");
-addSocket("socket-dict-key");
+addSocket("Number Socket");
+addSocket("Text Socket");
+addSocket("Boolean Socket");
+addSocket("Null Socket");
+addSocket("List Socket");
+addSocket("List Item Socket");
+addSocket("Dictionary Socket");
+addSocket("Dictionary Key Socket");
 
 
-export var socketNumber: Socket = sockets.get('socket-number')?.socket as Socket;
-export var socketDictKey: Socket = sockets.get('socket-dict-key')?.socket as Socket;
+var numberSocket: Socket = sockets.get('Number Socket')?.socket as Socket;
+var stringSocket: Socket = sockets.get('Text Socket')?.socket as Socket;
+var boolSocket: Socket = sockets.get('Boolean Socket')?.socket as Socket;
+var nullSocket: Socket = sockets.get('Dictionary Key Socket')?.socket as Socket;
+var dictSocket: Socket = sockets.get('Dictionary Socket')?.socket as Socket;
+var dictKeySocket: Socket = sockets.get('Dictionary Key Socket')?.socket as Socket;
+var listSocket: Socket = sockets.get('List Socket')?.socket as Socket;
+var listItemSocket: Socket = sockets.get('List Item Socket')?.socket as Socket;
 
+export default {
+    numberSocket,
+    stringSocket,
+    boolSocket,
+    nullSocket,
+    dictSocket,
+    dictKeySocket,
+    listSocket,
+    listItemSocket
+}

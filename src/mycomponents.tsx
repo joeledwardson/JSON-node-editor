@@ -1,141 +1,248 @@
-import Rete, { Input, Node } from "rete";
-import { socketDictKey, sockets } from "./mysocket";
-import { ControlNumber, ControlText, ControlButton, ControlSelect } from "./mycontrols";
+import Rete, { Control, Input, Node, Output, Socket, NodeEditor } from "rete";
+import { ComponentBase, ReteControlBase } from "./rete-react";
+import MySocket, { sockets } from "./mysocket";
+import MyControls, { OptionLabel, ControlNumber } from "./mycontrols";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
-import { ComponentBase } from "./rete-react";
-import { socketNumber } from "./mysocket";
-import { NodeEditor } from "rete";
-import { DisplayBase, DisplayList, listOutputAction } from "./myreactcomponents";
- 
-// Rete component for a single number - has a number input with control and a number output
+import { DisplayBase, DisplayDict, DisplayList, listOutputAction } from "./myreactcomponents";
+
+// map types to sockets
+let valueTypes: Array<string> = [
+  "Text",
+  "Number",
+  "Boolean",
+  "Dictionary",
+  "List",
+  "None"
+]
+let socketMap = new Map<string, string>(); 
+socketMap.set("Text", "Text Socket");
+socketMap.set("Number", "Number Socket");
+socketMap.set("Boolean", "Boolean Socket");
+socketMap.set("Dictionary", "Dictionary Socket");
+socketMap.set("List", "List Socket");
+
+// Number component 
 export class ComponentNum extends ComponentBase {
   constructor() {
     super("Number", DisplayBase);
   }
 
   async builder(node: Node): Promise<void> {
-    console.log("running Number builder...");
-    var out1 = new Rete.Output("outputNum", "Number",  socketNumber);
-    if (!this.editor) {
-      throw new Error('this.editor is null in NumComponent!');
-    }
-    var ctrl = new ControlNumber(this.editor, "inputNum", 0);
-    node.addControl(ctrl).addOutput(out1);
-    return new Promise(resolve => resolve());
+    return new Promise(resolve => {
+      this.editor && node
+        .addInput(new Input("parent", "Parent", MySocket.numberSocket))
+        .addControl(new MyControls.ControlNumber(this.editor, "Number Input", node.data["Number Input"] ?? 0))
+      resolve();
+    });
   }
 
   worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {
-    outputs["outputNum"] = node.data["inputNum"];
   }
 }
 
-// Rete component for adding 2 numbers - has 2 number inputs with controls and a number output
-export class ComponentAdd extends ComponentBase {
-    constructor() {
-      super("Add", DisplayBase);
-    }
-  
-    async builder(node: Node): Promise<void> {
-    
-      console.log("running add builder...");
-      var inp1 = new Rete.Input("num1", "Number", socketNumber);
-      var inp2 = new Rete.Input("num2", "Number2", socketNumber);
-      var out = new Rete.Output("num", "Number", socketNumber);
-  
-      if (!this.editor) {
-        throw new Error('this.editor is null in AddCOmponent!'); 
-      }
-  
-      inp1.addControl(new ControlNumber(this.editor, "num1", 0));
-      inp2.addControl(new ControlNumber(this.editor, "num2", 0));
-  
-      node
-        .addInput(inp1)
-        .addInput(inp2)
-        .addControl(new ControlNumber(this.editor, "preview", 0))
-        .addOutput(out);
-      
-      return new Promise(resolve => resolve());
-    }
-  
-    worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {
-      console.log("Add component working...");
-      let n1: number = (inputs["num1"].length ? inputs["num1"][0] : node.data.num1) as number;
-      let n2: number = (inputs["num2"].length ? inputs["num2"][0] : node.data.num2) as number;
-      let sum: number = (+n1) +  (+n2);
-  
-      if(this.editor) {
-          let previewCtrl = this.editor.nodes.find((n) => n.id == node.id)?.controls.get("preview") as ControlNumber;
-          previewCtrl && previewCtrl.controlValueChange("preview", sum);
-          outputs["num"] = sum;
-      }
-  
-    }
+
+// Text Component
+export class ComponentText extends ComponentBase {
+  constructor() {
+    super("Text", DisplayBase);
+  }
+
+  async builder(node: Node): Promise<void> {
+    return new Promise(resolve => {
+      this.editor && node
+        .addInput(new Input("parent", "Parent", MySocket.stringSocket))
+        .addControl(new MyControls.ControlText(this.editor, "Text Input", node.data["Text Input"] ?? ""))
+      resolve();
+    });
+  }
+
+  worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {
+  }
 }
-  
-// Rete component holding a list
+
+
+// Boolean Component
+export class ComponentBool extends ComponentBase {
+  constructor() {
+    super("Boolean", DisplayBase);
+  }
+
+  async builder(node: Node): Promise<void> {
+    return new Promise(resolve => {
+      this.editor && node
+        .addInput(new Input("parent", "Parent", MySocket.boolSocket))
+        .addControl(new MyControls.ControlBool(this.editor, "Boolean Input", node.data["Boolean Input"] ?? ""))
+      resolve();
+    });
+  }
+
+  worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {
+  }
+}
+
+
+// Null Component
+export class ComponentNull extends ComponentBase {
+  constructor() {
+    super("Null", DisplayBase);
+  }
+
+  async builder(node: Node): Promise<void> {
+    return new Promise(resolve => {
+      this.editor && node
+        .addInput(new Input("parent", "Parent", MySocket.nullSocket));
+      resolve();
+    });
+  }
+
+  worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {
+  }
+}
+
+
+// Dictionary component
 export class ComponentDict extends ComponentBase {
   constructor() {	
-      super('Dict', DisplayList);
+      super('Dictionary', DisplayDict);
   }
 
   builder(node: Node): Promise<void> {
     const editor: NodeEditor | null = this.editor;
     return new Promise<void>(res => {
-      if( editor ) {
-        // add control to add output
-        const adderControl: ControlButton = new ControlButton(
-            "OutputAdder", "+", () => listOutputAction(editor, node, node.outputs.size, "add")
-        );
-        node.addControl(adderControl);
-
-        // add 1 output
-        // listOutputAction(editor, node, 0, "add");
-      } else {
-        console.error('cant build node, editor not defined');
-      }
+      editor && node
+        .addInput(new Input("parent", "Parent", MySocket.dictSocket))
+        .addControl(new MyControls.ControlButton(
+          "Add Item", "Add Item +", () => listOutputAction(editor, node, MySocket.dictKeySocket, node.outputs.size, "add")
+        ))
       res();
     });
   }
 
-  worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {
-      ; // pass
+  worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {}
+}
+
+
+abstract class ComponentTypeSelect extends ComponentBase {
+  selectBuilder(node: Node, parentSocket: Socket, includeKeyInput: boolean): Promise<void> {
+    const editor: NodeEditor | null = this.editor;
+    const nodeUpdator = () => this.update && this.update();
+    const typeLabels: Array<OptionLabel> = valueTypes.map(v => ({
+      label: v,
+      value: v
+    }));
+
+    const selectChange = (control: ReteControlBase,  key: string, data: string) => {
+      
+      control.props.value = data; // update Control props value for display on re-rendering
+      node.data[key] = data;  // update stored node value
+      control.update && control.update();  // re-render control
+
+      // check type selection exist in data
+      if( typeof node.data["Type Selection"] === "string" ) {
+
+        // get selected type from data object
+        const selectedType: string = node.data["Type Selection"] as string;
+
+        // remove output if exist
+        if (node.outputs.has("Value")) {
+          const output = node.outputs.get("Value") as Output;
+          // remove connections from view
+          editor && output.connections.map(c => editor.removeConnection(c));
+          // remove output from node
+          node.removeOutput(output);
+        }
+
+        // check if new type has an associated socket
+        if ( socketMap.has(selectedType) ) {
+
+          // get socket object
+          const socketName = socketMap.get(selectedType) as string;
+          const socket = sockets.get(socketName)?.socket as Socket;
+          
+          // create new output with socket mapped to selected type
+          node.addOutput(new Output("Value", selectedType + " Value", socket));
+
+        }
+        
+        node.update();  // update node
+        nodeUpdator();  // re-render node
+
+        // for each affected node update its connections
+        setTimeout(
+          () => editor?.view.updateConnections({node}),
+          10
+        );
+      }
+    }
+
+    return new Promise<void>(res => {
+      editor && node.addInput(new Input("parent", "Parent", parentSocket));
+      editor && includeKeyInput && node.addControl(new MyControls.ControlText(editor, "Dictionary Key", ""));
+      editor && node.addControl(new MyControls.ControlSelect(editor, "Type Selection", null, typeLabels, selectChange));
+      res();
+    });
   }
 }
 
-const valueTypes = [
-  "String",
-  "Number",
-  "Dictionary",
-  "List",
-  "None"
-]
 
-// Rete component for dict key
-export class ComponentDictKey extends ComponentBase {
+// Dictionary Key component
+export class ComponentDictKey extends ComponentTypeSelect {
   constructor() {	
       super('Dict Key', DisplayBase);
   }
 
   builder(node: Node): Promise<void> {
+    return this.selectBuilder(node, MySocket.dictKeySocket, true);
+  }
+
+  worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {}
+}
+
+
+// List component
+export class ComponentList extends ComponentBase {
+  constructor() {	
+      super('List', DisplayList);
+  }
+
+  builder(node: Node): Promise<void> {
     const editor: NodeEditor | null = this.editor;
     return new Promise<void>(res => {
-      if( editor ) {
-        node.addInput(new Input("parent", "Parent", socketDictKey));
-        node.addControl(new ControlText(editor, "dictKey", ""));
-        node.addControl(new ControlSelect(editor, "typeSelect", null, 
-          valueTypes.map(v => {return {
-            label: v,
-            value: v
-        }})));
-      } else {
-        console.error('cant build node, editor not defined');
-      }
+      editor && node
+        .addInput(new Input("parent", "Parent", MySocket.listSocket))
+        .addControl(new MyControls.ControlButton(
+          "Add Item", "Add Item +", () => listOutputAction(editor, node, MySocket.listItemSocket, node.outputs.size, "add")
+        ))
       res();
     });
   }
 
-  worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {
-    console.log("pls");
+  worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {}
+}
+
+
+// List item component
+export class ComponentListItem extends ComponentTypeSelect {
+  constructor() {	
+      super('List Item', DisplayBase);
   }
+
+  builder(node: Node): Promise<void> {
+    return this.selectBuilder(node, MySocket.listItemSocket, false);
+  }
+
+  worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {}
+}
+
+
+export default {
+  ComponentNum,
+  // ComponentAdd,
+  ComponentText,
+  ComponentDict,
+  ComponentDictKey,
+  ComponentBool,
+  ComponentNull,
+  ComponentList,
+  ComponentListItem
 }
