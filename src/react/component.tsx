@@ -1,12 +1,12 @@
 import * as Rete from "rete";
 import * as ReactRete from 'rete-react-render-plugin';
-import * as MyControls from './mycontrols';
+import * as MyControls from '../controls/controls';
 import { v4 as uuidv4 } from 'uuid';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus, faTrash, faArrowUp, faArrowDown } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "react-bootstrap";
-import { StylableSocket } from "./rete/rete-react";
-import MySocket, { sockets } from "./mysocket";
+import { StylableSocket } from "./socket";
+import MySocket, { sockets } from "../mysocket";
 import TextareaAutosize from 'react-textarea-autosize';
 
 

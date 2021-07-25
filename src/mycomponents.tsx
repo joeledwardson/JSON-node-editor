@@ -1,10 +1,12 @@
 import Rete, { Control, Input, Node, Output, Socket, NodeEditor } from "rete";
-import { ComponentBase, ReteControlBase } from "./rete/rete-react";
+import { ComponentBase } from "./rete/component";
+import { ReteControlBase } from "./rete/control";
 import MySocket, { sockets } from "./mysocket";
-import mycontrols, { OptionLabel } from "./mycontrols";
-import * as MyControls from  "./mycontrols";
+import mycontrols from "./controls/controls";
+import { OptionLabel } from "./controls/display";
+import * as MyControls from  "./controls/controls";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
-import { DisplayBase, DisplayDict, DisplayList, listOutputAction, getOutputControls } from "./myreactcomponents";
+import { DisplayBase, DisplayDict, DisplayList, listOutputAction, getOutputControls } from "./react/component";
 
 // map types to sockets
 let TypeList: Array<string> = [

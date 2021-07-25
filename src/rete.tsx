@@ -6,7 +6,7 @@ import AreaPlugin from 'rete-area-plugin';
 import ConnectionPlugin from 'rete-connection-plugin';
 import ContextMenuPlugin, {ContextParams} from 'rete-context-menu-plugin';
 import HistoryPlugin from 'rete-history-plugin';
-import { ReteControlBase } from "./rete/rete-react";
+import { ReteControlBase } from "./rete/control";
 
 
 const AdvancedSelectionPlugin = require('@mbraun/rete-advanced-selection-plugin').default;
