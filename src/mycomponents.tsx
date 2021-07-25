@@ -1,12 +1,12 @@
 import Rete, { Control, Input, Node, Output, Socket, NodeEditor } from "rete";
 import { ComponentBase, ReteControlBase } from "./rete-react";
-import MySocket, { sockets } from "./mysocket";
+import MySocket, { sockets, addSocket } from "./mysocket";
 import MyControls, { OptionLabel, ControlNumber } from "./mycontrols";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
 import { DisplayBase, DisplayDict, DisplayList, listOutputAction } from "./myreactcomponents";
 
 // map types to sockets
-let valueTypes: Array<string> = [
+let TypeList: Array<string> = [
   "Text",
   "Number",
   "Boolean",
@@ -14,12 +14,8 @@ let valueTypes: Array<string> = [
   "List",
   "None"
 ]
-let socketMap = new Map<string, string>(); 
-socketMap.set("Text", "Text Socket");
-socketMap.set("Number", "Number Socket");
-socketMap.set("Boolean", "Boolean Socket");
-socketMap.set("Dictionary", "Dictionary Socket");
-socketMap.set("List", "List Socket");
+export const addType = (newType: string) => TypeList.push(newType);
+
 
 // Number component 
 export class ComponentNum extends ComponentBase {
@@ -126,7 +122,7 @@ abstract class ComponentTypeSelect extends ComponentBase {
   selectBuilder(node: Node, parentSocket: Socket, includeKeyInput: boolean): Promise<void> {
     const editor: NodeEditor | null = this.editor;
     const nodeUpdator = () => this.update && this.update();
-    const typeLabels: Array<OptionLabel> = valueTypes.map(v => ({
+    const typeLabels: Array<OptionLabel> = TypeList.map(v => ({
       label: v,
       value: v
     }));
@@ -153,11 +149,10 @@ abstract class ComponentTypeSelect extends ComponentBase {
         }
 
         // check if new type has an associated socket
-        if ( socketMap.has(selectedType) ) {
+        if ( sockets.has(selectedType) ) {
 
           // get socket object
-          const socketName = socketMap.get(selectedType) as string;
-          const socket = sockets.get(socketName)?.socket as Socket;
+          const socket = sockets.get(selectedType)?.socket as Socket;
           
           // create new output with socket mapped to selected type
           node.addOutput(new Output("Value", selectedType + " Value", socket));
@@ -235,6 +230,37 @@ export class ComponentListItem extends ComponentTypeSelect {
 }
 
 
+// Dynamic component
+export interface VariableType {
+  type: string
+}
+export class ComponentDynamic extends ComponentBase {
+  socket: Socket
+  varSpec: Map<string, VariableType>
+  constructor(name: string, varSpec: Map<string, VariableType>) {
+    super(name, DisplayBase);
+    if( !sockets.has(name) ) {
+      throw new Error(`expected socket "${name}" to exist!`);
+    }
+    this.socket = sockets.get(name)?.socket as Socket;
+    this.varSpec = varSpec;
+  }
+  builder(node: Node): Promise<void> {
+    const editor: NodeEditor | null = this.editor;
+    return new Promise<void>(res => {
+      editor && node.addInput(new Input("parent", "Parent", this.socket));
+      this.varSpec.forEach((spec, key) => {
+        if (!TypeList.includes(spec.type)) throw new Error(`type "${spec.type}" not recognised`);
+        if (!sockets.has(spec.type)) throw new Error (`type "${spec.type}" has no socket`);
+        node.addOutput(new Output(key, key, sockets.get(spec.type)?.socket as Socket));
+      })
+      res();
+    });
+  }
+  worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {}
+}
+
+
 export default {
   ComponentNum,
   // ComponentAdd,
@@ -244,5 +270,6 @@ export default {
   ComponentBool,
   ComponentNull,
   ComponentList,
-  ComponentListItem
+  ComponentListItem,
+  ComponentDynamic
 }

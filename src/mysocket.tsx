@@ -28,38 +28,31 @@ const colours: Array<string> = [
     '#E25822', 
     '#2B3D26'
 ];
+
+
 export let sockets = new Map<string, SocketHolder>()
 
-
-function addSocket(name: string) {
-    if (sockets.has(name)) {
-        throw new Error(`socket "${name}" already exists`);
-    } else {
-        sockets.set(name, {
-            socket: new Socket(name), 
-            colour: colours[sockets.size % colours.length]
-        })
+export function addSocket(typeName: string): SocketHolder {
+    if (sockets.has(typeName)) {
+        throw new Error(`socket "${typeName}" already exists`);
+    }         
+    const holder: SocketHolder = {
+        socket: new Socket(typeName), 
+        colour: colours[sockets.size % colours.length]
     }
+    sockets.set(typeName, holder)
+    return holder;
 }
 
-addSocket("Number Socket");
-addSocket("Text Socket");
-addSocket("Boolean Socket");
-addSocket("Null Socket");
-addSocket("List Socket");
-addSocket("List Item Socket");
-addSocket("Dictionary Socket");
-addSocket("Dictionary Key Socket");
+var numberSocket: Socket = addSocket("Number").socket;
+var stringSocket: Socket = addSocket("Text").socket;
+var boolSocket: Socket = addSocket("Boolean").socket;
+var nullSocket: Socket =addSocket("Null").socket;
+var listSocket: Socket = addSocket("List").socket;
+var listItemSocket: Socket = addSocket("List Item").socket;
+var dictSocket: Socket = addSocket("Dictionary").socket;
+var dictKeySocket: Socket = addSocket("Dictionary Key").socket;
 
-
-var numberSocket: Socket = sockets.get('Number Socket')?.socket as Socket;
-var stringSocket: Socket = sockets.get('Text Socket')?.socket as Socket;
-var boolSocket: Socket = sockets.get('Boolean Socket')?.socket as Socket;
-var nullSocket: Socket = sockets.get('Dictionary Key Socket')?.socket as Socket;
-var dictSocket: Socket = sockets.get('Dictionary Socket')?.socket as Socket;
-var dictKeySocket: Socket = sockets.get('Dictionary Key Socket')?.socket as Socket;
-var listSocket: Socket = sockets.get('List Socket')?.socket as Socket;
-var listItemSocket: Socket = sockets.get('List Item Socket')?.socket as Socket;
 
 export default {
     numberSocket,

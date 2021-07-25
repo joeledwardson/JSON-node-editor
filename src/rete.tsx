@@ -1,5 +1,6 @@
 import Rete from "rete";
-import MyComponents from "./mycomponents";
+import { addSocket } from "./mysocket";
+import MyComponents, { VariableType, addType } from "./mycomponents";
 import ReactRenderPlugin from 'rete-react-render-plugin';
 import AreaPlugin from 'rete-area-plugin';
 import ConnectionPlugin from 'rete-connection-plugin';
@@ -12,6 +13,27 @@ const SelectionPlugin: any = require('rete-drag-selection-plugin').default;
 
 
 export async function createEditor(container: HTMLElement) {
+  let objectSpecs = new Map<string, Map<string, VariableType>>();
+  objectSpecs.set('objA', new Map([
+    [
+      'a',
+      {
+        type: 'Text'
+      }
+    ],
+    [
+      'b',
+      {
+        type: 'Number'
+      }
+    ]
+  ]));
+
+  objectSpecs.forEach((spec, key) => {
+    addSocket(key);
+    addType(key)
+  });
+
   var components = [
     new MyComponents.ComponentNum(), 
     // new MyComponents.ComponentAdd(), 
@@ -21,8 +43,9 @@ export async function createEditor(container: HTMLElement) {
     new MyComponents.ComponentBool(),
     new MyComponents.ComponentNull(),
     new MyComponents.ComponentList(),
-    new MyComponents.ComponentListItem()
+    new MyComponents.ComponentListItem(),
   ];
+  objectSpecs.forEach((spec, key) => components.push(new MyComponents.ComponentDynamic(key, spec)));
 
   // TODO - shift drag select not working
   console.log("creating editor...");
