@@ -1,12 +1,12 @@
 import * as Rete from "rete";
-import { addSocket } from "./mysocket";
-import MyComponents, { VariableType, addType } from "./mycomponents";
+import { addSocket } from "./sockets/sockets";
+import MyComponents, { VariableType, addType } from "./components/components";
 import ReactRenderPlugin from 'rete-react-render-plugin';
 import AreaPlugin from 'rete-area-plugin';
 import ConnectionPlugin from 'rete-connection-plugin';
 import ContextMenuPlugin, {ContextParams} from 'rete-context-menu-plugin';
 import HistoryPlugin from 'rete-history-plugin';
-import { ReteControlBase } from "./rete/control";
+import { ControlBase } from "../rete/control";
 
 
 const AdvancedSelectionPlugin = require('@mbraun/rete-advanced-selection-plugin').default;

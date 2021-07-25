@@ -1,7 +1,7 @@
 import { useEffect, RefObject } from "react";
 import { createRef } from "react";
 import ReactDOM from "react-dom";
-import { createEditor } from "./rete";
+import { createEditor } from "./app/rete";
 import CSS from 'csstype';
 import './styles/styles.scss';
 const fontawesomeTypes = require('@fortawesome/fontawesome-free/js/all');

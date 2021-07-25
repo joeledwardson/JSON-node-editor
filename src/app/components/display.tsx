@@ -5,8 +5,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus, faTrash, faArrowUp, faArrowDown } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "react-bootstrap";
-import { StylableSocket } from "./socket";
-import MySocket, { sockets } from "../mysocket";
+import { StylableSocket } from "../sockets/display";
+import MySocket, { sockets } from "../sockets/sockets";
 import TextareaAutosize from 'react-textarea-autosize';
 
 
