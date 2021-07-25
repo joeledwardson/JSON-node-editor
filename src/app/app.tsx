@@ -1,12 +1,13 @@
 import * as Rete from "rete";
-import { addSocket } from "./sockets/sockets";
-import MyComponents, { VariableType, addType } from "./components/components";
+import { addSocket, sockets } from "./sockets/sockets";
+import MyComponents from "./components/components";
+import { ComponentDynamic, VariableType, addType } from './components/dynamic';
+
 import ReactRenderPlugin from 'rete-react-render-plugin';
 import AreaPlugin from 'rete-area-plugin';
 import ConnectionPlugin from 'rete-connection-plugin';
-import ContextMenuPlugin, {ContextParams} from 'rete-context-menu-plugin';
+import ContextMenuPlugin from 'rete-context-menu-plugin';
 import HistoryPlugin from 'rete-history-plugin';
-import { ControlBase } from "../rete/control";
 
 
 const AdvancedSelectionPlugin = require('@mbraun/rete-advanced-selection-plugin').default;
@@ -42,8 +43,11 @@ export async function createEditor(container: HTMLElement) {
 
   objectSpecs.forEach((spec, key) => {
     addSocket(key);
-    addType(key)
+    addType(key);
   });
+  const theAnySocket = addSocket("Any").socket;
+  sockets.forEach(s => theAnySocket.combineWith(s.socket));
+  
 
   var components = [
     new MyComponents.ComponentNum(), 
@@ -56,7 +60,7 @@ export async function createEditor(container: HTMLElement) {
     new MyComponents.ComponentList(),
     new MyComponents.ComponentListItem(),
   ];
-  objectSpecs.forEach((spec, key) => components.push(new MyComponents.ComponentDynamic(key, spec)));
+  objectSpecs.forEach((spec, key) => components.push(new ComponentDynamic(key, spec)));
 
   // TODO - shift drag select not working
   console.log("creating editor...");
@@ -84,7 +88,7 @@ export async function createEditor(container: HTMLElement) {
 
   n1.position = [80, 200];
   n2.position = [80, 400];
-  // add.position = [500, 240];
+  o.position = [-200, 200];
 
   editor.addNode(n1);
   editor.addNode(n2);

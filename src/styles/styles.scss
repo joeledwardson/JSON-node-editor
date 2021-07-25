@@ -46,12 +46,14 @@
             padding: 0.1rem 0.3rem;
             opacity: 0.5
         }
+
+        // set arrow fontawesome svgs to block so they do not take up extra height
+        svg {
+            display: block;
+        }
+
     }
 
-    // set arrow fontawesome svgs to block so they do not take up extra height
-    .output-item-arrows svg {
-        display: block;
-    }
 
     // make buttons small
     .btn {
@@ -64,7 +66,9 @@
     }
 }
 
-
+.controls-container {
+    // display: flex;
+}
 
 .control-input {
     @extend .bold-input;
@@ -75,3 +79,4 @@
     @extend .bold-input;
     width: 6rem !important;
 }
+

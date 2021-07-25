@@ -1,16 +1,12 @@
-import React from "react";
-import { NodeEditor, Control } from "rete";
-import { Form } from 'react-bootstrap';
+import { NodeEditor } from "rete";
 import { ControlBase as ReteControlBase } from "../../rete/control";
-import { Button } from "react-bootstrap";
-import TextareaAutosize from 'react-textarea-autosize';
 import { CSSProperties } from 'react';
 import * as Display from './display';
 
 
 /** function to update control value passed into react component itself */
 type ValueChanger = (ctrl: ReteControlBase, emitter: NodeEditor, key: string, data: any) => void;
-function controlValueChange(ctrl: ReteControlBase, emitter: NodeEditor, key: string, data: any): void {
+export function controlValueChange(ctrl: ReteControlBase, emitter: NodeEditor, key: string, data: any): void {
   ctrl.props.value = data;  // update props value used to update control value when re-rendering
   ctrl.putData(key, data);  //  put into node data objects for connections
   ctrl.update && ctrl.update();  // re-render
