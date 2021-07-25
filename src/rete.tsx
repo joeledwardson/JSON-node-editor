@@ -1,4 +1,4 @@
-import Rete from "rete";
+import * as Rete from "rete";
 import { addSocket } from "./mysocket";
 import MyComponents, { VariableType, addType } from "./mycomponents";
 import ReactRenderPlugin from 'rete-react-render-plugin';
@@ -6,6 +6,7 @@ import AreaPlugin from 'rete-area-plugin';
 import ConnectionPlugin from 'rete-connection-plugin';
 import ContextMenuPlugin, {ContextParams} from 'rete-context-menu-plugin';
 import HistoryPlugin from 'rete-history-plugin';
+import { ReteControlBase } from "./rete/rete-react";
 
 
 const AdvancedSelectionPlugin = require('@mbraun/rete-advanced-selection-plugin').default;
@@ -20,11 +21,21 @@ export async function createEditor(container: HTMLElement) {
       {
         type: 'Text'
       }
-    ],
-    [
+    ], [
       'b',
       {
-        type: 'Number'
+        type: 'Number',
+        default: 4,
+      }
+    ], [
+      'c',
+      {
+        type: 'Boolean'
+      }
+    ], [
+      'd',
+      {
+        type: 'Dictionary',
       }
     ]
   ]));
@@ -90,13 +101,21 @@ export async function createEditor(container: HTMLElement) {
   // editorConnect("num", "num1");
   // editorConnect("num", "num2");
 
-  editor.on(
-    ["process", "nodecreated", "noderemoved", "connectioncreated", "connectionremoved"],
-    async () => {
-      console.log("process");
-      await engine.abort();
-      await engine.process(editor.toJSON());
-    }
+  // editor.on(
+  //   ["process", "nodecreated", "noderemoved", "connectioncreated", "connectionremoved"],
+  //   async () => {
+  //     console.log("process");
+  //     await engine.abort();
+  //     await engine.process(editor.toJSON());
+  //   }
+  // );
+
+  // on connection added
+  editor.on(["connectionremove", "connectionremoved", "connectioncreated"], async(connection: Rete.Connection) => 
+    setTimeout(
+      () => [connection.input.node, connection.output.node].forEach(node => node && editor?.view.updateConnections({node})),
+      10
+    )
   );
 
   editor.on('error', (args: string | Error) => {

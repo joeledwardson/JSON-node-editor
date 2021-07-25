@@ -1,38 +1,31 @@
-import { Control, Input, NodeEditor, Output, Socket as ReteSocket } from "rete";
-import { Node as NodeComponent, Control as ControlComponent } from "rete-react-render-plugin";
-import { Node as ReteNode } from "rete";
+import * as Rete from "rete";
+import * as ReactRete from 'rete-react-render-plugin';
+import * as MyControls from './mycontrols';
 import { v4 as uuidv4 } from 'uuid';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus, faTrash, faArrowUp, faArrowDown } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "react-bootstrap";
-import { Connection } from "rete";
-import { CSSProperties } from "react";
-import { StylableSocket } from "./rete-react";
+import { StylableSocket } from "./rete/rete-react";
 import MySocket, { sockets } from "./mysocket";
+import TextareaAutosize from 'react-textarea-autosize';
 
-const outputStyle: CSSProperties = {
-  // visibility: "hidden"
-}
-
-const arrowBtnStyle : CSSProperties = {
-  padding: "0.1rem 0.3rem",
-  opacity: "0.5"
-}
-
-const svgStyle : CSSProperties = {
-  display: "block" // stop extra space being added inside button from SVG element
-}
-
-const minPad : CSSProperties = {
-  padding: "0.5rem 0.2rem",
-}
 
 type ListAction = "add" | "remove" | "moveUp" | "moveDown";
 
+
+// get mappings of node outputs to output controls (create if not exist)
+export function getOutputControls(node: Rete.Node): Map<string, Rete.Control> {
+  if (node.meta.outputMappings === undefined) {
+    let outputMappings = new Map<string, Rete.Control>();
+    node.meta.outputMappings = outputMappings;
+  }
+  return node.meta.outputMappings as Map<string, Rete.Control>;
+}  
+
 export async function listOutputAction(
-  editor: NodeEditor,
-  node: ReteNode, 
-  SocketType: ReteSocket,
+  editor: Rete.NodeEditor,
+  node: Rete.Node, 
+  SocketType: Rete.Socket,
   idx: number, 
   action: ListAction
 ): Promise<void> {
@@ -40,19 +33,23 @@ export async function listOutputAction(
     console.log("output key " + idx + " processing, action: " + action);
 
     // get existing outputs into list format
-    let lst: Array<Output> = Array.from(node.outputs.values());
+    let lst: Array<Rete.Output> = Array.from(node.outputs.values());
     console.log(`found ${lst.length} existing outputs`);
 
     // nodes that have a connection to the output that will need to be updated
-    let nds: Set<ReteNode> = new Set<ReteNode>([node]);
+    let nds: Set<Rete.Node> = new Set<Rete.Node>([node]);
 
     if (action === "add") {
 
       const newIndex: number = idx + 1; // index in output list for new output follows output pressed
       const newKey: string = uuidv4(); // generate unique string for key
 
-      const newOutput: Output = new Output(newKey, newKey, SocketType); // create new output with unique key
+      const newOutput: Rete.Output = new Rete.Output(newKey, newKey, SocketType); // create new output with unique key
+      const newControl: Rete.Control = new MyControls.ControlText(editor, newKey, ""); // create new control for output
+      node.addControl(newControl); // add control to node
+
       lst.splice(newIndex, 0, newOutput);  // insert new output into list
+      getOutputControls(node).set(newKey, newControl);  // add new control to output control mappings
     
     } else if (action === "remove") {
       
@@ -61,8 +58,15 @@ export async function listOutputAction(
         // get output using its index
         const output = lst[idx];
 
+        // remove mapped output control (if exist)
+        let ctrl = getOutputControls(node).get(output.key);
+        if( ctrl !== undefined ) {
+          node.removeControl(ctrl);
+          getOutputControls(node).delete(output.key);
+        }
+
         // register each node which has an input connected to the output being deleted
-        output.connections.forEach((c: Connection): void => {
+        output.connections.forEach((c: Rete.Connection): void => {
           c.input.node && nds.add(c.input.node);
         })
 
@@ -112,7 +116,7 @@ export async function listOutputAction(
     node.outputs.clear();
 
     // re-add outputs to node from modified list (connections will remain intact)
-    lst.map((o: Output, i: number) => {
+    lst.map((o: Rete.Output, i: number) => {
       o.node = null; // clear node so can be re-added by addOutput() function without triggering error
       node.addOutput(o)
     });
@@ -125,20 +129,28 @@ export async function listOutputAction(
       nds.forEach(n => editor?.view.updateConnections({node: n})),
       10
     );
+
     res();
   });
 }
 
 
 
-export class DisplayBase extends NodeComponent {
+export class DisplayBase extends ReactRete.Node {
 
   getTitle(): JSX.Element {
     return <div className="title">{this.props.node.name}</div>
   }
 
-  getOutput(output: Output, index: number): JSX.Element {
+  getOutput(output: Rete.Output, index: number): JSX.Element {
     return <div className="output" key={output.key}>
+      {!output.hasConnection() && getOutputControls(this.props.node).has(output.key) && <ReactRete.Control	
+        className="control"
+        key={output.key}
+        control={getOutputControls(this.props.node).get(output.key) as Rete.Control}
+        innerRef={this.props.bindControl}
+        />
+      }
       <div className="output-title">{output.name}</div>
       <StylableSocket
         type="output"
@@ -150,8 +162,8 @@ export class DisplayBase extends NodeComponent {
     </div>
   }
 
-  getControl(control: Control, index: number): JSX.Element {
-    return <ControlComponent	
+  getControl(control: Rete.Control, index: number): JSX.Element {
+    return <ReactRete.Control	
       className="control"
       key={control.key}
       control={control}
@@ -159,7 +171,7 @@ export class DisplayBase extends NodeComponent {
     />
   }
 
-  getInput(input: Input, index: number): JSX.Element {
+  getInput(input: Rete.Input, index: number): JSX.Element {
     return <div className="input" key={input.key}>
       <StylableSocket
         type="input"
@@ -172,7 +184,7 @@ export class DisplayBase extends NodeComponent {
         <div className="input-title">{input.name}</div>
       )}
       {input.showControl() && input.control && (
-        <ControlComponent
+        <ReactRete.Control
           className="input-control"
           control={input.control}
           innerRef={this.props.bindControl}
@@ -189,9 +201,9 @@ export class DisplayBase extends NodeComponent {
       <div className={`node ${selected}`}>
         {this.getTitle()}
         {/* Outputs */}
-        {outputs.map((output, index) => this.getOutput(output, index))}
-        {/* Controls */}
-        {controls.map((control, index) => this.getControl(control, index))}
+        {outputs.map((output, index) =>  this.getOutput(output, index))}
+        {/* Controls (check not mapped to output) */}
+        {controls.map((control, index) => !getOutputControls(this.props.node).has(control.key) && this.getControl(control, index))}
         {/* Inputs */}
         {inputs.map((input, index) => this.getInput(input, index))}
       </div>
@@ -205,29 +217,36 @@ export class DisplayDict extends DisplayBase {
     this.props.editor, this.props.node, MySocket.dictKeySocket, idx, action
   );
 
-  getOutput(output: Output, index: number): JSX.Element {
+  getOutput(output: Rete.Output, index: number): JSX.Element {
     return <div className="output" key={output.key}>
-      <div className="output-title hidden-node-item" style={outputStyle}>
-        <div style={{display: 'flex', alignItems: 'center'}}>
-          <div className="me-1" style={{display: 'flex', flexDirection: 'column'}}>
+      <div className="output-title hidden-node-item">
+        <div className="output-item-controls">
+          <div className="output-item-arrows">
             <div>
-              <button onClick={() => this.listOutputAction(index, "moveUp")} style={arrowBtnStyle}>
-                <i style={svgStyle} className="fas fa-chevron-up fa-xs"></i>
+              <button onClick={() => this.listOutputAction(index, "moveUp")} >
+                <i className="fas fa-chevron-up fa-xs"></i>
               </button>
             </div>
             <div>
-              <button onClick={() => this.listOutputAction(index, "moveDown")} style={arrowBtnStyle}>
-                <i style={svgStyle} className="fas fa-chevron-down fa-xs"></i>
+              <button onClick={() => this.listOutputAction(index, "moveDown")} >
+                <i className="fas fa-chevron-down fa-xs"></i>
               </button>
             </div>
           </div>
-          <Button style={minPad} variant="light" className="me-1" size="sm" onClick={() => this.listOutputAction(index, "add")} >
+          <Button variant="light" className="" size="sm" onClick={() => this.listOutputAction(index, "add")} >
             <FontAwesomeIcon icon={faPlus} />
           </Button>
-          <Button style={minPad} variant="warning" size="sm" onClick={() => this.listOutputAction(index, "remove")}>
+          <Button variant="warning" className="" size="sm" onClick={() => this.listOutputAction(index, "remove")}>
             <FontAwesomeIcon icon={faTrash} />
           </Button>
-          <span style={{width: "2rem"}} className="ms-2">#{output.key.slice(0, 3)}</span>
+          {/* <span style={{width: "2rem"}} className="ms-2">#{output.key.slice(0, 3)}</span> */}
+          <ReactRete.Control	
+            className="control"
+            key={output.key}
+            control={getOutputControls(this.props.node).get(output.key) as Rete.Control}
+            innerRef={this.props.bindControl}
+          />
+          {/* <TextareaAutosize rows={1} className="control-input"></TextareaAutosize> */}
         </div>
       </div>
       <StylableSocket

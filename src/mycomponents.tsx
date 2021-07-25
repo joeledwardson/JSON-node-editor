@@ -1,9 +1,10 @@
 import Rete, { Control, Input, Node, Output, Socket, NodeEditor } from "rete";
-import { ComponentBase, ReteControlBase } from "./rete-react";
-import MySocket, { sockets, addSocket } from "./mysocket";
-import MyControls, { OptionLabel, ControlNumber } from "./mycontrols";
+import { ComponentBase, ReteControlBase } from "./rete/rete-react";
+import MySocket, { sockets } from "./mysocket";
+import mycontrols, { OptionLabel } from "./mycontrols";
+import * as MyControls from  "./mycontrols";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
-import { DisplayBase, DisplayDict, DisplayList, listOutputAction } from "./myreactcomponents";
+import { DisplayBase, DisplayDict, DisplayList, listOutputAction, getOutputControls } from "./myreactcomponents";
 
 // map types to sockets
 let TypeList: Array<string> = [
@@ -15,6 +16,15 @@ let TypeList: Array<string> = [
   "None"
 ]
 export const addType = (newType: string) => TypeList.push(newType);
+
+// convert types to option label/value pairs
+function typeLabels(): Array<OptionLabel> {
+  return TypeList.map(v => ({
+    label: v,
+    value: v
+  }));
+}
+
 
 
 // Number component 
@@ -109,7 +119,7 @@ export class ComponentDict extends ComponentBase {
         .addInput(new Input("parent", "Parent", MySocket.dictSocket))
         .addControl(new MyControls.ControlButton(
           "Add Item", "Add Item +", () => listOutputAction(editor, node, MySocket.dictKeySocket, node.outputs.size, "add")
-        ))
+        ));
       res();
     });
   }
@@ -118,76 +128,73 @@ export class ComponentDict extends ComponentBase {
 }
 
 
-abstract class ComponentTypeSelect extends ComponentBase {
-  selectBuilder(node: Node, parentSocket: Socket, includeKeyInput: boolean): Promise<void> {
-    const editor: NodeEditor | null = this.editor;
-    const nodeUpdator = () => this.update && this.update();
-    const typeLabels: Array<OptionLabel> = TypeList.map(v => ({
-      label: v,
-      value: v
-    }));
 
-    const selectChange = (control: ReteControlBase,  key: string, data: string) => {
-      
-      control.props.value = data; // update Control props value for display on re-rendering
-      node.data[key] = data;  // update stored node value
-      control.update && control.update();  // re-render control
+// control function to dynamically create an output "Value" with corresponding socket type to "Type Selection" control
+function selectChanger(comp: ComponentBase, node: Node)  {
+  const editor: NodeEditor | null = comp.editor;
+  const nodeUpdator = () => comp.update && comp.update();
+  return (control: ReteControlBase,  key: string, data: string) => {
+    control.props.value = data; // update Control props value for display on re-rendering
+    node.data[key] = data;  // update stored node value
+    control.update && control.update();  // re-render control
 
-      // check type selection exist in data
-      if( typeof node.data["Type Selection"] === "string" ) {
+    // check type selection exist in data
+    if( typeof node.data["Type Selection"] === "string" ) {
 
-        // get selected type from data object
-        const selectedType: string = node.data["Type Selection"] as string;
+      // get selected type from data object
+      const selectedType: string = node.data["Type Selection"] as string;
 
-        // remove output if exist
-        if (node.outputs.has("Value")) {
-          const output = node.outputs.get("Value") as Output;
-          // remove connections from view
-          editor && output.connections.map(c => editor.removeConnection(c));
-          // remove output from node
-          node.removeOutput(output);
-        }
-
-        // check if new type has an associated socket
-        if ( sockets.has(selectedType) ) {
-
-          // get socket object
-          const socket = sockets.get(selectedType)?.socket as Socket;
-          
-          // create new output with socket mapped to selected type
-          node.addOutput(new Output("Value", selectedType + " Value", socket));
-
-        }
-        
-        node.update();  // update node
-        nodeUpdator();  // re-render node
-
-        // for each affected node update its connections
-        setTimeout(
-          () => editor?.view.updateConnections({node}),
-          10
-        );
+      // remove output if exist
+      if (node.outputs.has("Value")) {
+        const output = node.outputs.get("Value") as Output;
+        // remove connections from view
+        editor && output.connections.map(c => editor.removeConnection(c));
+        // remove output from node
+        node.removeOutput(output);
       }
-    }
 
-    return new Promise<void>(res => {
-      editor && node.addInput(new Input("parent", "Parent", parentSocket));
-      editor && includeKeyInput && node.addControl(new MyControls.ControlText(editor, "Dictionary Key", ""));
-      editor && node.addControl(new MyControls.ControlSelect(editor, "Type Selection", null, typeLabels, selectChange));
-      res();
-    });
+      // check if new type has an associated socket
+      if ( sockets.has(selectedType) ) {
+
+        // get socket object
+        const socket = sockets.get(selectedType)?.socket as Socket;
+        
+        // create new output with socket mapped to selected type
+        node.addOutput(new Output("Value", selectedType + " Value", socket));
+
+      }
+      
+      node.update();  // update node
+      nodeUpdator();  // re-render node
+
+      // for each affected node update its connections
+      setTimeout(
+        () => editor?.view.updateConnections({node}),
+        10
+      );
+    }
   }
+
+
 }
 
 
 // Dictionary Key component
-export class ComponentDictKey extends ComponentTypeSelect {
+export class ComponentDictKey extends ComponentBase {
   constructor() {	
       super('Dict Key', DisplayBase);
   }
 
   builder(node: Node): Promise<void> {
-    return this.selectBuilder(node, MySocket.dictKeySocket, true);
+    return new Promise<void>(res => {
+      this.editor && node
+        .addInput(new Input("parent", "Parent", MySocket.dictKeySocket))
+        .addControl(new MyControls.ControlText(
+          this.editor, "Dictionary Key", node.data["Dictionary Key"] ?? ""))
+        .addControl(new MyControls.ControlSelect(
+          this.editor, "Type Selection", node.data["Type Selection"], typeLabels(), selectChanger(this, node)));
+      res();
+    });
   }
 
   worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {}
@@ -217,13 +224,19 @@ export class ComponentList extends ComponentBase {
 
 
 // List item component
-export class ComponentListItem extends ComponentTypeSelect {
+export class ComponentListItem extends ComponentBase {
   constructor() {	
       super('List Item', DisplayBase);
   }
 
   builder(node: Node): Promise<void> {
-    return this.selectBuilder(node, MySocket.listItemSocket, false);
+    return new Promise<void>(res => {
+      this.editor && node
+        .addInput(new Input("parent", "Parent", MySocket.listItemSocket))
+        .addControl(new MyControls.ControlSelect(
+          this.editor, "Type Selection", node.data["Type Selection"], typeLabels(), selectChanger(this, node)));
+      res();
+    });
   }
 
   worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {}
@@ -232,7 +245,8 @@ export class ComponentListItem extends ComponentTypeSelect {
 
 // Dynamic component
 export interface VariableType {
-  type: string
+  type: string,
+  default?: any,
 }
 export class ComponentDynamic extends ComponentBase {
   socket: Socket
@@ -248,16 +262,32 @@ export class ComponentDynamic extends ComponentBase {
   builder(node: Node): Promise<void> {
     const editor: NodeEditor | null = this.editor;
     return new Promise<void>(res => {
-      editor && node.addInput(new Input("parent", "Parent", this.socket));
-      this.varSpec.forEach((spec, key) => {
-        if (!TypeList.includes(spec.type)) throw new Error(`type "${spec.type}" not recognised`);
-        if (!sockets.has(spec.type)) throw new Error (`type "${spec.type}" has no socket`);
-        node.addOutput(new Output(key, key, sockets.get(spec.type)?.socket as Socket));
-      })
+      if( editor ) {
+        node.addInput(new Input("parent", "Parent", this.socket));
+        this.varSpec.forEach((spec, key) => {
+          if (!TypeList.includes(spec.type)) throw new Error(`type "${spec.type}" not recognised`);
+          if (!sockets.has(spec.type)) throw new Error (`type "${spec.type}" has no socket`);
+          node.addOutput(new Output(key, key, sockets.get(spec.type)?.socket as Socket));
+
+          if( spec.type == "Text" ) {
+            let ctrl = new MyControls.ControlText(editor, key, node.data[key] ?? spec.default ?? "");
+            getOutputControls(node.addControl(ctrl)).set(key, ctrl);
+          } else if ( spec.type == "Number" ) {
+            let ctrl = new MyControls.ControlNumber(editor, key, node.data[key] ?? spec.default ?? null);
+            getOutputControls(node.addControl(ctrl)).set(key, ctrl);
+          } else if ( spec.type == "Boolean" ) {
+            let ctrl = new mycontrols.ControlBool(editor, key, node.data[key] ?? spec.default ?? null);
+            getOutputControls(node.addControl(ctrl)).set(key, ctrl);
+          }
+  
+        })
+      }
+
       res();
     });
   }
-  worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {}
+  worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {
+  }
 }
 
 

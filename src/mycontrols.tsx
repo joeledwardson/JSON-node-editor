@@ -1,7 +1,7 @@
 import React from "react";
 import { NodeEditor, Control } from "rete";
 import { Form } from 'react-bootstrap';
-import { ReteControlBase } from './rete-react';
+import { ReteControlBase } from './rete/rete-react';
 import { Button } from "react-bootstrap";
 import TextareaAutosize from 'react-textarea-autosize';
 import { CSSProperties } from 'react';
@@ -23,41 +23,33 @@ interface CtrlInputProps {
 
 // React component classes used in controls for entering data
 export class CtrlDisplayBase<T extends CtrlInputProps> extends React.Component<T> {
-  getInputType(): string {
-    return "";
-  }
-
   componentDidMount() {
     console.log(this.props);
     this.props.valueChanger(this.props.id, this.props.value);
   }
-
   onChange<Type extends HTMLTarget>(event: React.FormEvent<Type>) {
     this.props.valueChanger(this.props.id, event.currentTarget.value);
     this.props.emitter.trigger("process");
   }
-
   baseRenderKwargs() {
     return {
       style: this.props.style,
-      className: "input-group bold-input " + (this.props.className ?? ""),
+      className: "control-input input-group " + (this.props.className ?? ""),
       value: this.props.value,
       onChange: <Type extends HTMLTarget>(e: React.FormEvent<Type>) => this.onChange(e)
     }
   }
+}
 
+export class CtrlDisplayNumber extends CtrlDisplayBase<CtrlInputProps> {
   render() {
     return (
       <input 
-        type={this.getInputType()} 
+        type="number" 
         {...this.baseRenderKwargs()}
       />
     );
   }
-}
-
-export class CtrlDisplayNumber extends CtrlDisplayBase<CtrlInputProps> {
-  getInputType = () => "number";
 }
 
 export class CtrlDisplayText extends CtrlDisplayBase<CtrlInputProps> {
@@ -77,13 +69,10 @@ export class CtrlDisplayBool extends CtrlDisplayBase<CtrlInputProps> {
   render() {
     return (
       <select
-        className="form-select bold-input"
+        {...this.baseRenderKwargs()}
         aria-label="Boolean Input" 
-        onChange={(e) => this.onChange<HTMLSelectElement>(e)}
-        value={this.props.value}
-        style={{fontWeight: "bold", fontSize: "large"}}
       >
-        <option>Select a value</option>
+        <option></option>
         <option className="bold-input" value={1} >True</option>
         <option className="bold-input" value={0} >False</option>
       </select>

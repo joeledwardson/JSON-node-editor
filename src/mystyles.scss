@@ -1,21 +1,77 @@
-.Dictionary Key Socket {
-    background: green;
-}
+@import "bootstrap";
 
-.node {
-    width: 4rem;
-}
+// .node {
+//     width: 4rem;
+// }
 
-.hidden-node-item {
-    visibility: hidden;
-}
+// .hidden-node-item {
+//     visibility: hidden;
+// }
 
 
-.node:hover * {
-    visibility: visible;
-}
+// .node:hover * {
+//     visibility: visible;
+// }
 
 .bold-input {
     font-size: large;
     font-weight: bold;
+}
+
+.output {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    min-height: 2rem;
+}
+
+.output-item-controls {
+    display: flex;
+    align-items: center;
+
+    // add right margin between inputs
+    > div, button, textarea {
+        @extend .me-1;
+    }
+
+    > :first-child {
+        @extend .ms-3;
+    }
+
+    .output-item-arrows {
+        display: flex;
+        flex-direction: column; 
+
+        button {
+            padding: 0.1rem 0.3rem;
+            opacity: 0.5
+        }
+    }
+
+    // set arrow fontawesome svgs to block so they do not take up extra height
+    .output-item-arrows svg {
+        display: block;
+    }
+
+    // make buttons small
+    .btn {
+        padding: 0.5rem 0.2rem;
+    }
+
+    // remove padding from dictionary key input
+    .control {
+        padding: 0;
+    }
+}
+
+
+
+.control-input {
+    @extend .bold-input;
+    width: 10rem !important;
+}
+
+.dict-key-input {
+    @extend .bold-input;
+    width: 6rem !important;
 }

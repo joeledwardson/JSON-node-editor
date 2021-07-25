@@ -16,10 +16,13 @@ export class ReteControlBase extends Control {
 }
   
 
+interface DataObject {
+    component?: typeof React.Component
+}
 export abstract class ComponentBase extends Rete.Component {
     update?: () => Promise<void>; // update() is declared at load time by rete react render plugin implementation
     render?: "react";
-    data: {component?: typeof React.Component}; // "data" property passed to renderer, which if it has "component" is used for component rendering
+    data: DataObject; // "data" property passed to renderer, which if it has "component" is used for component rendering
     constructor(name: string, component?: typeof React.Component) {
         super(name);
         this.data = {
