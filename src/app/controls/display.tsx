@@ -13,7 +13,8 @@ export interface InputProps {
     value: any;
     valueChanger: (data: unknown) => void;
     style?: CSSProperties;
-    className?: string
+    className?: string;
+    componentDidMount?: () => void;
 };
 
 /** value & label pairs displayed in select options */
@@ -35,7 +36,7 @@ export interface ButtonProps extends InputProps {
 
 /** base class for display controls - sends value update on mount and provides function base base kwagrs to pass to JSX element in render */
 export class InputBase<T extends InputProps, S={}> extends React.Component<T, S> {
-  componentDidMount = () => this.props.valueChanger(this.props.value);  // on mount, update node with props value (needed?)
+  componentDidMount = () => this.props.componentDidMount ? this.props.componentDidMount() : this.props.valueChanger(this.props.value);  // on mount, update node with props value (needed?)
   
   baseRenderKwargs() {
     return {
@@ -99,9 +100,6 @@ export class InputSelect extends InputBase<SelectProps> {
       <Form.Select 
         aria-label="Select"
         {...this.baseRenderKwargs()} 
-        // onChange={(e) => this.onChange<HTMLSelectElement>(e)}
-        // value={this.props.value ?? ""}
-        // className={this.props.className}
       >
         {this.props.options.map(opt =>
             <option 
@@ -124,7 +122,7 @@ export class InputButton extends InputBase<ButtonProps, {clickCount: number}> {
     }
   }
 
-  componentDidMount = () => this.props.valueChanger(this.state.clickCount);  
+  componentDidMount = () => this.props.componentDidMount && this.props.componentDidMount()  // dont need to set value on component loaded
   
   onClick() {
     this.setState((state) => ({clickCount: state.clickCount + 1}));

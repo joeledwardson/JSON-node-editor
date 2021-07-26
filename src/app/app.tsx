@@ -105,19 +105,23 @@ export async function createEditor(container: HTMLElement) {
   // editorConnect("num", "num1");
   // editorConnect("num", "num2");
 
-  // editor.on(
-  //   ["process", "nodecreated", "noderemoved", "connectioncreated", "connectionremoved"],
-  //   async () => {
-  //     console.log("process");
-  //     await engine.abort();
-  //     await engine.process(editor.toJSON());
-  //   }
-  // );
+  editor.on(
+    ["process", "nodecreated", "noderemoved", "connectioncreated", "connectionremoved"],
+    async () => {
+      console.log("process");
+      await engine.abort();
+      await engine.process(editor.toJSON());
+    }
+  );
 
   // on connection added
   editor.on(["connectionremove", "connectionremoved", "connectioncreated"], async(connection: Rete.Connection) => 
     setTimeout(
-      () => [connection.input.node, connection.output.node].forEach(node => node && editor?.view.updateConnections({node})),
+      async () => {
+        console.log("connection processing");
+        await engine.abort();
+        [connection.input.node, connection.output.node].forEach(node => node && editor?.view.updateConnections({node}));
+      },
       10
     )
   );

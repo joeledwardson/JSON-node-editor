@@ -13,77 +13,52 @@ export function controlValueChange(ctrl: ReteControlBase, emitter: NodeEditor, k
   emitter.trigger('process');  // trigger process so that connected nodes update
 }
 
-abstract class ControlTemplate extends ReteControlBase {
-  props: Display.InputProps
-  constructor(
-    emitter: NodeEditor, 
-    key: string, 
-    value: any, 
-    valueChanger?: ValueChanger, 
-    style?: CSSProperties, 
-    className?: string
-  ) {
-    super(key)
-    this.props = {
-      value, style, className, 
-      valueChanger: valueChanger ? data => valueChanger(this, emitter, key, data) : data => controlValueChange(this, emitter, key, data)
-    }
+export interface ControlPropsBase {
+  key: string;
+  emitter: NodeEditor;
+  value: any;
+  valueChanger?: ValueChanger;
+  style?: CSSProperties;
+  className?: string;
+  componentDidMount?: () => void;
+}
+export interface ControlPropsSelect extends ControlPropsBase {
+  options: Array<Display.OptionLabel>,
+}
+export interface ControlPropsButton extends ControlPropsBase {
+  buttonInner: string | JSX.Element
+}
+
+
+export abstract class ControlTemplate<T extends ControlPropsBase> extends ReteControlBase {
+  props: T
+  constructor(p: T) {
+    super(p.key)
+    let vc = p.valueChanger;
+    p.valueChanger = vc ? data => vc && vc(this, p.emitter, p.key, data) : data => controlValueChange(this, p.emitter, p.key, data);
+    this.props = p;
   }
 }
 
-export class ControlNumber extends ControlTemplate {
+export class ControlNumber extends ControlTemplate<ControlPropsBase> {
   component = Display.InputNumber
 }
 
-export class ControlText extends ControlTemplate {
+export class ControlText extends ControlTemplate<ControlPropsBase> {
   component = Display.InputText
 }
 
-export class ControlBool extends ControlTemplate {
+export class ControlBool extends ControlTemplate<ControlPropsBase> {
   component = Display.InputBool
 }
 
-export class ControlSelect extends ReteControlBase {
+export class ControlSelect extends ControlTemplate<ControlPropsSelect> {
   component = Display.InputSelect
-  props: Display.SelectProps
-  constructor(
-    emitter: NodeEditor, 
-    key: string, 
-    value: any, 
-    options: Array<Display.OptionLabel>,
-    valueChanger?: ValueChanger, 
-    style?: CSSProperties, 
-    className?: string
-  ) {
-    super(key);
-    this.props = {
-      options, value, style, className, 
-      valueChanger: valueChanger ? data => valueChanger(this, emitter, key, data) : data => controlValueChange(this, emitter, key, data)
-    }
-  }
-
 }
 
 // rete control class for holding a button object
-export class ControlButton extends ReteControlBase {
+export class ControlButton extends ControlTemplate<ControlPropsButton> {
   component = Display.InputButton
-  props: Display.ButtonProps;
-  constructor(
-    emitter: NodeEditor, 
-    key: string, 
-    buttonInner: string | JSX.Element, 
-    valueChanger?: ValueChanger, 
-    style?: CSSProperties, 
-    className?: string
-  ) {
-      super(key);
-      this.props = {
-        buttonInner,
-        value: null, 
-        style, className, 
-        valueChanger: valueChanger ? data => valueChanger(this, emitter, key, data) : data => controlValueChange(this, emitter, key, data)
-      }
-  }
 }
 
 

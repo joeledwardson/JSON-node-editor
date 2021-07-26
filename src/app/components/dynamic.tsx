@@ -45,15 +45,15 @@ export class ComponentDynamic extends ComponentBase {
           node.addOutput(new Rete.Output(key, key, sockets.get(spec.type)?.socket as Rete.Socket));
 
           if (spec.type === "Text") {
-            let ctrl = new MyControls.ControlText(editor, key, node.data[key] ?? spec.default ?? "");
+            let ctrl = new MyControls.ControlText({emitter: editor, key, value: node.data[key] ?? spec.default ?? ""});
             getOutputControls(node.addControl(ctrl)).set(key, ctrl);
 
           } else if (spec.type === "Number") {
-            let ctrl = new MyControls.ControlNumber(editor, key, node.data[key] ?? spec.default ?? null);
+            let ctrl = new MyControls.ControlNumber({emitter: editor, key, value: node.data[key] ?? spec.default ?? null});
             getOutputControls(node.addControl(ctrl)).set(key, ctrl);
 
           } else if (spec.type === "Boolean") {
-            let ctrl = new MyControls.ControlBool(editor, key, node.data[key] ?? spec.default ?? null);
+            let ctrl = new MyControls.ControlBool({emitter: editor, key, value: node.data[key] ?? spec.default ?? null});
             getOutputControls(node.addControl(ctrl)).set(key, ctrl);
 
           }
