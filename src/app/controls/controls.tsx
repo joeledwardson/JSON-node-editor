@@ -1,15 +1,21 @@
 import { NodeEditor } from "rete";
 import { ControlBase as ReteControlBase } from "../../rete/control";
+import { cGetData } from "./data";
 import { CSSProperties } from 'react';
 import * as Display from './display';
 
 
 /** function to update control value passed into react component itself */
 type ValueChanger = (ctrl: ReteControlBase, emitter: NodeEditor, key: string, data: any) => void;
-export function controlValueChange(ctrl: ReteControlBase, emitter: NodeEditor, key: string, data: any): void {
+
+export function ctrlValChange(ctrl: ReteControlBase, emitter: NodeEditor, key: string, data: any): void {
   ctrl.props.value = data;  // update props value used to update control value when re-rendering
-  ctrl.putData(key, data);  //  put into node data objects for connections
+  cGetData(ctrl)[key] = data;  //  put into node data objects for connections
   ctrl.update && ctrl.update();  // re-render
+}
+
+export function ctrlValProcess(ctrl: ReteControlBase, emitter: NodeEditor, key: string, data: any): void {
+  ctrlValChange(ctrl, emitter, key, data);
   emitter.trigger('process');  // trigger process so that connected nodes update
 }
 
@@ -35,7 +41,7 @@ export abstract class ControlTemplate<T extends ControlPropsBase> extends ReteCo
   constructor(p: T) {
     super(p.key)
     let vc = p.valueChanger;
-    p.valueChanger = vc ? data => vc && vc(this, p.emitter, p.key, data) : data => controlValueChange(this, p.emitter, p.key, data);
+    p.valueChanger = vc ? data => vc && vc(this, p.emitter, p.key, data) : data => ctrlValProcess(this, p.emitter, p.key, data);
     this.props = p;
   }
 }

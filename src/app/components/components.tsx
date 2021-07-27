@@ -4,10 +4,11 @@ import { ControlBase } from "../../rete/control";
 import MySocket, { sockets } from "../sockets/sockets";
 import { OptionLabel } from "../controls/display";
 import * as Controls from  "../controls/controls";
+import { cGetData, nGetData, getInitial } from "../controls/data";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
 import { DisplayBase, DisplayListBase, ListAction } from "./display";
 import { v4 as uuidv4 } from 'uuid';
-import { getOutputControls } from "./outputcontrols";
+import { getOutputControls } from "./data";
 
 /** list of available types */
 export let TypeList: Array<string> = [
@@ -34,47 +35,36 @@ function typeLabels(): Array<OptionLabel> {
 function selectChanger(comp: ComponentBase, node: Rete.Node, ctrl: ControlBase, emitter: Rete.NodeEditor, key: string, data: any): void {
   const editor: Rete.NodeEditor | null = comp.editor;
   const nodeUpdator = () => comp.update && comp.update();
-  ctrl.props.value = data; // update Control props value for display on re-rendering
-  node.data[key] = data;  // update stored node value
+
+  const selectedType: string = typeof data === "string" ? String(data) : ""; // get type selection, use blank if null/undefined
+  ctrl.props.value = selectedType; // update Control props value for display on re-rendering
+  cGetData(ctrl)[key] = selectedType;  // update stored node value
   ctrl.update && ctrl.update();  // re-render control
 
-  // check type selection exist in data
-  if( typeof node.data["Type Selection"] === "string" ) {
+  // remove output if exist
+  let output = node.outputs.get("Value");
+  if (output) {
+    // remove connections from view
+    editor && output.connections.map(c => editor.removeConnection(c));
 
-    // get selected type from data object
-    const selectedType: string = node.data["Type Selection"] as string;
-
-    // remove output if exist
-    if (node.outputs.has("Value")) {
-      const output = node.outputs.get("Value") as Rete.Output;
-
-      // remove connections from view
-      editor && output.connections.map(c => editor.removeConnection(c));
-
-      // remove output from node
-      node.removeOutput(output);
-    }
-
-    // check if new type has an associated socket
-    if ( sockets.has(selectedType) ) {
-
-      // get socket object
-      const socket = sockets.get(selectedType)?.socket as Rete.Socket;
-      
-      // create new output with socket mapped to selected type
-      node.addOutput(new Rete.Output("Value", selectedType + " Value", socket));
-
-    }
-    
-    node.update();  // update node
-    nodeUpdator();  // re-render node
-
-    // for each affected node update its connections
-    setTimeout(
-      () => editor?.view.updateConnections({node}),
-      10
-    );
+    // remove output from node
+    node.removeOutput(output);
   }
+
+  // check if new type has an associated socket
+  let socket = sockets.get(selectedType)?.socket;
+  // create new output with socket mapped to selected type
+  if (socket) node.addOutput(new Rete.Output("Value", selectedType + " Value", socket));  
+  
+  node.update();  // update node
+  nodeUpdator();  // re-render node
+
+  // for each affected node update its connections
+  setTimeout(
+    () => editor?.view.updateConnections({node}),
+    10
+  );
+  
 }
 
 
@@ -109,7 +99,7 @@ export async function listOutputAction(
       if( addControl ) {
         const newControl: Rete.Control = new Controls.ControlText({key: newKey, emitter: editor, value: ""}); // create new control for output
         node.addControl(newControl); // add control to node
-        getOutputControls(node).set(newKey, newControl);  // add new control to output control mappings
+        getOutputControls(node)[newKey] = newControl.key;  // add new control to output control mappings
       }
 
     } else if (action === "remove") {
@@ -120,10 +110,10 @@ export async function listOutputAction(
         const output = lst[idx];
 
         // remove mapped output control (if exist)
-        let ctrl = getOutputControls(node).get(output.key);
+        let ctrl = node.controls.get(getOutputControls(node)[output.key]);
         if( ctrl !== undefined ) {
           node.removeControl(ctrl);
-          getOutputControls(node).delete(output.key);
+          delete getOutputControls(node)[output.key];
         }
 
         // register each node which has an input connected to the output being deleted
@@ -207,7 +197,11 @@ export class ComponentNum extends ComponentBase {
     return new Promise(resolve => {
       this.editor && node
         .addInput(new Rete.Input("parent", "Parent", MySocket.numberSocket))
-        .addControl(new Controls.ControlNumber({emitter: this.editor, key: "Number Input", value: node.data["Number Input"] ?? 0}))
+        .addControl(new Controls.ControlNumber({
+          emitter: this.editor, 
+          key: "Number Input", 
+          value: getInitial(node, "Number Input", 0)
+        }))
       resolve();
     });
   }
@@ -228,7 +222,11 @@ export class ComponentText extends ComponentBase {
     return new Promise(resolve => {
       this.editor && node
         .addInput(new Rete.Input("parent", "Parent", MySocket.stringSocket))
-        .addControl(new Controls.ControlText({emitter: this.editor, key: "Text Input", value: node.data["Text Input"] ?? ""}))
+        .addControl(new Controls.ControlText({
+          emitter: this.editor, 
+          key: "Text Input", 
+          value: getInitial(node, "Text Input", "")
+        }))
       resolve();
     });
   }
@@ -249,7 +247,11 @@ export class ComponentBool extends ComponentBase {
     return new Promise(resolve => {
       this.editor && node
         .addInput(new Rete.Input("parent", "Parent", MySocket.boolSocket))
-        .addControl(new Controls.ControlBool({emitter: this.editor, key: "Boolean Input", value: node.data["Boolean Input"] ?? ""}))
+        .addControl(new Controls.ControlBool({
+          emitter: this.editor, 
+          key: "Boolean Input", 
+          value: getInitial(node, "Boolean Input", "")
+        }))
       resolve();
     });
   }
@@ -294,55 +296,76 @@ export class ComponentDict extends ComponentBase {
 
   typeSelection(node: Rete.Node, ctrl: ControlBase, emitter: Rete.NodeEditor, key: string, data: any) {
     const selectedType: string = (data && typeof data === "string") ? data : "";
-    node.meta.currentTypeSelection = selectedType;
+    Controls.ctrlValChange(ctrl, emitter, key, selectedType);
     
-    let socket = sockets.get("Any")?.socket;
-    let selectedSocket = sockets.get(selectedType)?.socket;
-    if ( selectedSocket ) socket = selectedSocket;
+    let socket = (sockets.get(selectedType)?.socket ?? sockets.get("Any")?.socket) as Rete.Socket;
+    if ( !( socket instanceof Rete.Socket ) ) {
+      throw new Error("couldnt find 'Any' or selected socket");
+    }
+
+    // get control data and output->control mappings
+    let ctrlData = nGetData(node);
+    let outputCtrls = getOutputControls(node);
     
-    let keys: Array<string> = Array.from(node.outputs.keys());
-    keys.forEach(k => {
+    // get output keys and iterate over to produce new outputs
+    // (dont iterate over node.outputs itself or adding new items will cause infinite loop)
+    let oKeys: Array<string> = Array.from(node.outputs.keys());
+    oKeys.map(k => {
+      
+      // get output object, track inputs connected to output 
       let output = node.outputs.get(k);
-      const conns = new Array<Rete.Connection>();
-      let newDictKey = "";
-      if( output ) {
-        let ctrl = node.controls.get(output.key);
-        if( ctrl && node.data[output.key]) {
-          newDictKey = String(node.data[output.key]);
-          delete node.data[output.key];
-        }
-        getOutputControls(node).delete(output.key);        
-        ctrl && node.removeControl(ctrl);
-        output.connections.map(c => conns.push(c));
-        output.connections.map(c => emitter.removeConnection(c));
+      const conns: Array<Rete.Input> = new Array<Rete.Input>();
+      
+      if(output) {
+        // remove output connections, and register connected inputs
+        output.connections.forEach(c => {
+          conns.push(c.input);
+          emitter.removeConnection(c);
+        });  
+        // remove output from node
         node.removeOutput(output);
       }
-      if( socket ) {
-        let newKey = uuidv4();
-        const newOutput = new Rete.Output(newKey, newKey, socket); // create new output with unique key
-        const newControl = new Controls.ControlText({
-          key: newKey, 
-          emitter, 
-          value: newDictKey,
-          componentDidMount: () => {
-            conns.forEach(c => {
-              if( newOutput.socket?.compatibleWith(c.input.socket) ) {
-                emitter.connect(newOutput, c.input);
-              }
-            });
-          } 
-        }); // create new control for output
-        node.addControl(newControl); // add control to node
-        node.data[newKey] = newDictKey;
-        getOutputControls(node).set(newKey, newControl);  // add new control to output control mappings
-        node.addOutput(newOutput);
 
-      } else {
-        throw new Error('socket for output doesnt exist!');
-      }
+      // remove output control  
+      let ctrl = node.controls.get(k);
+      ctrl && node.removeControl(ctrl);  
+      
+      // get new dictionary key from current control or use blank
+      let newDictKey: string = ctrlData[k] ?? ""; 
+      
+      // delete data from current control and remove output->control mapping
+      delete ctrlData[k];  
+      delete outputCtrls[k];   
+
+      // create new output/control key
+      let newKey = uuidv4();  
+
+      // create new output with unique key
+      const newOutput = new Rete.Output(newKey, newKey, socket); 
+
+      // create new control and if compatible output connections will be added after first render
+      // rete has to register sockets in display which happens at rendering - thus use component mount after render to add connections
+      const newControl = new Controls.ControlText({
+        key: newKey, 
+        emitter, 
+        value: newDictKey,
+        componentDidMount: () => conns.forEach(input => {
+          if( newOutput.socket?.compatibleWith(input.socket) ) {
+            emitter.connect(newOutput, input);
+          }
+        })
+      })
+      
+      // set new dictionary key in control data, and set output mapping to control
+      ctrlData[newKey] = newDictKey;
+      outputCtrls[newKey] = newControl.key;
+      
+      // add output and control to node
+      node.addOutput(newOutput)
+      node.addControl(newControl);
     })
-    
-    Controls.controlValueChange(ctrl, emitter, key, selectedType);
+
+    // update node and trigger re-render of connections
     node.update();
     setTimeout(() => 
       emitter.view.updateConnections({node}),
@@ -366,10 +389,21 @@ export class ComponentDict extends ComponentBase {
         .addControl(new Controls.ControlSelect({
           emitter: editor, 
           key: "Select Type", 
-          value: node.data["Select Type"] ?? "", 
+          value: getInitial(node, "Select Type", "Any"), 
           options: typeLabels(), 
           valueChanger: (ctrl: ControlBase, emitter: Rete.NodeEditor, key: string, data: any) => this.typeSelection(node, ctrl, emitter, key, data)
-        }))
+        }));
+      let outputCtrls = getOutputControls(node);
+      let ctrlData = nGetData(node);
+      Object.keys(outputCtrls).forEach(k => {
+        let socket = (sockets.get(ctrlData["Select Type"])?.socket ?? sockets.get("Any")?.socket) as Rete.Socket;
+        node.addOutput(new Rete.Output(k, k, socket));
+        editor && node.addControl(new Controls.ControlText({
+          key: k,
+          emitter: editor,
+          value: ctrlData[k]
+        }));
+      })
       res();
     });
   }
@@ -392,12 +426,12 @@ export class ComponentDictKey extends ComponentBase {
         .addControl(new Controls.ControlText({
           emitter: this.editor, 
           key: "Dictionary Key", 
-          value: node.data["Dictionary Key"] ?? ""
+          value: getInitial(node, "Dictionary Key", ""), 
         }))
         .addControl(new Controls.ControlSelect({
           emitter: this.editor, 
           key: "Type Selection", 
-          value: node.data["Type Selection"], 
+          value: getInitial(node, "Type Selection", ""), 
           options: typeLabels(), 
           valueChanger: (ctrl: ControlBase, emitter: Rete.NodeEditor, key: string, data: any) => selectChanger(this, node, ctrl, emitter, key, data)
         }));
@@ -455,7 +489,7 @@ export class ComponentListItem extends ComponentBase {
         .addControl(new Controls.ControlSelect({
           emitter: this.editor, 
           key: "Type Selection", 
-          value: node.data["Type Selection"], 
+          value: getInitial(node, "Type Selection", ""),
           options: typeLabels(),
           valueChanger: (ctrl: ControlBase, emitter: Rete.NodeEditor, key: string, data: any) => selectChanger(this, node, ctrl, emitter, key, data)
         }));

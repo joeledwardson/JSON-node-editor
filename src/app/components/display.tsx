@@ -7,7 +7,7 @@ import { faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "react-bootstrap";
 import { StylableSocket } from "../sockets/display";
 import MySocket, { sockets } from "../sockets/sockets";
-import { getOutputControls } from "./outputcontrols";
+import { getOutputControls } from "./data";
 
 
 export type ListAction = "add" | "remove" | "moveUp" | "moveDown";
@@ -22,11 +22,12 @@ export class DisplayBase extends ReactRete.Node {
   }
 
   getOutput(output: Rete.Output, index: number): JSX.Element {
+    let ctrl = this.props.node.controls.get(getOutputControls(this.props.node)[output.key]);
     return <div className="output" key={output.key}>
-      {!output.hasConnection() && getOutputControls(this.props.node).has(output.key) && <ReactRete.Control	
+      {!output.hasConnection() && ctrl && <ReactRete.Control	
         className="control"
         key={output.key}
-        control={getOutputControls(this.props.node).get(output.key) as Rete.Control}
+        control={ctrl}
         innerRef={this.props.bindControl}
         />
       }
@@ -83,7 +84,7 @@ export class DisplayBase extends ReactRete.Node {
         {outputs.map((output, index) =>  this.getOutput(output, index))}
         {/* Controls (check not mapped to output) */}
         <div className="controls-container" >
-        {controls.map((control, index) => !getOutputControls(this.props.node).has(control.key) && this.getControl(control, index))}
+        {controls.map((control, index) => !getOutputControls(this.props.node)[control.key] && this.getControl(control, index))}
         </div>        
         {/* Inputs */}
         {inputs.map((input, index) => this.getInput(input, index))}
@@ -96,6 +97,7 @@ export class DisplayBase extends ReactRete.Node {
 export abstract class DisplayListBase extends DisplayBase {
   abstract action: ListActionFunction
   getOutput(output: Rete.Output, index: number): JSX.Element {
+    let ctrl = this.props.node.controls.get(getOutputControls(this.props.node)[output.key]);
     return <div className="output" key={output.key}>
       <div className="output-title hidden-node-item">
         <div className="output-item-controls">
@@ -118,11 +120,11 @@ export abstract class DisplayListBase extends DisplayBase {
             <FontAwesomeIcon icon={faTrash} />
           </Button>
           {/* <span style={{width: "2rem"}} className="ms-2">#{output.key.slice(0, 3)}</span> */}
-          {getOutputControls(this.props.node).has(output.key) &&
+          {ctrl &&
           <ReactRete.Control	
             className="control"
             key={output.key}
-            control={getOutputControls(this.props.node).get(output.key) as Rete.Control}
+            control={ctrl}
             innerRef={this.props.bindControl}
           />
           }

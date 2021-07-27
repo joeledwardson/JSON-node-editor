@@ -4,8 +4,9 @@ import { sockets } from "../sockets/sockets";
 import * as MyControls from "../controls/controls";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
 import { DisplayBase } from "./display";
-import { getOutputControls } from "./outputcontrols";
+import { getOutputControls } from "./data";
 import {  TypeList } from "./components";
+import { getInitial } from '../controls/data';
 
 
 /** Variable spec */
@@ -42,19 +43,36 @@ export class ComponentDynamic extends ComponentBase {
             throw new Error(`type "${spec.type}" not recognised`);
           if (!sockets.has(spec.type))
             throw new Error(`type "${spec.type}" has no socket`);
+
           node.addOutput(new Rete.Output(key, key, sockets.get(spec.type)?.socket as Rete.Socket));
+          let outputCtrls = getOutputControls(node);
 
           if (spec.type === "Text") {
-            let ctrl = new MyControls.ControlText({emitter: editor, key, value: node.data[key] ?? spec.default ?? ""});
-            getOutputControls(node.addControl(ctrl)).set(key, ctrl);
+            let ctrl = new MyControls.ControlText({
+              emitter: editor, 
+              key, 
+              value: getInitial(node, key, spec.default ?? "")
+            });
+            node.addControl(ctrl);
+            outputCtrls[key] = ctrl.key;
 
           } else if (spec.type === "Number") {
-            let ctrl = new MyControls.ControlNumber({emitter: editor, key, value: node.data[key] ?? spec.default ?? null});
-            getOutputControls(node.addControl(ctrl)).set(key, ctrl);
+            let ctrl = new MyControls.ControlNumber({
+              emitter: editor, 
+              key, 
+              value: getInitial(node, key, spec.default ?? null)
+            });
+            node.addControl(ctrl);
+            outputCtrls[key] = ctrl.key;
 
           } else if (spec.type === "Boolean") {
-            let ctrl = new MyControls.ControlBool({emitter: editor, key, value: node.data[key] ?? spec.default ?? null});
-            getOutputControls(node.addControl(ctrl)).set(key, ctrl);
+            let ctrl = new MyControls.ControlBool({
+              emitter: editor, 
+              key, 
+              value: getInitial(node, key, spec.default ?? null)
+            });
+            node.addControl(ctrl);
+            outputCtrls[key] = ctrl.key;
 
           }
 
