@@ -1,5 +1,5 @@
 import * as Rete from "rete";
-import { addSocket, sockets } from "./sockets/sockets";
+import MySocket, { sockets, addSocket } from "./sockets/sockets";
 import MyComponents from "./components/components";
 import { ComponentDynamic, VariableType, addType } from './components/dynamic';
 
@@ -45,8 +45,7 @@ export async function createEditor(container: HTMLElement) {
     addSocket(key);
     addType(key);
   });
-  const theAnySocket = addSocket("Any").socket;
-  sockets.forEach(s => theAnySocket.combineWith(s.socket));
+  sockets.forEach(s => MySocket.anySocket.combineWith(s.socket));
   
 
   var components = [

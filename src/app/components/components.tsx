@@ -8,7 +8,7 @@ import { cGetData, nGetData, getInitial } from "../controls/data";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
 import { DisplayBase, DisplayListBase, ListAction } from "./display";
 import { v4 as uuidv4 } from 'uuid';
-import { getOutputControls } from "./data";
+import { getOutputControls, setOutputControls } from "./data";
 
 /** list of available types */
 export let TypeList: Array<string> = [
@@ -67,6 +67,10 @@ function selectChanger(comp: ComponentBase, node: Rete.Node, ctrl: ControlBase, 
   
 }
 
+function getSocket(s: any): Rete.Socket {
+  let socket = s && sockets.get(s)?.socket;
+  return socket ?? MySocket.anySocket;
+}
 
 /** perform an action on a dynamic list output */
 export async function listOutputAction(
@@ -76,44 +80,63 @@ export async function listOutputAction(
   action: ListAction,
   addControl: boolean
 ): Promise<void> {
-  return new Promise((res, rej) => {
-    console.log("output key " + idx + " processing, action: " + action);
+  return new Promise((res, rej) => { 
+    // get controls data and output->controls map
+    let ctrlData = nGetData(node);
+    let ctrlsMap = getOutputControls(node);
 
     // get existing outputs into list format
     let lst: Array<Rete.Output> = Array.from(node.outputs.values());
+    
+    // create list of nodes that have a connection to the output to be updated
+    let nds: Set<Rete.Node> = new Set<Rete.Node>([node]);
+    
+    // get selected type from type selection control
+    const selectedType = ctrlData["Select Type"];
+    let socket = sockets.get(selectedType)?.socket;
+    
+    // info logging
+    console.log("output key " + idx + " processing, action: " + action);
     console.log(`found ${lst.length} existing outputs`);
 
-    // nodes that have a connection to the output that will need to be updated
-    let nds: Set<Rete.Node> = new Set<Rete.Node>([node]);
+    if (!(socket instanceof Rete.Socket)) {
+      return rej(`couldnt find type socket type "${selectedType}"`);
+    }    
 
     if (action === "add") {
-
-      const newIndex: number = idx + 1; // index in output list for new output follows output pressed
-      const newKey: string = uuidv4(); // generate unique string for key
-
-      const selectedType = node.meta.currentTypeSelection as string | undefined;
-      const SocketType: Rete.Socket = (selectedType && sockets.has(selectedType)) ? sockets.get(selectedType)?.socket as Rete.Socket : sockets.get("Any")?.socket as Rete.Socket;
-      const newOutput: Rete.Output = new Rete.Output(newKey, newKey, SocketType); // create new output with unique key
-      lst.splice(newIndex, 0, newOutput);  // insert new output into list
+      // index in output list for new output follows output pressed
+      const newIndex: number = idx + 1;
+      // generate unique string for key 
+      const newKey: string = uuidv4(); 
+      
+      // insert new output into list
+      socket && lst.splice(newIndex, 0, new Rete.Output(newKey, newKey, socket));  
       
       if( addControl ) {
-        const newControl: Rete.Control = new Controls.ControlText({key: newKey, emitter: editor, value: ""}); // create new control for output
-        node.addControl(newControl); // add control to node
-        getOutputControls(node)[newKey] = newControl.key;  // add new control to output control mappings
+        // create new control for output with blank value
+        const ctrlKey = uuidv4();
+        const newControl: Rete.Control = new Controls.ControlText({
+          key: ctrlKey, 
+          emitter: editor, 
+          value: ""
+        }); 
+        // add control to node
+        node.addControl(newControl); 
+        // add new control to output control mappings
+        ctrlsMap[newKey] = newControl.key;  
       }
 
     } else if (action === "remove") {
       
       if (idx >= 0 && idx < lst.length) {
-
         // get output using its index
         const output = lst[idx];
 
         // remove mapped output control (if exist)
-        let ctrl = node.controls.get(getOutputControls(node)[output.key]);
-        if( ctrl !== undefined ) {
+        let ctrl = node.controls.get(ctrlsMap[output.key]);
+        if( ctrl instanceof Rete.Control ) {
           node.removeControl(ctrl);
-          delete getOutputControls(node)[output.key];
+          delete ctrlsMap[ctrl.key];
         }
 
         // register each node which has an input connected to the output being deleted
@@ -137,7 +160,6 @@ export async function listOutputAction(
     } else if (action === "moveUp") {
 
       if( idx > 0 && idx < lst.length ) {
-
         // pop element out and move "up" (up on screen, down in list index)
         const output = lst[idx];
         lst.splice(idx, 1);
@@ -150,7 +172,6 @@ export async function listOutputAction(
     } else if (action === "moveDown") {
 
       if( idx >= 0 && (idx + 1) < lst.length ) {
-        
         // pop element out and move "down" (down on screen, up in list index)
         // remove next element and insert behind 
         const nextOutput = lst[idx + 1];
@@ -166,11 +187,21 @@ export async function listOutputAction(
     // clear map of stored outputs
     node.outputs.clear();
 
-    // re-add outputs to node from modified list (connections will remain intact)
-    lst.map((o: Rete.Output, i: number) => {
-      o.node = null; // clear node so can be re-added by addOutput() function without triggering error
-      node.addOutput(o)
+    // re-add outputs to node from modified list (connections will remain intact) and create new re-ordered output->ctrl mappings object
+    let newMap: {[key: string]: string} = {}
+    lst.map(o => {
+      // clear node so can be re-added by addOutput() function without triggering error
+      o.node = null; 
+      // re-add output
+      node.addOutput(o);
+      // if control exists re-add to new output mappings
+      if( ctrlsMap[o.key] ) {
+        newMap[o.key] = ctrlsMap[o.key];
+      }
     });
+
+    // update output-ctrl mappings
+    setOutputControls(node, newMap);
 
     // update node
     node.update();
@@ -327,11 +358,11 @@ export class ComponentDict extends ComponentBase {
       }
 
       // remove output control  
-      let ctrl = node.controls.get(k);
+      let ctrl = node.controls.get(outputCtrls[k]);
       ctrl && node.removeControl(ctrl);  
       
       // get new dictionary key from current control or use blank
-      let newDictKey: string = ctrlData[k] ?? ""; 
+      let newDictKey: string = (ctrl && ctrlData[ctrl?.key]) ?? ""; 
       
       // delete data from current control and remove output->control mapping
       delete ctrlData[k];  
@@ -345,8 +376,9 @@ export class ComponentDict extends ComponentBase {
 
       // create new control and if compatible output connections will be added after first render
       // rete has to register sockets in display which happens at rendering - thus use component mount after render to add connections
+      const ctrlKey = uuidv4();
       const newControl = new Controls.ControlText({
-        key: newKey, 
+        key: ctrlKey, 
         emitter, 
         value: newDictKey,
         componentDidMount: () => conns.forEach(input => {
@@ -357,7 +389,7 @@ export class ComponentDict extends ComponentBase {
       })
       
       // set new dictionary key in control data, and set output mapping to control
-      ctrlData[newKey] = newDictKey;
+      ctrlData[ctrlKey] = newDictKey;
       outputCtrls[newKey] = newControl.key;
       
       // add output and control to node
@@ -395,13 +427,15 @@ export class ComponentDict extends ComponentBase {
         }));
       let outputCtrls = getOutputControls(node);
       let ctrlData = nGetData(node);
-      Object.keys(outputCtrls).forEach(k => {
+      Object.entries(outputCtrls).forEach(([k, v]) => {
         let socket = (sockets.get(ctrlData["Select Type"])?.socket ?? sockets.get("Any")?.socket) as Rete.Socket;
+        // add output using the output key
         node.addOutput(new Rete.Output(k, k, socket));
+        // add control using mapped control key
         editor && node.addControl(new Controls.ControlText({
-          key: k,
+          key: v,
           emitter: editor,
-          value: ctrlData[k]
+          value: ctrlData[v]
         }));
       })
       res();

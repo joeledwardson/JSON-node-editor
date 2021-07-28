@@ -52,7 +52,7 @@ var listSocket: Socket = addSocket("List").socket;
 var listItemSocket: Socket = addSocket("List Item").socket;
 var dictSocket: Socket = addSocket("Dictionary").socket;
 var dictKeySocket: Socket = addSocket("Dictionary Key").socket;
-
+var anySocket = addSocket("Any").socket;
 
 export default {
     numberSocket,
@@ -62,5 +62,6 @@ export default {
     dictSocket,
     dictKeySocket,
     listSocket,
-    listItemSocket
+    listItemSocket,
+    anySocket
 }

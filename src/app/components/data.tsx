@@ -7,3 +7,7 @@ export function getOutputControls(node: Rete.Node): {[key: string]: string} {
   }
   return node.data.outputMappings as {[key: string]: string};
 }
+
+export function setOutputControls(node: Rete.Node, newMappings: {[key: string]: string}): void {
+  node.data.outputMappings = newMappings;
+}

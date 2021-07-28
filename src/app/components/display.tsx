@@ -76,6 +76,7 @@ export class DisplayBase extends ReactRete.Node {
   render() {
     const { node, bindSocket, bindControl } = this.props;
     const { outputs, controls, inputs, selected } = this.state;
+    let ctrlKeys = Object.values(getOutputControls(this.props.node));    
     
     return (
       <div className={`node ${selected}`}>
@@ -84,7 +85,7 @@ export class DisplayBase extends ReactRete.Node {
         {outputs.map((output, index) =>  this.getOutput(output, index))}
         {/* Controls (check not mapped to output) */}
         <div className="controls-container" >
-        {controls.map((control, index) => !getOutputControls(this.props.node)[control.key] && this.getControl(control, index))}
+        {controls.map((control, index) => !ctrlKeys.includes(control.key) && this.getControl(control, index))}
         </div>        
         {/* Inputs */}
         {inputs.map((input, index) => this.getInput(input, index))}
@@ -97,7 +98,8 @@ export class DisplayBase extends ReactRete.Node {
 export abstract class DisplayListBase extends DisplayBase {
   abstract action: ListActionFunction
   getOutput(output: Rete.Output, index: number): JSX.Element {
-    let ctrl = this.props.node.controls.get(getOutputControls(this.props.node)[output.key]);
+    let ctrlKey = getOutputControls(this.props.node)[output.key];
+    let ctrl = ctrlKey && this.props.node.controls.get(ctrlKey);
     return <div className="output" key={output.key}>
       <div className="output-title hidden-node-item">
         <div className="output-item-controls">
@@ -141,64 +143,3 @@ export abstract class DisplayListBase extends DisplayBase {
     </div>
   }
 }
-
-export function getDisplayListClass(listOutputAction: ListActionFunction): typeof ReactRete.Node {
-  return class _DisplayClass extends DisplayListBase {
-    action = listOutputAction
-  }
-}
-
-// export class DisplayDict extends DisplayBase {
-//   listOutputAction = async (idx: number, action:ListAction) => listOutputAction(
-//     this.props.editor, this.props.node, MySocket.dictKeySocket, idx, action
-//   );
-
-//   getOutput(output: Rete.Output, index: number): JSX.Element {
-//     return <div className="output" key={output.key}>
-//       <div className="output-title hidden-node-item">
-//         <div className="output-item-controls">
-//           <div className="output-item-arrows">
-//             <div>
-//               <button onClick={() => this.listOutputAction(index, "moveUp")} >
-//                 <i className="fas fa-chevron-up fa-xs"></i>
-//               </button>
-//             </div>
-//             <div>
-//               <button onClick={() => this.listOutputAction(index, "moveDown")} >
-//                 <i className="fas fa-chevron-down fa-xs"></i>
-//               </button>
-//             </div>
-//           </div>
-//           <Button variant="light" className="" size="sm" onClick={() => this.listOutputAction(index, "add")} >
-//             <FontAwesomeIcon icon={faPlus} />
-//           </Button>
-//           <Button variant="warning" className="" size="sm" onClick={() => this.listOutputAction(index, "remove")}>
-//             <FontAwesomeIcon icon={faTrash} />
-//           </Button>
-//           {/* <span style={{width: "2rem"}} className="ms-2">#{output.key.slice(0, 3)}</span> */}
-//           <ReactRete.Control	
-//             className="control"
-//             key={output.key}
-//             control={getOutputControls(this.props.node).get(output.key) as Rete.Control}
-//             innerRef={this.props.bindControl}
-//           />
-//           {/* <TextareaAutosize rows={1} className="control-input"></TextareaAutosize> */}
-//         </div>
-//       </div>
-//       <StylableSocket
-//         type="output"
-//         socket={output.socket}
-//         io={output}
-//         innerRef={this.props.bindSocket}
-//         cssStyle={{background: sockets.get(output.socket.name)?.colour}}
-//       />
-//     </div>
-//   }
-// }
-
-
-// export class DisplayList extends DisplayDict {
-//   listOutputAction = async (idx: number, action:ListAction) => listOutputAction(
-//     this.props.editor, this.props.node, MySocket.listItemSocket, idx, action
-//   );
-// }
