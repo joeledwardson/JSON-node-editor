@@ -427,6 +427,7 @@ export class ComponentDict extends ComponentBase {
         }));
       let outputCtrls = getOutputControls(node);
       let ctrlData = nGetData(node);
+      // loop output->control mappings
       Object.entries(outputCtrls).forEach(([k, v]) => {
         let socket = (sockets.get(ctrlData["Select Type"])?.socket ?? sockets.get("Any")?.socket) as Rete.Socket;
         // add output using the output key
