@@ -3,11 +3,11 @@ import * as ReactRete from 'rete-react-render-plugin';
 import * as MyControls from '../controls/controls';
 import { v4 as uuidv4 } from 'uuid';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faPlus, faTimes, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "react-bootstrap";
 import { StylableSocket } from "../sockets/display";
 import MySocket, { sockets } from "../sockets/sockets";
-import { getOutputControls } from "./data";
+import { getOutputControls, getOutputNulls } from "./data";
 
 
 export type ListAction = "add" | "remove" | "moveUp" | "moveDown";
@@ -21,45 +21,46 @@ export class DisplayBase extends ReactRete.Node {
     return <div className="title">{this.props.node.name}</div>
   }
 
-  getOutput(output: Rete.Output, index: number): JSX.Element {
-    let ctrl = this.props.node.controls.get(getOutputControls(this.props.node)[output.key]);
-    return <div className="output" key={output.key}>
-      {!output.hasConnection() && ctrl && <ReactRete.Control	
-        className="control"
-        key={output.key}
-        control={ctrl}
-        innerRef={this.props.bindControl}
-        />
-      }
-      <div className="output-title">{output.name}</div>
-      <StylableSocket
-        type="output"
-        socket={output.socket}
-        io={output}
-        innerRef={this.props.bindSocket}
-        cssStyle={{background: sockets.get(output.socket.name)?.colour}}
-      />
-    </div>
+  getSocket(io: Rete.IO, typ: string) {
+    return <StylableSocket
+      type={typ}
+      socket={io.socket}
+      io={io}
+      innerRef={this.props.bindSocket}
+      cssStyle={{background: sockets.get(io.socket.name)?.colour}}
+    />
   }
 
-  getControl(control: Rete.Control, index: number): JSX.Element {
+  getControl(ctrl: Rete.Control) {
     return <ReactRete.Control	
       className="control"
-      key={control.key}
-      control={control}
+      key={ctrl.key}
+      control={ctrl}
       innerRef={this.props.bindControl}
     />
   }
 
+  getOutput(output: Rete.Output, index: number): JSX.Element {
+    let ctrl = this.props.node.controls.get(getOutputControls(this.props.node)[output.key]);
+    return <div className="output" key={output.key}>
+      {!output.hasConnection() && ctrl && this.getControl(ctrl)}
+      <div className="output-title">{output.name}</div>
+      {this.getSocket(output, "output")}
+    </div>
+  }
+
+  // getControl(control: Rete.Control, index: number): JSX.Element {
+  //   return <ReactRete.Control	
+  //     className="control"
+  //     key={control.key}
+  //     control={control}
+  //     innerRef={this.props.bindControl}
+  //   />
+  // }
+
   getInput(input: Rete.Input, index: number): JSX.Element {
     return <div className="input" key={input.key}>
-      <StylableSocket
-        type="input"
-        socket={input.socket}
-        io={input}
-        innerRef={this.props.bindSocket}
-        cssStyle={{background: sockets.get(input.socket.name)?.colour}}
-      />
+      {this.getSocket(input, "input")}
       {!input.showControl() && (
         <div className="input-title">{input.name}</div>
       )}
@@ -85,7 +86,7 @@ export class DisplayBase extends ReactRete.Node {
         {outputs.map((output, index) =>  this.getOutput(output, index))}
         {/* Controls (check not mapped to output) */}
         <div className="controls-container" >
-        {controls.map((control, index) => !ctrlKeys.includes(control.key) && this.getControl(control, index))}
+        {controls.map((control, index) => !ctrlKeys.includes(control.key) && this.getControl(control))}
         </div>        
         {/* Inputs */}
         {inputs.map((input, index) => this.getInput(input, index))}
@@ -121,25 +122,75 @@ export abstract class DisplayListBase extends DisplayBase {
           <Button variant="warning" className="" size="sm" onClick={() => this.action(index, "remove")}>
             <FontAwesomeIcon icon={faTrash} />
           </Button>
-          {/* <span style={{width: "2rem"}} className="ms-2">#{output.key.slice(0, 3)}</span> */}
-          {ctrl &&
-          <ReactRete.Control	
-            className="control"
-            key={output.key}
-            control={ctrl}
-            innerRef={this.props.bindControl}
-          />
-          }
-          {/* <TextareaAutosize rows={1} className="control-input"></TextareaAutosize> */}
+          {ctrl && this.getControl(ctrl)}
         </div>
       </div>
-      <StylableSocket
-        type="output"
-        socket={output.socket}
-        io={output}
-        innerRef={this.props.bindSocket}
-        cssStyle={{background: sockets.get(output.socket.name)?.colour}}
-      />
+      {this.getSocket(output, "output")}
     </div>
+  }
+
+  render() {
+    const { node, bindSocket, bindControl } = this.props;
+    const { outputs, controls, inputs, selected } = this.state;
+    let ctrlMaps = getOutputControls(this.props.node);
+    let ctrlKeys = Object.values(ctrlMaps);    
+    let _outputs = Object.keys(ctrlMaps).map(k => this.props.node.outputs.get(k));    
+    
+    return (
+      <div className={`node ${selected}`}>
+        {this.getTitle()}
+        {/* Outputs - display in order of output->ctrl mapping object (if exist) */}
+        { _outputs.map((output, index) => output && this.getOutput(output, index))}
+        {/* Controls (check not mapped to output) */}
+        <div className="controls-container" >
+        {controls.map((control, index) => !ctrlKeys.includes(control.key) && this.getControl(control))}
+        </div>        
+        {/* Inputs */}
+        {inputs.map((input, index) => this.getInput(input, index))}
+      </div>
+    );
+  }
+}
+
+
+export class DisplayDynamic extends DisplayBase {
+  getOutput(output: Rete.Output, index: number): JSX.Element {
+    let ctrl = this.props.node.controls.get(getOutputControls(this.props.node)[output.key]);
+    let isNull = getOutputNulls(this.props.node)[output.key] === true;
+    let btnIcon = isNull ? faCheck : faTimes;
+    let btnElement = <div className="display-button-container">
+      <Button variant="secondary" size="sm" className="display-button">
+        <FontAwesomeIcon icon={btnIcon} />
+      </Button>
+    </div>
+
+    // return <div className="output" key={output.key}>
+    return <div className="output">
+      {(!output.hasConnection() && ctrl && !isNull && this.getControl(ctrl)) || <div></div>}
+      <div className="output-title">{output.name}</div>
+      {btnElement}
+      {this.getSocket(output, "output")}
+    </div>
+  }
+
+  render() {
+    const { node, bindSocket, bindControl } = this.props;
+    const { outputs, controls, inputs, selected } = this.state;
+    let ctrlKeys = Object.values(getOutputControls(this.props.node));    
+    return (
+      <div className={`node ${selected}`}>
+        {this.getTitle()}
+        {/* <div className="dynamic-outputs"> */}
+          {/* Outputs */}
+          {outputs.map((output, index) =>  this.getOutput(output, index))}
+        {/* </div> */}
+        {/* Controls (check not mapped to output) */}
+        <div className="controls-container" >
+        {controls.map((control, index) => !ctrlKeys.includes(control.key) && this.getControl(control))}
+        </div>        
+        {/* Inputs */}
+        {inputs.map((input, index) => this.getInput(input, index))}
+      </div>
+    );
   }
 }

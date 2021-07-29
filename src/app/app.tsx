@@ -1,6 +1,7 @@
 import * as Rete from "rete";
 import MySocket, { sockets, addSocket } from "./sockets/sockets";
-import MyComponents from "./components/components";
+import * as BasicComponents from "./components/basic";
+import * as AdvancedComponents from './components/advanced';
 import { ComponentDynamic, VariableType, addType } from './components/dynamic';
 
 import ReactRenderPlugin from 'rete-react-render-plugin';
@@ -18,25 +19,27 @@ export async function createEditor(container: HTMLElement) {
   let objectSpecs = new Map<string, Map<string, VariableType>>();
   objectSpecs.set('objA', new Map([
     [
-      'a',
+      'sub_features_config',
       {
-        type: 'Text'
+        type: 'Dictionary'
       }
     ], [
-      'b',
+      'ftr_identifier',
+      {
+        type: 'Text',
+        default: 'pls',
+      }
+    ], [
+      'cache_count',
       {
         type: 'Number',
-        default: 4,
+        default: 2
       }
     ], [
-      'c',
+      'cache_secs',
       {
-        type: 'Boolean'
-      }
-    ], [
-      'd',
-      {
-        type: 'Dictionary',
+        type: 'Number',
+        default: null
       }
     ]
   ]));
@@ -49,15 +52,15 @@ export async function createEditor(container: HTMLElement) {
   
 
   var components = [
-    new MyComponents.ComponentNum(), 
+    new BasicComponents.ComponentNum(), 
     // new MyComponents.ComponentAdd(), 
-    new MyComponents.ComponentDict(),
-    new MyComponents.ComponentDictKey(),
-    new MyComponents.ComponentText(),
-    new MyComponents.ComponentBool(),
-    new MyComponents.ComponentNull(),
-    new MyComponents.ComponentList(),
-    new MyComponents.ComponentListItem(),
+    new AdvancedComponents.ComponentDict(),
+    // new MyComponents.ComponentDictKey(),
+    new BasicComponents.ComponentText(),
+    new BasicComponents.ComponentBool(),
+    new BasicComponents.ComponentNull(),
+    new AdvancedComponents.ComponentList(),
+    // new MyComponents.ComponentListItem(),
   ];
   objectSpecs.forEach((spec, key) => components.push(new ComponentDynamic(key, spec)));
 

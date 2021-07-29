@@ -85,7 +85,6 @@ export class InputBool extends InputBase<InputProps> {
       <select
         {...this.baseRenderKwargs()}
       >
-        <option></option>
         <option className="bold-input" value={1} >True</option>
         <option className="bold-input" value={0} >False</option>
       </select>

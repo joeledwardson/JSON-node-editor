@@ -23,6 +23,25 @@
     justify-content: flex-end;
     align-items: center;
     min-height: 2rem;
+
+}
+
+.dynamic-outputs {
+    display: grid;
+    align-items: center;
+    grid-template-columns: repeat(4, auto);
+    .control {
+        @extend .me-1;
+        @extend .ms-1;
+    }
+    .display-button {
+        padding: 0.3rem;
+        opacity: 0.6;
+        @extend .me-2;
+    }
+    .output-title {
+        justify-self: end;
+    }
 }
 
 .output-item-controls {
