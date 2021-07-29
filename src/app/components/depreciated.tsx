@@ -2,13 +2,10 @@ import * as Rete from "rete";
 import { ComponentBase } from "../../rete/component";
 import { ControlBase } from "../../rete/control";
 import MySocket, { sockets } from "../sockets/sockets";
-import { OptionLabel } from "../controls/display";
 import * as Controls from  "../controls/controls";
-import { cGetData, nGetData, getInitial } from "../controls/data";
+import { cGetData, getInitial } from "../data/control";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
 import * as Display from "./display";
-import { v4 as uuidv4 } from 'uuid';
-import { getOutputControls, setOutputControls } from "./data";
 import { typeLabels } from "./basic";
 
 

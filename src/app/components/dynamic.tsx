@@ -4,9 +4,9 @@ import { sockets, addSocket } from "../sockets/sockets";
 import * as MyControls from "../controls/controls";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
 import { DisplayDynamicBase } from "./display";
-import { getOutputControls, getOutputNulls } from "./data";
+import { getOutputControls, getOutputNulls } from "../data/component";
 import {  TypeList } from "./basic";
-import { getInitial } from '../controls/data';
+import { getInitial } from '../data/control';
 
 
 /** Variable spec */

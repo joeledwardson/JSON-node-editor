@@ -1,6 +1,6 @@
 import { NodeEditor } from "rete";
 import { ControlBase as ReteControlBase } from "../../rete/control";
-import { cGetData } from "./data";
+import { cGetData } from "../data/control";
 import { CSSProperties } from 'react';
 import * as Display from './display';
 

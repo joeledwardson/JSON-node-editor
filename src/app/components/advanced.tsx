@@ -3,11 +3,11 @@ import { ComponentBase } from "../../rete/component";
 import { ControlBase } from "../../rete/control";
 import MySocket, { sockets } from "../sockets/sockets";
 import * as Controls from  "../controls/controls";
-import { nGetData, getInitial } from "../controls/data";
+import { nGetData, getInitial } from "../data/control";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
 import * as Display from "./display";
 import { v4 as uuidv4 } from 'uuid';
-import { getOutputControls, setOutputControls } from "./data";
+import { getOutputControls, setOutputControls } from "../data/component";
 import { typeLabels } from './basic';
 
 

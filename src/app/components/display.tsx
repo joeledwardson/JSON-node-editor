@@ -5,7 +5,7 @@ import { faCheck, faPlus, faTimes, faTrash, faMouse } from "@fortawesome/free-so
 import { Button } from "react-bootstrap";
 import { StylableSocket } from "../sockets/display";
 import { sockets } from "../sockets/sockets";
-import { getOutputControls, getOutputNulls } from "./data";
+import { getOutputControls, getOutputNulls } from "../data/component";
 import { CSSProperties } from "react";
 
 

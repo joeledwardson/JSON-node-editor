@@ -1,12 +1,10 @@
 import * as Rete from 'rete';
 import { ControlBase } from "../../rete/control";
+import { getDataAttribute, setDataAttribute } from './access';
 
 /** get controls data from node object */
 export function nGetData(node: Rete.Node): {[key: string]: any} {
-  if (node.data.controlsData === undefined) {
-    node.data.controlsData = {};
-  }
-  return node.data.controlsData as {[key: string]: any};
+  return getDataAttribute<any>(node, 'controlsData');
 }
 
 /** get controls data from control object */
