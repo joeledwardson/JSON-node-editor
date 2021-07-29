@@ -3,12 +3,12 @@ import { ComponentBase } from "../../rete/component";
 import { ControlBase } from "../../rete/control";
 import MySocket, { sockets } from "../sockets/sockets";
 import * as Controls from  "../controls/controls";
-import { nGetData, getInitial } from "../data/control";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
 import * as Display from "./display";
 import { v4 as uuidv4 } from 'uuid';
-import { getOutputControls, setOutputControls } from "../data/component";
+import * as Data from "../data/component";
 import { typeLabels } from './basic';
+import * as Dynamic from './dynamic';
 
 
 /** 
@@ -25,8 +25,8 @@ async function listOutputAction(
 ): Promise<void> {
   return new Promise((res, rej) => { 
     // get controls data and output->controls map
-    let ctrlData = nGetData(node);
-    let ctrlsMap = getOutputControls(node);
+    let ctrlData = Data.nGetData(node);
+    let ctrlsMap = Data.getOutputControls(node);
 
     // get number of existing outputs
     const nOutputs = node.outputs.size;
@@ -48,7 +48,7 @@ async function listOutputAction(
     console.log(`found ${nOutputs} existing outputs`);
     
     // get entries array for output->ctrl mappings to modify
-    let newMappings = Object.entries(getOutputControls(node));
+    let newMappings = Object.entries(Data.getOutputControls(node));
 
     if (action === "add") {
       // index in output list for new output follows output pressed
@@ -134,7 +134,7 @@ async function listOutputAction(
       }
     }
     // update output mappings
-    setOutputControls(node, Object.fromEntries(newMappings));
+    Data.setOutputControls(node, Object.fromEntries(newMappings));
 
     // update node
     node.update();
@@ -217,13 +217,13 @@ export abstract class AdvancedComponentBase extends ComponentBase {
         .addControl(new Controls.ControlSelect({
           emitter: editor, 
           key: "Select Type", 
-          value: getInitial(node, "Select Type", "Any"), 
+          value: Data.getInitial(node, "Select Type", "Any"), 
           options: typeLabels(), 
           valueChanger: (ctrl: ControlBase, emitter: Rete.NodeEditor, key: string, data: any) => typeSelection(node, ctrl, emitter, key, data)
         }));
       
-      let outputCtrls = getOutputControls(node);
-      let ctrlData = nGetData(node);
+      let outputCtrls = Data.getOutputControls(node);
+      let ctrlData = Data.nGetData(node);
       let socket = (sockets.get(ctrlData["Select Type"])?.socket ?? sockets.get("Any")?.socket) as Rete.Socket;
       
       // loop output->control mappings
@@ -238,13 +238,61 @@ export abstract class AdvancedComponentBase extends ComponentBase {
           emitter: editor,
           value: ctrlData[ctrlKey]
         }));
-      })
+      });
+
+      /** show/hide type selection control */
+      const setCtrlVisible = (visibility: Boolean) => {
+        let ctrl = node.controls.get("Select Type");
+        if( ctrl instanceof Controls.ControlSelect) {
+          ctrl.props.style = {visibility: visibility ? "visible" : "hidden"};
+          ctrl.update && ctrl.update();
+        }
+      } 
+
+      /** on connection created, set selected type to parent specification (if exists) and hide type selection control */
+      node.meta.connectionCreatedFunc = (input: Rete.Input, output: Rete.Output) => {
+        if(input.key == "parent" && output.node) {
+          let typeDefs = Data.getTypeDefinitions(output.node);
+          let k = output.name;
+          if( k in typeDefs ) {
+            setCtrlVisible(false);
+          }
+        }
+      }
+
+      /** on connection removed, set selected type to control and show  */
+      node.meta.connectionRemovedFunc = (input: Rete.Input) => {
+        if(input.key == "parent") {
+          setCtrlVisible(true);
+        }
+      }
 
       res();
     });
   }
 
-  worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {}
+  worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {
+    // console.log('working...');
+    // console.log(node);
+    // console.log(inputs);
+    // console.log(outputs);
+    // console.log(args);
+    // if(
+    //   inputs.parent && 
+    //   inputs.parent instanceof Array && 
+    //   inputs.parent.length >= 1 && 
+    //   inputs.parent[0].dictTypes instanceof Array) {
+      
+    //   let socket = Dynamic.multiSocket(inputs.parent[0].dictTypes)
+    //   let selectCtrl =  "Select Type"
+
+    //   inputs.parent[0].types
+    //   console.log('found parent types')
+    //   console.log(inputs.parent[0])
+    // } else {
+    //   console.log('no parent types found');
+    // }
+  }
 }
 
 

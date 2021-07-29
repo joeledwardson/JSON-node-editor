@@ -3,7 +3,7 @@ import { ComponentBase } from "../../rete/component";
 import { ControlBase } from "../../rete/control";
 import MySocket, { sockets } from "../sockets/sockets";
 import * as Controls from  "../controls/controls";
-import { cGetData, getInitial } from "../data/control";
+import { cGetData, getInitial } from "../data/component";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
 import * as Display from "./display";
 import { typeLabels } from "./basic";

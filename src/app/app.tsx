@@ -2,7 +2,8 @@ import * as Rete from "rete";
 import MySocket, { sockets, addSocket } from "./sockets/sockets";
 import * as BasicComponents from "./components/basic";
 import * as AdvancedComponents from './components/advanced';
-import { ComponentDynamic, VariableType, addType } from './components/dynamic';
+import { ComponentDynamic, addType } from './components/dynamic';
+import { VariableType } from "./data/component";
 
 import ReactRenderPlugin from 'rete-react-render-plugin';
 import AreaPlugin from 'rete-area-plugin';
@@ -107,6 +108,33 @@ export async function createEditor(container: HTMLElement) {
 
   // editorConnect("num", "num1");
   // editorConnect("num", "num2");
+
+  editor.on(
+    ["connectioncreated"],
+    async (connection: Rete.Connection) => {
+      await engine.abort();
+      let iNode = connection.input.node;
+      if (iNode) {
+        let connFunc = iNode.meta.connectionCreatedFunc as (input: Rete.Input, output: Rete.Output) => void | undefined;
+        if (connFunc) 
+          connFunc(connection.input, connection.output);
+      }
+    }
+  )
+
+  editor.on(
+    ["connectionremoved"],
+    async (connection: Rete.Connection) => {
+      await engine.abort();
+      let iNode = connection.input.node;
+      if (iNode) {
+        let connFunc = iNode.meta.connectionRemovedFunc as (input: Rete.Input) => void | undefined;
+        if (connFunc) 
+          connFunc(connection.input);
+      }
+    }
+  )
+
 
   editor.on(
     ["process", "nodecreated", "noderemoved", "connectioncreated", "connectionremoved"],

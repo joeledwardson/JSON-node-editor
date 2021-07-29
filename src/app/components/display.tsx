@@ -175,7 +175,7 @@ export abstract class DisplayDynamicBase extends DisplayBase {
 
     return <div className="output" key={output.key}>
     {/* return <> */}
-      {displayCtrl ? ctrl && this.getControl(ctrl) : <div></div>}
+      {displayCtrl ? ctrl && this.getControl(ctrl) : <div className="control-input"></div>}
       {isNullable ? btnElement : <div></div>}
       {titleElement}
       {this.getSocket(output, "output", {visibility: isNull ? "hidden" : "visible"})}
