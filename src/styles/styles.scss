@@ -27,17 +27,28 @@
 }
 
 .dynamic-outputs {
-    display: grid;
-    align-items: center;
-    grid-template-columns: repeat(4, auto);
+    // display: grid;
+    // align-items: center;
+    // grid-template-columns: repeat(4, auto);
     .control {
         @extend .me-1;
         @extend .ms-1;
+        padding: 0;
+        flex-grow: 1;
     }
     .display-button {
-        padding: 0.3rem;
-        opacity: 0.6;
-        @extend .me-2;
+        // padding: 0.3rem;
+        opacity: 0.5;
+        @extend .me-1;
+        @extend .ms-1;
+        width: 1.2rem;
+        height: 1.2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        svg {
+            display: block;
+        }
     }
     .output-title {
         justify-self: end;

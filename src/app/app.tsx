@@ -21,25 +21,26 @@ export async function createEditor(container: HTMLElement) {
     [
       'sub_features_config',
       {
-        type: 'Dictionary'
+        types: ['Dictionary', 'None'],
+        default: 'None'
       }
     ], [
       'ftr_identifier',
       {
-        type: 'Text',
+        types: ['Text'],
         default: 'pls',
       }
     ], [
       'cache_count',
       {
-        type: 'Number',
+        types: ['Number'],
         default: 2
       }
     ], [
       'cache_secs',
       {
-        type: 'Number',
-        default: null
+        types: ['Number', 'None'],
+        default: 3
       }
     ]
   ]));

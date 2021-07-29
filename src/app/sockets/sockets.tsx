@@ -47,7 +47,7 @@ export function addSocket(typeName: string): SocketHolder {
 var numberSocket: Socket = addSocket("Number").socket;
 var stringSocket: Socket = addSocket("Text").socket;
 var boolSocket: Socket = addSocket("Boolean").socket;
-var nullSocket: Socket =addSocket("Null").socket;
+var nullSocket: Socket =addSocket("None").socket;
 var listSocket: Socket = addSocket("List").socket;
 var listItemSocket: Socket = addSocket("List Item").socket;
 var dictSocket: Socket = addSocket("Dictionary").socket;

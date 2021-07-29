@@ -1,13 +1,12 @@
 import * as Rete from "rete";
 import * as ReactRete from 'rete-react-render-plugin';
-import * as MyControls from '../controls/controls';
-import { v4 as uuidv4 } from 'uuid';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCheck, faPlus, faTimes, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faPlus, faTimes, faTrash, faMouse } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "react-bootstrap";
 import { StylableSocket } from "../sockets/display";
-import MySocket, { sockets } from "../sockets/sockets";
+import { sockets } from "../sockets/sockets";
 import { getOutputControls, getOutputNulls } from "./data";
+import { CSSProperties } from "react";
 
 
 export type ListAction = "add" | "remove" | "moveUp" | "moveDown";
@@ -21,13 +20,13 @@ export class DisplayBase extends ReactRete.Node {
     return <div className="title">{this.props.node.name}</div>
   }
 
-  getSocket(io: Rete.IO, typ: string) {
+  getSocket(io: Rete.IO, typ: string, styles?: CSSProperties) {
     return <StylableSocket
       type={typ}
       socket={io.socket}
       io={io}
       innerRef={this.props.bindSocket}
-      cssStyle={{background: sockets.get(io.socket.name)?.colour}}
+      cssStyle={{background: sockets.get(io.socket.name)?.colour, ...styles}}
     />
   }
 
@@ -153,23 +152,34 @@ export abstract class DisplayListBase extends DisplayBase {
 }
 
 
-export class DisplayDynamic extends DisplayBase {
+export abstract class DisplayDynamicBase extends DisplayBase {
+
+  abstract nullButtonClick(output: Rete.Output): void
+
   getOutput(output: Rete.Output, index: number): JSX.Element {
     let ctrl = this.props.node.controls.get(getOutputControls(this.props.node)[output.key]);
-    let isNull = getOutputNulls(this.props.node)[output.key] === true;
-    let btnIcon = isNull ? faCheck : faTimes;
-    let btnElement = <div className="display-button-container">
-      <Button variant="secondary" size="sm" className="display-button">
-        <FontAwesomeIcon icon={btnIcon} />
-      </Button>
-    </div>
+    let isNullable: boolean = output.key in getOutputNulls(this.props.node);
+    let isNull: boolean = getOutputNulls(this.props.node)[output.key] === true;
+    let displayCtrl: boolean = !output.hasConnection() && Boolean(ctrl) && !isNull;
+    let btnIcon = isNull ? faMouse : faTimes;
+    let btnElement = 
+    <Button 
+      variant="secondary" 
+      size="sm" 
+      className="display-button"
+      onClick={()=>this.nullButtonClick(output)}
+    >
+      <FontAwesomeIcon icon={btnIcon} />
+    </Button>
+    let titleElement = <div className="output-title">{output.name}</div>
 
-    // return <div className="output" key={output.key}>
-    return <div className="output">
-      {(!output.hasConnection() && ctrl && !isNull && this.getControl(ctrl)) || <div></div>}
-      <div className="output-title">{output.name}</div>
-      {btnElement}
-      {this.getSocket(output, "output")}
+    return <div className="output" key={output.key}>
+    {/* return <> */}
+      {displayCtrl ? ctrl && this.getControl(ctrl) : <div></div>}
+      {isNullable ? btnElement : <div></div>}
+      {titleElement}
+      {this.getSocket(output, "output", {visibility: isNull ? "hidden" : "visible"})}
+    {/* </> */}
     </div>
   }
 
@@ -180,10 +190,10 @@ export class DisplayDynamic extends DisplayBase {
     return (
       <div className={`node ${selected}`}>
         {this.getTitle()}
-        {/* <div className="dynamic-outputs"> */}
-          {/* Outputs */}
+        {/* Outputs */}
+        <div className="dynamic-outputs">
           {outputs.map((output, index) =>  this.getOutput(output, index))}
-        {/* </div> */}
+        </div>
         {/* Controls (check not mapped to output) */}
         <div className="controls-container" >
         {controls.map((control, index) => !ctrlKeys.includes(control.key) && this.getControl(control))}
