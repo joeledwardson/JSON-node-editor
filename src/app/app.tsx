@@ -23,7 +23,8 @@ export async function createEditor(container: HTMLElement) {
       'sub_features_config',
       {
         types: ['Dictionary', 'None'],
-        default: 'None'
+        default: 'None',
+        dictTypes: ['Text']
       }
     ], [
       'ftr_identifier',

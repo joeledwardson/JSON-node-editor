@@ -44,15 +44,39 @@ export function addSocket(typeName: string): SocketHolder {
     return holder;
 }
 
-var numberSocket: Socket = addSocket("Number").socket;
-var stringSocket: Socket = addSocket("Text").socket;
-var boolSocket: Socket = addSocket("Boolean").socket;
-var nullSocket: Socket =addSocket("None").socket;
-var listSocket: Socket = addSocket("List").socket;
-var listItemSocket: Socket = addSocket("List Item").socket;
-var dictSocket: Socket = addSocket("Dictionary").socket;
-var dictKeySocket: Socket = addSocket("Dictionary Key").socket;
-var anySocket = addSocket("Any").socket;
+
+/** create type string from a list of valid types */
+export const getTypeString = (typs: string[]) => typs.join(' | ');
+
+
+/** generate socket from list of valid types - socket name created by joining types together, or can be passed optionally */
+export function multiSocket(typs: string[], key?: string): Socket {
+    let socketName: string = key ?? getTypeString(typs);
+    const socket = sockets.get(socketName)?.socket;
+    if( socket ) {
+      return socket;
+    } else {
+      const newSocket = addSocket(socketName).socket;
+      typs.forEach(t => {
+        let s = sockets.get(t)?.socket;
+        if (!s) 
+          throw new Error(`multi-socket type "${t}" not recognised`);
+        s && newSocket.combineWith(s);
+      });
+      return newSocket;
+    }
+  }
+  
+
+export var numberSocket: Socket = addSocket("Number").socket;
+export var stringSocket: Socket = addSocket("Text").socket;
+export var boolSocket: Socket = addSocket("Boolean").socket;
+export var nullSocket: Socket =addSocket("None").socket;
+export var listSocket: Socket = addSocket("List").socket;
+export var listItemSocket: Socket = addSocket("List Item").socket;
+export var dictSocket: Socket = addSocket("Dictionary").socket;
+export var dictKeySocket: Socket = addSocket("Dictionary Key").socket;
+export var anySocket = addSocket("Any").socket;
 
 export default {
     numberSocket,

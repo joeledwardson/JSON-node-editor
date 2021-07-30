@@ -1,6 +1,6 @@
 import * as Rete from 'rete';
 import { ComponentBase } from "../../rete/component";
-import { sockets, addSocket } from "../sockets/sockets";
+import { sockets, getTypeString, multiSocket } from "../sockets/sockets";
 import * as MyControls from "../controls/controls";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
 import { DisplayDynamicBase } from "./display";
@@ -11,29 +11,8 @@ import { TypeVariable } from 'typescript';
 
 
 
-/** create type string from a list of valid types */
-export const getTypeString = (typs: string[]) => typs.join(' | ');
-
 /** add custom type to valid type list */
 export const addType = (newType: string) => TypeList.push(newType);
-
-/** generate socket from list of valid types - socket name created by joining types together, or can be passed optionally */
-export function multiSocket(typs: string[], key?: string): Rete.Socket {
-  let socketName: string = key ?? getTypeString(typs);
-  const socket = sockets.get(socketName)?.socket;
-  if( socket ) {
-    return socket;
-  } else {
-    const newSocket = addSocket(socketName).socket;
-    typs.forEach(t => {
-      let s = sockets.get(t)?.socket;
-      if (!s) 
-        throw new Error(`multi-socket type "${t}" not recognised`);
-      s && newSocket.combineWith(s);
-    });
-    return newSocket;
-  }
-}
 
 
 /** Dynamic component */
