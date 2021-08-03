@@ -66,7 +66,7 @@ export class ComponentDynamic extends ComponentBase {
               return `List[${getTypeString(spec.listTypes)}]`;
             } else if (s == 'Dictionary') {
               spec.dictTypes = spec.dictTypes ?? ['Any'];
-              return `List[${getTypeString(spec.dictTypes)}]`;
+              return `Dict[${getTypeString(spec.dictTypes)}]`;
             } else {
               return s;
             }

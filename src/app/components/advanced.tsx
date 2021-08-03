@@ -245,7 +245,7 @@ export abstract class AdvancedComponentBase extends ComponentBase {
 
     /** show/hide type selection control */
     const setCtrlVisible = (visibility: Boolean) => {
-      selectCtrl.props.style = {visibility: visibility ? "visible" : "hidden"};
+      selectCtrl.props.style = {display: visibility ? "block" : "none"};
       selectCtrl.update && selectCtrl.update();
     } 
 

@@ -31,14 +31,18 @@ const colours: Array<string> = [
 
 
 export let sockets = new Map<string, SocketHolder>()
+let colourIndex = 0;
 
-export function addSocket(typeName: string): SocketHolder {
+export function addSocket(typeName: string, colour?: string): SocketHolder {
     if (sockets.has(typeName)) {
         throw new Error(`socket "${typeName}" already exists`);
-    }         
+    }
+    let socketColour = colour ?? colours[colourIndex % colours.length];
+    if( !colour ) colourIndex += 1;
+    
     const holder: SocketHolder = {
         socket: new Socket(typeName), 
-        colour: colours[sockets.size % colours.length]
+        colour: socketColour
     }
     sockets.set(typeName, holder)
     return holder;
@@ -56,7 +60,14 @@ export function multiSocket(typs: string[], key?: string): Socket {
     if( socket ) {
       return socket;
     } else {
-      const newSocket = addSocket(socketName).socket;
+      // colour undefined by default means a new colour will be created
+      let newColor: string | undefined = undefined;
+      for(const t of typs) {
+        // take the first valid non-null socket to use as the colour
+        newColor = t !== 'None' ? sockets.get(t)?.colour : undefined;
+        if( newColor !== undefined) break;
+      }
+      const newSocket = addSocket(socketName, newColor).socket;
       typs.forEach(t => {
         let s = sockets.get(t)?.socket;
         if (!s) 
