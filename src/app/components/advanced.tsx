@@ -1,20 +1,22 @@
 import * as Rete from "rete";
-import { ComponentBase } from "../../rete/component";
-import { ControlBase } from "../../rete/control";
+import { ReteComponent } from "../../rete/component";
+import { ReteControl } from "../../rete/control";
 import * as MySocket from "../sockets/sockets";
 import * as Controls from  "../controls/controls";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
 import * as Display from "./display";
 import { v4 as uuidv4 } from 'uuid';
 import * as Data from "../data/component";
-import { TypeList } from './basic';
+import { TypeList, ComponentBase } from './basic';
 import { OptionLabel } from "../controls/display";
 import { VariableType } from "../data/component";
 import { ctrlValChange } from "../controls/controls";
 
 
 
-/** convert types to option label/value pairs with a blank at the start */
+/** 
+ * convert types to option label/value pairs with a blank at the start 
+ * */
 export function typeLabels(): Array<OptionLabel> {
   return [{
     label: "",
@@ -166,18 +168,25 @@ async function listOutputAction(
 }
 
 
-/** Dictionary display component - listOutputAction `hasOutputControls` set to true as dictionary outputs have text controls for keys */
+/** 
+ * Dictionary display component - listOutputAction `hasOutputControls` set to true as dictionary outputs have text controls for keys 
+ * */
 class DisplayDict extends Display.DisplayListBase {
   action = (index: number, action: Display.ListAction) => listOutputAction(this.props.editor, this.props.node, index, action, true);
 }
 
 
-/** Display list component - listOutputAction `hasOutputControls` set to false as list outputs do not have have text input keys */
+/** 
+ * Display list component - listOutputAction `hasOutputControls` set to false as list outputs do not have have text input keys 
+ * */
 class DisplayList extends Display.DisplayListBase {
   action = (index: number, action: Display.ListAction) => listOutputAction(this.props.editor, this.props.node, index, action, false);
 }
 
-/** change output sockets to a new type from `data` var and remove incompatible connections */
+
+/** 
+ * Change output sockets to a new type from `data` var and remove incompatible connections 
+ * */
 function socketUpdate(node: Rete.Node, emitter: Rete.NodeEditor, newSocket: Rete.Socket, ioList: Map<string, Rete.IO>) {
   ioList.forEach(io => {
     let invalidConnections = io.connections.filter(c => !newSocket.compatibleWith(c.input.socket));
@@ -193,9 +202,13 @@ function socketUpdate(node: Rete.Node, emitter: Rete.NodeEditor, newSocket: Rete
   );
 }
 
+
+/** 
+ * Process a control selecting a variable type by updating the control value and updating input/output sockets 
+*/
 function typeSelect(
   node: Rete.Node, 
-  ctrl: ControlBase, 
+  ctrl: ReteControl, 
   emitter: Rete.NodeEditor, 
   newType: any,
   ioMap: Map<string, Rete.IO>
@@ -205,37 +218,39 @@ function typeSelect(
   socketUpdate(node, emitter, socket, ioMap);
 }
 
-
-function getSelectedSocket(ctrlData: {[key: string]: any}, ctrlSelectKey: string): Rete.Socket {
-  let _sel = ctrlData[ctrlSelectKey];
-  return TypeList.includes(_sel) ? (MySocket.sockets.get(_sel)?.socket ?? MySocket.anySocket) : MySocket.anySocket;  
+/**  
+ * check node data for control value containing selected type to use in retrieving a socket
+ * - if control data doesn't contain selected type of value is invalid, return the "any" type
+ */
+function getSelectedSocket(typ: string): Rete.Socket {
+  return TypeList.includes(typ) ? (MySocket.sockets.get(typ)?.socket ?? MySocket.anySocket) : MySocket.anySocket;  
 }
 
 
 
 /** 
- * Advanced component - supports type selection, dynamic output list that can be extended and re-ordered (using `listOutputAction`) 
+ * List component - supports type selection, dynamic output list that can be extended and re-ordered (using `listOutputAction`) 
  * with `hasOutputControls` as true will render a text control next to each dynamic output
 */
-export abstract class AdvancedComponentBase extends ComponentBase {
+export abstract class ListComponentBase extends ComponentBase {
   abstract hasOutputControls: boolean;
   abstract socket: Rete.Socket;
   abstract getParentTypes(spec: VariableType): string[];
   readonly ctrlSelectKey = "Select Type";
 
-  typeSelect(node: Rete.Node, ctrl: ControlBase, emitter: Rete.NodeEditor, newType: any) {
+  typeSelect(node: Rete.Node, ctrl: ReteControl, emitter: Rete.NodeEditor, newType: any) {
     typeSelect(node, ctrl, emitter, newType, node.outputs);
   }
 
   _builder(node: Rete.Node, editor: Rete.NodeEditor) {
     let ctrlData = Data.nGetData(node);
-    let socket = getSelectedSocket(ctrlData, this.ctrlSelectKey);
+    let socket = getSelectedSocket(ctrlData[this.ctrlSelectKey]);
     let selectCtrl = new Controls.ControlSelect({
       emitter: editor, 
       key: this.ctrlSelectKey, 
       value: socket.name, 
       options: typeLabels(), 
-      valueChanger: (ctrl: ControlBase, emitter: Rete.NodeEditor, key: string, data: any) => this.typeSelect(node, ctrl, emitter, data)
+      valueChanger: (ctrl: ReteControl, emitter: Rete.NodeEditor, key: string, data: any) => this.typeSelect(node, ctrl, emitter, data)
     });
     node
       .addInput(new Rete.Input("parent", "Parent", this.socket))
@@ -271,8 +286,10 @@ export abstract class AdvancedComponentBase extends ComponentBase {
     } 
 
     /** on connection created, set selected type to parent specification (if exists) and hide type selection control */
-    node.meta.connectionCreatedFunc = (input: Rete.Input, output: Rete.Output) => {
-      if(input.key == "parent" && output.node) {
+    let connectionCreatedFunc: Data.ConnectionFunc = (connection: Rete.Connection) => {
+      let input = connection.input
+      let output =  connection.output;
+      if(input.node == node && input.key == "parent" && output.node) {
         let typeDefs = Data.getTypeDefinitions(output.node);
         let k = output.name;
         if( k in typeDefs ) {
@@ -287,31 +304,20 @@ export abstract class AdvancedComponentBase extends ComponentBase {
     }
 
     /** on connection removed, set selected type to control and show  */
-    node.meta.connectionRemovedFunc = (input: Rete.Input) => {
-      if(input.key == "parent") {
+    let connectionRemovedFunc: Data.ConnectionFunc = (connection: Rete.Connection) => {
+      if(connection.input.node == node && connection.input.key == "parent") {
         setCtrlVisible(true);
         this.typeSelect(node, selectCtrl, editor, "Any");
       }
     }
-  }
 
-  builder(node: Rete.Node): Promise<void> {
-    const editor: Rete.NodeEditor | null = this.editor;
-    return new Promise<void>(res => {
-      if( editor ) {
-        this._builder(node, editor);
-      }
-      res();
-    });
-  }
-
-  worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {
+    Data.setConnectionFuncs(node, {"created": connectionCreatedFunc, "removed": connectionRemovedFunc});
   }
 }
 
 
 /** Dictionary component - labelled dynamic outputs that can be re-ordered/modified  */
-export class ComponentDict extends AdvancedComponentBase {
+export class ComponentDict extends ListComponentBase {
   hasOutputControls = true
   socket = MySocket.dictSocket;
   getParentTypes = (spec: VariableType) => spec.dictTypes ?? ['Any']
@@ -323,7 +329,7 @@ export class ComponentDict extends AdvancedComponentBase {
 
 
 /** Same as dictionary component but without output controls */
-export class ComponentList extends AdvancedComponentBase {
+export class ComponentList extends ListComponentBase {
   hasOutputControls = false
   socket = MySocket.listSocket;
   getParentTypes = (spec: VariableType) => spec.listTypes ?? ['Any']
@@ -333,7 +339,8 @@ export class ComponentList extends AdvancedComponentBase {
   }
 }
 
-export class ComponentFunctionVar extends ComponentBase {
+
+export class ComponentFunctionVar extends ReteComponent {
   constructor() {
     super('Function Variable');
   }
@@ -343,13 +350,13 @@ export class ComponentFunctionVar extends ComponentBase {
     return new Promise<void>(res => {
       if( this.editor ) {
         let ctrlData = Data.nGetData(node);
-        let socket = getSelectedSocket(ctrlData, this.ctrlSelectKey);
+        let socket = getSelectedSocket(ctrlData[this.ctrlSelectKey]);
         let selectCtrl = new Controls.ControlSelect({
           emitter: this.editor, 
           key: this.ctrlSelectKey, 
           value: socket.name, 
           options: typeLabels(), 
-          valueChanger: (ctrl: ControlBase, emitter: Rete.NodeEditor, key: string, data: any) => typeSelect(node, ctrl, emitter, data, node.inputs)
+          valueChanger: (ctrl: ReteControl, emitter: Rete.NodeEditor, key: string, data: any) => typeSelect(node, ctrl, emitter, data, node.inputs)
         });
 
         let parent = new Rete.Input("parent", "Parent", socket);
@@ -373,23 +380,9 @@ export class ComponentFunctionVar extends ComponentBase {
             }
           })
         }
-        function pls(ctrl: ControlBase, emitter: Rete.NodeEditor, key: string, data: any) {
+        function pls(ctrl: ReteControl, emitter: Rete.NodeEditor, key: string, data: any) {
           let oldVal = ctrl.props.value as string;  
           processParent(parent, oldVal as string, data as string);
-          // parent.connections.forEach(c => {
-          //   let n = c.output.node;
-          //   if(n && n.name === 'Function Block') {
-          //     let s = data as string;
-          //     let oldInput = n.inputs.get(oldVal);
-          //     if(oldInput) n.removeInput(oldInput);
-          //     if(!n.inputs.has(s)) {
-          //       n.addInput(new Rete.Input(s, s, parent.socket));
-          //       n.update && n.update();
-          //     }
-          //   } else {
-          //     let _p =  c.output.node?.inputs.get("parent")
-          //   }
-          // })
           ctrlValChange(ctrl, emitter, key, data);
         }
         let nameCtrl = new Controls.ControlText({
@@ -417,38 +410,43 @@ export class ComponentFunctionBlock extends ComponentBase {
   }
   readonly ctrlSelectKey = "Select Type";
   data = {component: Display.DisplayBase};
-  builder(node: Rete.Node): Promise<void> {
-    return new Promise<void>(res => {
-      if( this.editor ) {
-
-        let ctrlData = Data.nGetData(node);
-        let socket = getSelectedSocket(ctrlData, this.ctrlSelectKey);
-        let selectCtrl = new Controls.ControlSelect({
-          emitter: this.editor, 
-          key: this.ctrlSelectKey, 
-          value: socket.name, 
-          options: typeLabels(), 
-          valueChanger: (ctrl: ControlBase, emitter: Rete.NodeEditor, key: string, data: any) => typeSelect(node, ctrl, emitter, data, node.outputs)
-        });
-        let nameCtrl = new Controls.ControlText({
-          emitter: this.editor, 
-          key: "name",
-          value: ctrlData["name"] ?? ""
-        })
-        node
-          .addControl(selectCtrl)
-          .addOutput(new Rete.Output("output", "Output", socket))
-          .addControl(nameCtrl);
-      
-      }
-
-      res();
+  _builder(node: Rete.Node, editor: Rete.NodeEditor) {
+    let ctrlData = Data.nGetData(node);
+    let socket = getSelectedSocket(ctrlData[this.ctrlSelectKey]);
+    let selectCtrl = new Controls.ControlSelect({
+      emitter: editor, 
+      key: this.ctrlSelectKey, 
+      value: socket.name, 
+      options: typeLabels(), 
+      valueChanger: (ctrl: ReteControl, emitter: Rete.NodeEditor, key: string, data: any) => typeSelect(node, ctrl, emitter, data, node.outputs)
     });
-  }
-  worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {
-    console.log("function block working...");
-  }
-
+    let nameCtrl = new Controls.ControlText({
+      emitter: editor, 
+      key: "name",
+      value: ctrlData["name"] ?? ""
+    })
+    node
+      .addControl(selectCtrl)
+      .addOutput(new Rete.Output("output", "Output", socket))
+      .addControl(nameCtrl);
+      function nodeProcess(_node: Rete.Node) {
+        if (_node.name === "Function Variable") {
+          let _ctrl = _node.controls.get("Select Type");
+          if(_ctrl) {
+            let _type = String(_ctrl.data);
+            if(!node.inputs.has(_type)) {
+              let _socket = getSelectedSocket(_ctrl.data as string);
+              node.addInput(new Rete.Input(_type, _type, _socket));
+            }
+          }
+        }
+        _node.outputs.forEach(o => o.connections.forEach(c => c.input.node && nodeProcess(c.input.node)));
+      }
+      function process() {
+        node.inputs.forEach(i => node.removeInput(i));
+        nodeProcess(node);
+      }
+    }
 }
 
 
