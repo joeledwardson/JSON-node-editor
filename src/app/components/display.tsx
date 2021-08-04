@@ -13,7 +13,14 @@ export type ListAction = "add" | "remove" | "moveUp" | "moveDown";
 export type ListActionFunction = (index: number, action: ListAction) => void;
 
 
-
+/**
+ * Basic Component Display Class
+ * Displays: 
+ * - title 
+ * - outputs (with their mapped controls using `getOutputControls()`, if exist and output not connected)
+ * - controls (not mapped to outputs)
+ * - inputs
+ */
 export class DisplayBase extends ReactRete.Node {
 
   getTitle(): JSX.Element {
@@ -47,15 +54,6 @@ export class DisplayBase extends ReactRete.Node {
       {this.getSocket(output, "output")}
     </div>
   }
-
-  // getControl(control: Rete.Control, index: number): JSX.Element {
-  //   return <ReactRete.Control	
-  //     className="control"
-  //     key={control.key}
-  //     control={control}
-  //     innerRef={this.props.bindControl}
-  //   />
-  // }
 
   getInput(input: Rete.Input, index: number): JSX.Element {
     return <div className="input" key={input.key}>
@@ -94,7 +92,14 @@ export class DisplayBase extends ReactRete.Node {
   }
 }
 
-
+/**
+ * Same as Base Display but outputs & their mapped controls are displayed with:
+ * - arrow up button 
+ * - arrow down button 
+ * - plus button
+ * - minus button
+ * the 4 above actions call `ListActionFunction()`
+ */
 export abstract class DisplayListBase extends DisplayBase {
   abstract action: ListActionFunction
   getOutput(output: Rete.Output, index: number): JSX.Element {
@@ -152,8 +157,23 @@ export abstract class DisplayListBase extends DisplayBase {
 }
 
 
+/** 
+ * Same as Base Display, except for outputs & their mapped controls:
+ * Outputs can be "nullable", i.e. their key has a "nulled" boolean value (get/set by `getOutputNulls` with output key)  
+ * 
+ * If output is "nullable", it is displayed either with an x to "null" the output or a mouse-icon to "activate" the output
+ * 
+ * "nullable" outputs are displayed as:
+ * - if output key is "nulled" with "null" value set to true, mouse button is displayed to "activate" output
+ *     - displayed without a socket or its mapped control
+ * - if output is not "nulled", with "null" value set to false, x button is displayed to "null" output
+ *     - displayed as normal with its socket and mapped control
+ * 
+ * The action of clicking either "activate"/"null" an output is controlled by `nullButtonClick()`
+ */
 export abstract class DisplayDynamicBase extends DisplayBase {
 
+  /** process object member null button click -  */
   abstract nullButtonClick(output: Rete.Output): void
 
   getOutput(output: Rete.Output, index: number): JSX.Element {

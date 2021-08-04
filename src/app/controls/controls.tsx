@@ -1,5 +1,5 @@
 import { NodeEditor } from "rete";
-import { ControlBase as ReteControlBase } from "../../rete/control";
+import { ReteControl as ReteControlBase } from "../../rete/control";
 import { cGetData } from "../data/component";
 import { CSSProperties } from 'react';
 import * as Display from './display';
@@ -10,6 +10,7 @@ type ValueChanger = (ctrl: ReteControlBase, emitter: NodeEditor, key: string, da
 
 export function ctrlValChange(ctrl: ReteControlBase, emitter: NodeEditor, key: string, data: any): void {
   ctrl.props.value = data;  // update props value used to update control value when re-rendering
+  ctrl.data = data;
   cGetData(ctrl)[key] = data;  //  put into node data objects for connections
   ctrl.update && ctrl.update();  // re-render
 }

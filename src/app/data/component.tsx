@@ -9,16 +9,21 @@ export interface VariableType {
   listTypes?: string[]
 }
 
+/** Connection added/removed function spec */
+export type ConnectionFunc = (connection: Rete.Connection) => void;
+export type ConnectionEventType = "created" | "removed";
 
-/** get mappings of node outputs to output controls (create if not exist) */
+/** get mappings of node outputs to output controls */
 export function getOutputControls(node: Rete.Node): {[key: string]: string} {
   return getDataAttribute<string>(node, "outputMappings");
 }
 
+/** set mappings of node outputs to output controls */
 export function setOutputControls(node: Rete.Node, newMappings: {[key: string]: string}): void {
   setDataAttribute<string>(node, "outputMappings", newMappings);
 }
 
+/** get mappings of node outputs to boolean "nulled" values */
 export function getOutputNulls(node: Rete.Node): {[key: string]: boolean} {
   return getDataAttribute<boolean>(node, "outputNulls");
 }
@@ -39,10 +44,19 @@ export function getInitial(node: Rete.Node, key: string, defaultVal: any): any {
   return nGetData(node)[key] ?? defaultVal;
 }
 
+/** get type definitions of members from node */
 export function getTypeDefinitions(node: Rete.Node): {[key: string]: VariableType} {
   return getDataAttribute<VariableType>(node, 'typeDefinitions')
 }
 
+/** set type definitions of members from node */
 export function setTypeDefinitions(node: Rete.Node, newDefinitions: {[key: string]: VariableType}): void {
   setDataAttribute(node, 'typeDefinitions', newDefinitions);
+}
+
+export function getConnectionFuncs(node: Rete.Node): {[key in ConnectionEventType]: ConnectionFunc} {
+  return getDataAttribute<ConnectionFunc>(node, 'connectionFunc') as {[key in ConnectionEventType]: ConnectionFunc};
+}
+export function setConnectionFuncs(node: Rete.Node, funcs: {[key in ConnectionEventType]: ConnectionFunc}): void {
+  return setDataAttribute<ConnectionFunc>(node, 'connectionFunc', funcs);
 }

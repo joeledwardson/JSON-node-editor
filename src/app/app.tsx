@@ -1,4 +1,5 @@
 import * as Rete from "rete";
+import * as Data from './data/component';
 import MySocket, { sockets, addSocket } from "./sockets/sockets";
 import * as BasicComponents from "./components/basic";
 import * as AdvancedComponents from './components/advanced';
@@ -10,6 +11,7 @@ import AreaPlugin from 'rete-area-plugin';
 import ConnectionPlugin from 'rete-connection-plugin';
 import ContextMenuPlugin from 'rete-context-menu-plugin';
 import HistoryPlugin from 'rete-history-plugin';
+import { ReteComponent } from "../rete/component";
 
 
 const AdvancedSelectionPlugin = require('@mbraun/rete-advanced-selection-plugin').default;
@@ -54,7 +56,7 @@ export async function createEditor(container: HTMLElement) {
   sockets.forEach(s => MySocket.anySocket.combineWith(s.socket));
   
 
-  var components = [
+  var components: Array<ReteComponent> = [
     // new MyComponents.ComponentAdd(), 
     // new MyComponents.ComponentDictKey(),
     // new MyComponents.ComponentListItem(),
@@ -116,12 +118,18 @@ export async function createEditor(container: HTMLElement) {
     ["connectioncreated"],
     async (connection: Rete.Connection) => {
       await engine.abort();
-      let iNode = connection.input.node;
-      if (iNode) {
-        let connFunc = iNode.meta.connectionCreatedFunc as (input: Rete.Input, output: Rete.Output) => void | undefined;
-        if (connFunc) 
-          connFunc(connection.input, connection.output);
-      }
+      [connection.input.node, connection.output.node].forEach(n => {
+        if(n && Data.getConnectionFuncs(n) && Data.getConnectionFuncs(n)["created"]) {
+          Data.getConnectionFuncs(n)["created"](connection);
+        }
+      })
+      // Data.getConnectionFuncs(connection.input.node);
+      // let iNode = connection.input.node;
+      // if (iNode) {
+      //   let connFunc = iNode.meta.connectionCreatedFunc as (input: Rete.Input, output: Rete.Output) => void | undefined;
+      //   if (connFunc) 
+      //     connFunc(connection.input, connection.output);
+      // }
     }
   )
 
@@ -129,12 +137,17 @@ export async function createEditor(container: HTMLElement) {
     ["connectionremoved"],
     async (connection: Rete.Connection) => {
       await engine.abort();
-      let iNode = connection.input.node;
-      if (iNode) {
-        let connFunc = iNode.meta.connectionRemovedFunc as (input: Rete.Input) => void | undefined;
-        if (connFunc) 
-          connFunc(connection.input);
-      }
+      [connection.input.node, connection.output.node].forEach(n => {
+        if(n && Data.getConnectionFuncs(n) && Data.getConnectionFuncs(n)["removed"]) {
+          Data.getConnectionFuncs(n)["removed"](connection);
+        }
+      })
+      // let iNode = connection.input.node;
+      // if (iNode) {
+      //   let connFunc = iNode.meta.connectionRemovedFunc as (input: Rete.Input) => void | undefined;
+      //   if (connFunc) 
+      //     connFunc(connection.input);
+      // }
     }
   )
 

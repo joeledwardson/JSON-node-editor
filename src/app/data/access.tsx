@@ -4,7 +4,7 @@ export function getDataAttribute<T>(node: Rete.Node, name: string): {[key: strin
   if (node.data[name] === undefined) {
     node.data[name] = {};
   }
-  return node.data[name] as {[key: string]: T};
+  return node.data[name] as {K: T};
 }
 
 export function setDataAttribute<T>(node: Rete.Node, name: string, data: {[key: string]: T}): void {
