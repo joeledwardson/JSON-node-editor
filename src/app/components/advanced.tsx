@@ -7,10 +7,23 @@ import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
 import * as Display from "./display";
 import { v4 as uuidv4 } from 'uuid';
 import * as Data from "../data/component";
-import { typeLabels, TypeList } from './basic';
-import * as Dynamic from './dynamic';
+import { TypeList } from './basic';
+import { OptionLabel } from "../controls/display";
 import { VariableType } from "../data/component";
+import { ctrlValChange } from "../controls/controls";
 
+
+
+/** convert types to option label/value pairs with a blank at the start */
+export function typeLabels(): Array<OptionLabel> {
+  return [{
+    label: "",
+    value: ""
+  }].concat(TypeList.map(v => ({
+    label: v,
+    value: v
+  })));
+}
 
 /** 
  * perform an action on a dynamic list output 
@@ -164,6 +177,41 @@ class DisplayList extends Display.DisplayListBase {
   action = (index: number, action: Display.ListAction) => listOutputAction(this.props.editor, this.props.node, index, action, false);
 }
 
+/** change output sockets to a new type from `data` var and remove incompatible connections */
+function socketUpdate(node: Rete.Node, emitter: Rete.NodeEditor, newSocket: Rete.Socket, ioList: Map<string, Rete.IO>) {
+  ioList.forEach(io => {
+    let invalidConnections = io.connections.filter(c => !newSocket.compatibleWith(c.input.socket));
+    invalidConnections.forEach(c => emitter.removeConnection(c));
+    io.socket = newSocket;
+  })
+
+  // update node and trigger re-render of connections
+  node.update();
+  setTimeout(() => 
+    emitter.view.updateConnections({node}),
+    10
+  );
+}
+
+function typeSelect(
+  node: Rete.Node, 
+  ctrl: ControlBase, 
+  emitter: Rete.NodeEditor, 
+  newType: any,
+  ioMap: Map<string, Rete.IO>
+): void {
+  let socket = MySocket.sockets.get(newType)?.socket ?? MySocket.anySocket;
+  Controls.ctrlValChange(ctrl, emitter, ctrl.key, socket.name);
+  socketUpdate(node, emitter, socket, ioMap);
+}
+
+
+function getSelectedSocket(ctrlData: {[key: string]: any}, ctrlSelectKey: string): Rete.Socket {
+  let _sel = ctrlData[ctrlSelectKey];
+  return TypeList.includes(_sel) ? (MySocket.sockets.get(_sel)?.socket ?? MySocket.anySocket) : MySocket.anySocket;  
+}
+
+
 
 /** 
  * Advanced component - supports type selection, dynamic output list that can be extended and re-ordered (using `listOutputAction`) 
@@ -175,37 +223,13 @@ export abstract class AdvancedComponentBase extends ComponentBase {
   abstract getParentTypes(spec: VariableType): string[];
   readonly ctrlSelectKey = "Select Type";
 
-  typeSelect(
-    node: Rete.Node,
-    ctrl: ControlBase, 
-    emitter: Rete.NodeEditor, 
-    newType: any
-  ) {
-    let socket = MySocket.sockets.get(newType)?.socket ?? MySocket.anySocket;
-    Controls.ctrlValChange(ctrl, emitter, this.ctrlSelectKey, socket.name);
-    this.socketUpdate(node, emitter, socket);
-  }
-  
-  /** change output sockets to a new type from `data` var and remove incompatible connections */
-  socketUpdate(node: Rete.Node, emitter: Rete.NodeEditor, newSocket: Rete.Socket) {
-    node.outputs.forEach(o => {
-      let invalidConnections = o.connections.filter(c => !newSocket.compatibleWith(c.input.socket));
-      invalidConnections.forEach(c => emitter.removeConnection(c));
-      o.socket = newSocket;
-    })
-
-    // update node and trigger re-render of connections
-    node.update();
-    setTimeout(() => 
-      emitter.view.updateConnections({node}),
-      10
-    );
+  typeSelect(node: Rete.Node, ctrl: ControlBase, emitter: Rete.NodeEditor, newType: any) {
+    typeSelect(node, ctrl, emitter, newType, node.outputs);
   }
 
   _builder(node: Rete.Node, editor: Rete.NodeEditor) {
     let ctrlData = Data.nGetData(node);
-    let _sel = ctrlData[this.ctrlSelectKey];
-    let socket = TypeList.includes(_sel) ? (MySocket.sockets.get(_sel)?.socket ?? MySocket.anySocket) : MySocket.anySocket;
+    let socket = getSelectedSocket(ctrlData, this.ctrlSelectKey);
     let selectCtrl = new Controls.ControlSelect({
       emitter: editor, 
       key: this.ctrlSelectKey, 
@@ -224,12 +248,9 @@ export abstract class AdvancedComponentBase extends ComponentBase {
       }))
       .addControl(selectCtrl);
     
+      
+    // loop output->control mappings from node data
     let outputCtrls = Data.getOutputControls(node);
-    // let ctrlData = Data.nGetData(node);
-    // this.typeSelect(node, selectCtrl, editor, selectCtrl.data)
-    // let socket = (MySocket.sockets.get(ctrlData["Select Type"])?.socket ?? MySocket.sockets.get("Any")?.socket) as Rete.Socket;
-    
-    // loop output->control mappings
     Object.entries(outputCtrls).forEach(([outputKey, ctrlKey]) => {
 
       // add output using the output key
@@ -285,26 +306,6 @@ export abstract class AdvancedComponentBase extends ComponentBase {
   }
 
   worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {
-    // console.log('working...');
-    // console.log(node);
-    // console.log(inputs);
-    // console.log(outputs);
-    // console.log(args);
-    // if(
-    //   inputs.parent && 
-    //   inputs.parent instanceof Array && 
-    //   inputs.parent.length >= 1 && 
-    //   inputs.parent[0].dictTypes instanceof Array) {
-      
-    //   let socket = Dynamic.multiSocket(inputs.parent[0].dictTypes)
-    //   let selectCtrl =  "Select Type"
-
-    //   inputs.parent[0].types
-    //   console.log('found parent types')
-    //   console.log(inputs.parent[0])
-    // } else {
-    //   console.log('no parent types found');
-    // }
   }
 }
 
@@ -332,6 +333,123 @@ export class ComponentList extends AdvancedComponentBase {
   }
 }
 
+export class ComponentFunctionVar extends ComponentBase {
+  constructor() {
+    super('Function Variable');
+  }
+  readonly ctrlSelectKey = "Select Type";
+  data = {component: Display.DisplayBase};
+  builder(node: Rete.Node): Promise<void> {
+    return new Promise<void>(res => {
+      if( this.editor ) {
+        let ctrlData = Data.nGetData(node);
+        let socket = getSelectedSocket(ctrlData, this.ctrlSelectKey);
+        let selectCtrl = new Controls.ControlSelect({
+          emitter: this.editor, 
+          key: this.ctrlSelectKey, 
+          value: socket.name, 
+          options: typeLabels(), 
+          valueChanger: (ctrl: ControlBase, emitter: Rete.NodeEditor, key: string, data: any) => typeSelect(node, ctrl, emitter, data, node.inputs)
+        });
+
+        let parent = new Rete.Input("parent", "Parent", socket);
+        function processParent(i: Rete.Input, oldValue: string, value: string) {
+          i.connections.forEach(c => {
+            let n = c.output.node;
+            if(n && n.name === 'Function Block') {
+              let oldInput = n.inputs.get(oldValue);
+              if(oldInput) {
+                n.removeInput(oldInput);
+              }
+              if(!n.inputs.has(value)) {
+                n.addInput(new Rete.Input(value, value, parent.socket));
+                n.update && n.update();
+              }
+            } else {
+              let p =  c.output.node?.inputs.get("parent");
+              if( p ) {
+                processParent(p, oldValue, value);
+              }
+            }
+          })
+        }
+        function pls(ctrl: ControlBase, emitter: Rete.NodeEditor, key: string, data: any) {
+          let oldVal = ctrl.props.value as string;  
+          processParent(parent, oldVal as string, data as string);
+          // parent.connections.forEach(c => {
+          //   let n = c.output.node;
+          //   if(n && n.name === 'Function Block') {
+          //     let s = data as string;
+          //     let oldInput = n.inputs.get(oldVal);
+          //     if(oldInput) n.removeInput(oldInput);
+          //     if(!n.inputs.has(s)) {
+          //       n.addInput(new Rete.Input(s, s, parent.socket));
+          //       n.update && n.update();
+          //     }
+          //   } else {
+          //     let _p =  c.output.node?.inputs.get("parent")
+          //   }
+          // })
+          ctrlValChange(ctrl, emitter, key, data);
+        }
+        let nameCtrl = new Controls.ControlText({
+          emitter: this.editor, 
+          key: "name",
+          value: ctrlData["name"] ?? "",
+          valueChanger: pls
+        });
+        node
+          .addControl(selectCtrl)
+          .addInput(parent)
+          .addControl(nameCtrl);
+      }
+      res();
+    });
+  }
+  worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {
+  }
+
+}
+
+export class ComponentFunctionBlock extends ComponentBase {
+  constructor() {
+    super('Function Block');
+  }
+  readonly ctrlSelectKey = "Select Type";
+  data = {component: Display.DisplayBase};
+  builder(node: Rete.Node): Promise<void> {
+    return new Promise<void>(res => {
+      if( this.editor ) {
+
+        let ctrlData = Data.nGetData(node);
+        let socket = getSelectedSocket(ctrlData, this.ctrlSelectKey);
+        let selectCtrl = new Controls.ControlSelect({
+          emitter: this.editor, 
+          key: this.ctrlSelectKey, 
+          value: socket.name, 
+          options: typeLabels(), 
+          valueChanger: (ctrl: ControlBase, emitter: Rete.NodeEditor, key: string, data: any) => typeSelect(node, ctrl, emitter, data, node.outputs)
+        });
+        let nameCtrl = new Controls.ControlText({
+          emitter: this.editor, 
+          key: "name",
+          value: ctrlData["name"] ?? ""
+        })
+        node
+          .addControl(selectCtrl)
+          .addOutput(new Rete.Output("output", "Output", socket))
+          .addControl(nameCtrl);
+      
+      }
+
+      res();
+    });
+  }
+  worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {
+    console.log("function block working...");
+  }
+
+}
 
 
 export default {

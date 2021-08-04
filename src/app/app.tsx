@@ -55,15 +55,17 @@ export async function createEditor(container: HTMLElement) {
   
 
   var components = [
-    new BasicComponents.ComponentNum(), 
     // new MyComponents.ComponentAdd(), 
-    new AdvancedComponents.ComponentDict(),
     // new MyComponents.ComponentDictKey(),
+    // new MyComponents.ComponentListItem(),
+    new BasicComponents.ComponentNum(), 
     new BasicComponents.ComponentText(),
     new BasicComponents.ComponentBool(),
     new BasicComponents.ComponentNull(),
     new AdvancedComponents.ComponentList(),
-    // new MyComponents.ComponentListItem(),
+    new AdvancedComponents.ComponentDict(),
+    new AdvancedComponents.ComponentFunctionBlock(),
+    new AdvancedComponents.ComponentFunctionVar()
   ];
   objectSpecs.forEach((spec, key) => components.push(new ComponentDynamic(key, spec)));
 

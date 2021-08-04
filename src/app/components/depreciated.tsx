@@ -6,7 +6,7 @@ import * as Controls from  "../controls/controls";
 import { cGetData, getInitial } from "../data/component";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
 import * as Display from "./display";
-import { typeLabels } from "./basic";
+import { typeLabels } from "./advanced";
 
 
 /** control changer function to dynamically create an output "Value" with corresponding socket type to "Type Selection" control */

@@ -1,11 +1,11 @@
 import * as Rete from "rete";
 import { ComponentBase } from "../../rete/component";
 import MySocket, { sockets } from "../sockets/sockets";
-import { OptionLabel } from "../controls/display";
 import * as Controls from  "../controls/controls";
 import { getInitial } from "../data/component";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
 import * as Display from "./display";
+
 
 /** list of available types */
 export let TypeList: Array<string> = [
@@ -16,17 +16,6 @@ export let TypeList: Array<string> = [
   "List",
   "None"
 ]
-
-/** convert types to option label/value pairs with a blank at the start */
-export function typeLabels(): Array<OptionLabel> {
-  return [{
-    label: "",
-    value: ""
-  }].concat(TypeList.map(v => ({
-    label: v,
-    value: v
-  })));
-}
 
 
 

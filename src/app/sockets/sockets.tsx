@@ -63,8 +63,8 @@ export function multiSocket(typs: string[], key?: string): Socket {
       // colour undefined by default means a new colour will be created
       let newColor: string | undefined = undefined;
       for(const t of typs) {
-        // take the first valid non-null socket to use as the colour
-        newColor = t !== 'None' ? sockets.get(t)?.colour : undefined;
+        // take the first valid socket to use as the colour
+        newColor = sockets.get(t)?.colour;
         if( newColor !== undefined) break;
       }
       const newSocket = addSocket(socketName, newColor).socket;
