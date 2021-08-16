@@ -123,13 +123,6 @@ export async function createEditor(container: HTMLElement) {
           Data.getConnectionFuncs(n)["created"](connection);
         }
       })
-      // Data.getConnectionFuncs(connection.input.node);
-      // let iNode = connection.input.node;
-      // if (iNode) {
-      //   let connFunc = iNode.meta.connectionCreatedFunc as (input: Rete.Input, output: Rete.Output) => void | undefined;
-      //   if (connFunc) 
-      //     connFunc(connection.input, connection.output);
-      // }
     }
   )
 
@@ -142,12 +135,6 @@ export async function createEditor(container: HTMLElement) {
           Data.getConnectionFuncs(n)["removed"](connection);
         }
       })
-      // let iNode = connection.input.node;
-      // if (iNode) {
-      //   let connFunc = iNode.meta.connectionRemovedFunc as (input: Rete.Input) => void | undefined;
-      //   if (connFunc) 
-      //     connFunc(connection.input);
-      // }
     }
   )
 

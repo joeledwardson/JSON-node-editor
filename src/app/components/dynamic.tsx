@@ -40,10 +40,11 @@ export class ComponentDynamic extends ComponentBase {
   varSpec: Map<string, VariableType>;
   constructor(name: string, varSpec: Map<string, VariableType>) {
     super(name);
-    if (!sockets.has(name)) {
+    let socket = sockets.get(name)?.socket;
+    if (!socket) {
       throw new Error(`expected socket "${name}" to exist!`);
     }
-    this.socket = sockets.get(name)?.socket as Rete.Socket;
+    this.socket = socket;
     this.varSpec = varSpec;
   }
 

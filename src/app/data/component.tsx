@@ -55,8 +55,15 @@ export function setTypeDefinitions(node: Rete.Node, newDefinitions: {[key: strin
 }
 
 export function getConnectionFuncs(node: Rete.Node): {[key in ConnectionEventType]: ConnectionFunc} {
-  return getDataAttribute<ConnectionFunc>(node, 'connectionFunc') as {[key in ConnectionEventType]: ConnectionFunc};
+  return getDataAttribute<ConnectionFunc>(node, 'connectionFuncs') as {[key in ConnectionEventType]: ConnectionFunc};
 }
 export function setConnectionFuncs(node: Rete.Node, funcs: {[key in ConnectionEventType]: ConnectionFunc}): void {
-  return setDataAttribute<ConnectionFunc>(node, 'connectionFunc', funcs);
+  return setDataAttribute<ConnectionFunc>(node, 'connectionFuncs', funcs);
+}
+
+export function getGeneralFuncs(node: Rete.Node): {[key: string]: () => void} {
+  return getDataAttribute<() => void>(node, "generalFuncs");
+}
+export function setGeneralFuncs(node: Rete.Node, funcs: {[key: string]: () => void}) {
+  setDataAttribute(node, "generalFuncs", funcs);
 }

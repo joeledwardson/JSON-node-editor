@@ -5,7 +5,7 @@ import * as MySocket from "../sockets/sockets";
 import * as Controls from  "../controls/controls";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
 import * as Display from "./display";
-import { v4 as uuidv4 } from 'uuid';
+import { stringify, v4 as uuidv4 } from 'uuid';
 import * as Data from "../data/component";
 import { TypeList, ComponentBase } from './basic';
 import { OptionLabel } from "../controls/display";
@@ -340,64 +340,46 @@ export class ComponentList extends ListComponentBase {
 }
 
 
-export class ComponentFunctionVar extends ReteComponent {
+export class ComponentFunctionVar extends ComponentBase {
   constructor() {
     super('Function Variable');
   }
   readonly ctrlSelectKey = "Select Type";
   data = {component: Display.DisplayBase};
-  builder(node: Rete.Node): Promise<void> {
-    return new Promise<void>(res => {
-      if( this.editor ) {
-        let ctrlData = Data.nGetData(node);
-        let socket = getSelectedSocket(ctrlData[this.ctrlSelectKey]);
-        let selectCtrl = new Controls.ControlSelect({
-          emitter: this.editor, 
-          key: this.ctrlSelectKey, 
-          value: socket.name, 
-          options: typeLabels(), 
-          valueChanger: (ctrl: ReteControl, emitter: Rete.NodeEditor, key: string, data: any) => typeSelect(node, ctrl, emitter, data, node.inputs)
-        });
-
-        let parent = new Rete.Input("parent", "Parent", socket);
-        function processParent(i: Rete.Input, oldValue: string, value: string) {
-          i.connections.forEach(c => {
-            let n = c.output.node;
-            if(n && n.name === 'Function Block') {
-              let oldInput = n.inputs.get(oldValue);
-              if(oldInput) {
-                n.removeInput(oldInput);
-              }
-              if(!n.inputs.has(value)) {
-                n.addInput(new Rete.Input(value, value, parent.socket));
-                n.update && n.update();
-              }
-            } else {
-              let p =  c.output.node?.inputs.get("parent");
-              if( p ) {
-                processParent(p, oldValue, value);
-              }
-            }
-          })
-        }
-        function pls(ctrl: ReteControl, emitter: Rete.NodeEditor, key: string, data: any) {
-          let oldVal = ctrl.props.value as string;  
-          processParent(parent, oldVal as string, data as string);
-          ctrlValChange(ctrl, emitter, key, data);
-        }
-        let nameCtrl = new Controls.ControlText({
-          emitter: this.editor, 
-          key: "name",
-          value: ctrlData["name"] ?? "",
-          valueChanger: pls
-        });
-        node
-          .addControl(selectCtrl)
-          .addInput(parent)
-          .addControl(nameCtrl);
-      }
-      res();
+  _builder(node: Rete.Node, editor: Rete.NodeEditor) {
+    let ctrlData = Data.nGetData(node);
+    let socket = getSelectedSocket(ctrlData[this.ctrlSelectKey]);
+    let selectCtrl = new Controls.ControlSelect({
+      emitter: editor, 
+      key: this.ctrlSelectKey, 
+      value: socket.name, 
+      options: typeLabels(), 
+      valueChanger: (ctrl: ReteControl, emitter: Rete.NodeEditor, key: string, data: any) => typeSelect(node, ctrl, emitter, data, node.inputs)
     });
+
+    let parent = new Rete.Input("parent", "Parent", socket);
+    function findParentBlock(_node: Rete.Node) {
+      if(_node.name == "Function Block") {
+        let _processor = Data.getGeneralFuncs(_node)["functionBlockProcessor"];
+        _processor && _processor();
+      } else {
+        _node.inputs.forEach(i => i.connections.forEach(c => c.output.node && findParentBlock(c.output.node)));
+      }
+    }
+    function pls(ctrl: ReteControl, emitter: Rete.NodeEditor, key: string, data: any) {
+      ctrlValChange(ctrl, emitter, key, data);
+      findParentBlock(node);
+    }
+    let nameCtrl = new Controls.ControlText({
+      emitter: editor, 
+      key: "name",
+      value: ctrlData["name"] ?? "",
+      valueChanger: pls
+    });
+    node
+      .addControl(selectCtrl)
+      .addInput(parent)
+      .addControl(nameCtrl);
   }
   worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {
   }
@@ -429,26 +411,59 @@ export class ComponentFunctionBlock extends ComponentBase {
       .addControl(selectCtrl)
       .addOutput(new Rete.Output("output", "Output", socket))
       .addControl(nameCtrl);
-      function nodeProcess(_node: Rete.Node) {
-        if (_node.name === "Function Variable") {
-          let _ctrl = _node.controls.get("Select Type");
-          if(_ctrl) {
-            let _type = String(_ctrl.data);
-            if(!node.inputs.has(_type)) {
-              let _socket = getSelectedSocket(_ctrl.data as string);
-              node.addInput(new Rete.Input(_type, _type, _socket));
-            }
-          }
+
+      function getVarType(varNode: Rete.Node): string {
+        let typeControl = varNode.controls.get("Select Type");
+        let varType: string = "Any";
+        if(typeControl) {
+          varType = String(typeControl.data);
         }
-        _node.outputs.forEach(o => o.connections.forEach(c => c.input.node && nodeProcess(c.input.node)));
+        return varType;
+      }
+      function getVarName(varNode: Rete.Node): string {
+        let nameControl = varNode.controls.get("name");
+        return nameControl ? String(nameControl.data) : "";
+      }
+      function nodeProcessor(_node: Rete.Node) {
+        if(_node.name == "Function Variable") {
+          let varType: string = getVarType(_node);
+          let varName: string = getVarName(_node);
+          if(!node.inputs.has(varName)) {
+            let _socket = getSelectedSocket(varType);
+            node.addInput(new Rete.Input(varName, varName, _socket));
+          }
+        } else {
+          _node.outputs.forEach(o => o.connections.forEach(c => c.input.node && nodeProcessor(c.input.node)));
+        }
       }
       function process() {
         node.inputs.forEach(i => node.removeInput(i));
-        nodeProcess(node);
+        nodeProcessor(node);
+        node.update();
+        setTimeout(
+          () => editor?.view.updateConnections({node}),
+          10
+        );
       }
+      Data.setConnectionFuncs(node, {
+        "created": () => process(),
+        "removed": () => process()
+      });
+      Data.setGeneralFuncs(node, {
+        "functionBlockProcessor": () => process()
+      })
     }
 }
 
+export class ComponentFunctionCall extends ComponentBase {
+  constructor() {
+    super('Function Block');
+  }
+  data = {component: Display.DisplayBase}
+  _builder(node: Rete.Node, editor: Rete.NodeEditor) {
+    
+  }
+}
 
 export default {
   ComponentDict,
