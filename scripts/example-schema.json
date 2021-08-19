@@ -1,0 +1,41 @@
+{
+  "definitions": {
+    "Foo": {
+      "title": "Foo",
+      "type": "object",
+      "properties": {
+        "a": {
+          "title": "A",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "a"
+      ]
+    },
+    "Model": {
+      "title": "Model",
+      "type": "object",
+      "properties": {
+        "a": {
+          "title": "A",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Foo"
+            },
+            {
+              "type": "object"
+            },
+            {
+              "type": "array",
+              "items": {}
+            }
+          ]
+        }
+      },
+      "required": [
+        "a"
+      ]
+    }
+  }
+}

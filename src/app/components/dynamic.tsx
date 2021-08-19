@@ -54,6 +54,23 @@ export class ComponentDynamic extends ComponentBase {
     // create copy of variable specifications to modify
     let _varSpec = new Map<string, VariableType>(this.varSpec);
     
+
+    
+    type JSONValue =
+      | Partial<{ [key: string]: JSONValue }>
+      | JSONValue[]
+      | string
+      | number
+      | boolean
+      | null
+    var y: JSONValue = {hello: {"type": "there"}}
+    Object.entries(y).forEach(([k, v]) => {
+      if( v && typeof v === "object" && !Array.isArray(v) && v["type"] ) {
+        // check for type "integer", "number", "string"
+        console.log(v["type"]);
+      }
+    });
+
     _varSpec.forEach((spec, key) => {
       // check each type in variable spec is valid
       spec.types.forEach(t => {
