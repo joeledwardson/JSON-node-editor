@@ -18,38 +18,69 @@ const AdvancedSelectionPlugin = require('@mbraun/rete-advanced-selection-plugin'
 const SelectionPlugin: any = require('rete-drag-selection-plugin').default; 
 
 
-export async function createEditor(container: HTMLElement) {
-  let objectSpecs = new Map<string, Map<string, VariableType>>();
-  objectSpecs.set('objA', new Map([
-    [
-      'sub_features_config',
-      {
-        types: ['Dictionary', 'None'],
-        default: 'None',
-        dictTypes: ['Text']
+const sampleDefs = {
+  "RFMvAvg": {
+    "title": "RFMvAvg",
+    "description": "moving average of parent values",
+    "type": "object",
+    "additionalProperties": false,
+    "isClassDefinition": true,
+    "properties": {
+      "custom_ftr_identifier": {
+        "title": "Custom Ftr Identifier",
+        "type": "string"
+      },
+      "cache_count": {
+        "title": "Cache Count",
+        "description": "number of caching points",
+        "default": 2,
+        "type": "integer"
+      },
+      "cache_secs": {
+        "title": "Cache Secs",
+        "type": "number"
+      },
+      "cache_insidewindow": {
+        "title": "Cache Insidewindow",
+        "type": "boolean"
       }
-    ], [
-      'ftr_identifier',
-      {
-        types: ['Text'],
-        default: 'pls',
-      }
-    ], [
-      'cache_count',
-      {
-        types: ['Number'],
-        default: 2
-      }
-    ], [
-      'cache_secs',
-      {
-        types: ['Number', 'None'],
-        default: 3
-      }
-    ]
-  ]));
+    }
+  }
+}
 
-  objectSpecs.forEach((spec, key) => {
+
+export async function createEditor(container: HTMLElement) {
+  // let objectSpecs = new Map<string, Map<string, VariableType>>();
+  // objectSpecs.set('objA', new Map([
+  //   [
+  //     'sub_features_config',
+  //     {
+  //       types: ['Dictionary', 'None'],
+  //       default: 'None',
+  //       dictTypes: ['Text']
+  //     }
+  //   ], [
+  //     'ftr_identifier',
+  //     {
+  //       types: ['Text'],
+  //       default: 'pls',
+  //     }
+  //   ], [
+  //     'cache_count',
+  //     {
+  //       types: ['Number'],
+  //       default: 2
+  //     }
+  //   ], [
+  //     'cache_secs',
+  //     {
+  //       types: ['Number', 'None'],
+  //       default: 3
+  //     }
+  //   ]
+  // ]));
+
+  Object.keys(sampleDefs).forEach(key => {
     addSocket(key);
     addType(key);
   });
@@ -69,7 +100,8 @@ export async function createEditor(container: HTMLElement) {
     new AdvancedComponents.ComponentFunctionBlock(),
     new AdvancedComponents.ComponentFunctionVar()
   ];
-  objectSpecs.forEach((spec, key) => components.push(new ComponentDynamic(key, spec)));
+  Object.entries(sampleDefs).forEach(([key, spec]) => components.push(new ComponentDynamic(key, spec)));
+  // objectSpecs.forEach((spec, key) => components.push(new ComponentDynamic(key, spec)));
 
   // TODO - shift drag select not working
   console.log("creating editor...");
