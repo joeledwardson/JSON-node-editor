@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch JSON Script",
+            "name": "Launch Schema Script",
             "program": "${workspaceFolder}/scripts/schema-test.js",
             "request": "launch",
             "skipFiles": [
@@ -13,7 +13,17 @@
             ],
             "type": "pwa-node"
         },
-
+        {
+            "name": "Launch Test Script",
+            "program": "${workspaceFolder}/scripts/ts-test.ts",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node",
+            "preLaunchTask": "tsc: build - tsconfig.json",
+            "outFiles": ["${workspaceFolder}/out/**/*.js"]
+        },
 
         {
             "type": "node",

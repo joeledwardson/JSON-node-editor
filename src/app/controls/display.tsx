@@ -15,6 +15,7 @@ export interface InputProps {
     style?: CSSProperties;
     className?: string;
     componentDidMount?: () => void;
+    display_disabled?: boolean;
 };
 
 /** value & label pairs displayed in select options */
@@ -43,7 +44,8 @@ export class InputBase<T extends InputProps, S={}> extends React.Component<T, S>
       style: this.props.style,
       className: "control-input input-group " + (this.props.className ?? ""),
       value: this.props.value,
-      onChange: <Type extends HTMLTarget>(e: React.FormEvent<Type>) => this.props.valueChanger(e.currentTarget.value)
+      onChange: <Type extends HTMLTarget>(e: React.FormEvent<Type>) => this.props.valueChanger(e.currentTarget.value),
+      disabled: this.props.display_disabled? true : undefined
     }
   }
 }
@@ -98,7 +100,7 @@ export class InputSelect extends InputBase<SelectProps> {
     return (
       <Form.Select 
         aria-label="Select"
-        {...this.baseRenderKwargs()} 
+        {...this.baseRenderKwargs()}
       >
         {this.props.options.map(opt =>
             <option 

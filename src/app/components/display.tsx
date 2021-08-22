@@ -7,10 +7,13 @@ import { StylableSocket } from "../sockets/display";
 import { sockets } from "../sockets/sockets";
 import { getOutputControls, getOutputNulls } from "../data/component";
 import { CSSProperties } from "react";
+import { ControlPropsBase, ControlTemplate } from "../controls/core";
 
 
 export type ListAction = "add" | "remove" | "moveUp" | "moveDown";
 export type ListActionFunction = (index: number, action: ListAction) => void;
+
+
 
 
 /**
@@ -37,7 +40,8 @@ export class DisplayBase extends ReactRete.Node {
     />
   }
 
-  getControl(ctrl: Rete.Control) {
+  getControl(ctrl: Rete.Control, display_disabled: boolean = false) {
+    (ctrl as ControlTemplate<ControlPropsBase>).props.display_disabled = display_disabled;
     return <ReactRete.Control	
       className="control"
       key={ctrl.key}
@@ -180,8 +184,11 @@ export abstract class DisplayDynamicBase extends DisplayBase {
     let ctrl = this.props.node.controls.get(getOutputControls(this.props.node)[output.key]);
     let isNullable: boolean = output.key in getOutputNulls(this.props.node);
     let isNull: boolean = getOutputNulls(this.props.node)[output.key] === true;
-    let displayCtrl: boolean = !output.hasConnection() && Boolean(ctrl) && !isNull;
+    let disableCtrl: boolean = output.hasConnection() || isNull;
     let btnIcon = isNull ? faMouse : faTimes;
+    
+    console.log(`control "${ctrl?.key}" is disabled: "${disableCtrl}`);
+    
     let btnElement = 
     <Button 
       variant="secondary" 
@@ -195,7 +202,7 @@ export abstract class DisplayDynamicBase extends DisplayBase {
 
     return <div className="output" key={output.key}>
     {/* return <> */}
-      {displayCtrl ? ctrl && this.getControl(ctrl) : <div className="control-input"></div>}
+      {typeof ctrl !== "undefined" ? this.getControl(ctrl, disableCtrl) : <div className="control-input"></div>}
       {isNullable ? btnElement : <div></div>}
       {titleElement}
       {this.getSocket(output, "output", {visibility: isNull ? "hidden" : "visible"})}

@@ -52,51 +52,69 @@ export function addSocket(typeName: string, colour?: string): SocketHolder {
 /** create type string from a list of valid types */
 export const getTypeString = (typs: string[]) => typs.join(' | ');
 
+export function JSONTypeConvert(typ: string): string {
+  let type_maps: {[key: string]: string} = {
+    "string": "Text",
+    "integer": "Number",
+    "number": "Number",
+    "array": "List",
+    "boolean": "Boolean",
+    "null": "None",
+    "object": "Dict"
+  }
+  return type_maps[typ] ?? typ;
+}
+
 
 /** generate socket from list of valid types - socket name created by joining types together, or can be passed optionally */
-export function multiSocket(typs: string[], key?: string): Socket {
-    let socketName: string = key ?? getTypeString(typs);
-    const socket = sockets.get(socketName)?.socket;
-    if( socket ) {
-      return socket;
-    } else {
-      // colour undefined by default means a new colour will be created
-      let newColor: string | undefined = undefined;
-      for(const t of typs) {
-        // take the first valid socket to use as the colour
-        newColor = sockets.get(t)?.colour;
-        if( newColor !== undefined) break;
-      }
-      const newSocket = addSocket(socketName, newColor).socket;
-      typs.forEach(t => {
-        let s = sockets.get(t)?.socket;
-        if (!s) 
-          throw new Error(`multi-socket type "${t}" not recognised`);
-        s && newSocket.combineWith(s);
-      });
-      return newSocket;
-    }
-  }
+export function multiSocket(typs: string[], key?: string, colour?: string): Socket {
+  let socketName: string = key ?? getTypeString(typs);
+  const socket = sockets.get(socketName)?.socket;
   
+  if(!socket || colour) {
+    for(const t of typs) {
+      // take the first valid socket to use as the colour
+      if( colour ) break;
+      colour = sockets.get(t)?.colour;
+    }
+    const newSocket = addSocket(socketName, colour).socket;
+    typs.forEach(t => {
+      let s = sockets.get(t)?.socket;
+      s && newSocket.combineWith(s);
+      if (!s) 
+        throw new Error(`multi-socket type "${t}" not recognised`);
+    });
+    return newSocket;
+  } else { 
+    return socket;
+  }
+}
+  
+var anyHolder = addSocket("Any");
+var listHolder = addSocket("List");
 
 export var numberSocket: Socket = addSocket("Number").socket;
 export var stringSocket: Socket = addSocket("Text").socket;
 export var boolSocket: Socket = addSocket("Boolean").socket;
 export var nullSocket: Socket =addSocket("None").socket;
-export var listSocket: Socket = addSocket("List").socket;
-export var listItemSocket: Socket = addSocket("List Item").socket;
+export var listSocket: Socket = listHolder.socket;
 export var dictSocket: Socket = addSocket("Dictionary").socket;
-export var dictKeySocket: Socket = addSocket("Dictionary Key").socket;
-export var anySocket = addSocket("Any").socket;
+export var anySocket = anyHolder.socket;
 
-export default {
-    numberSocket,
-    stringSocket,
-    boolSocket,
-    nullSocket,
-    dictSocket,
-    dictKeySocket,
-    listSocket,
-    listItemSocket,
-    anySocket
-}
+export var listColour: string = listHolder.colour;
+export var anyColour: string = anyHolder.colour;
+
+
+// export default {
+//     numberSocket,
+//     stringSocket,
+//     boolSocket,
+//     nullSocket,
+//     dictSocket,
+//     dictKeySocket,
+//     listSocket,
+//     listItemSocket,
+//     anySocket,
+//     multiSocket,
+//     getTypeString,
+// }

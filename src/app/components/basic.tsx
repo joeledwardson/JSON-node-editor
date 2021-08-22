@@ -1,6 +1,6 @@
 import * as Rete from "rete";
 import { ReteComponent } from "../../rete/component";
-import MySocket, { sockets } from "../sockets/sockets";
+import * as MySocket  from "../sockets/sockets";
 import * as Controls from  "../controls/controls";
 import { getInitial } from "../data/component";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";

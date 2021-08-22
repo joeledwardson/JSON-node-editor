@@ -10,7 +10,7 @@ import * as Data from "../data/component";
 import { TypeList, ComponentBase } from './basic';
 import { OptionLabel } from "../controls/display";
 import { VariableType } from "../data/component";
-import { ctrlValChange } from "../controls/controls";
+import { ctrlValChange } from "../controls/core";
 
 
 
@@ -214,7 +214,7 @@ function typeSelect(
   ioMap: Map<string, Rete.IO>
 ): void {
   let socket = MySocket.sockets.get(newType)?.socket ?? MySocket.anySocket;
-  Controls.ctrlValChange(ctrl, emitter, ctrl.key, socket.name);
+  ctrlValChange(ctrl, emitter, ctrl.key, socket.name);
   socketUpdate(node, emitter, socket, ioMap);
 }
 
