@@ -41,11 +41,19 @@ export class DisplayBase extends ReactRete.Node {
   }
 
   getControl(ctrl: Rete.Control, display_disabled: boolean = false) {
-    (ctrl as ControlTemplate<ControlPropsBase>).props.display_disabled = display_disabled;
+    let ctrlt = ctrl as ControlTemplate<ControlPropsBase>;
+    let old_disabled = ctrlt.props.display_disabled; 
+    ctrlt.props.display_disabled = display_disabled;
+    if( display_disabled ) {
+      ctrlt.props.value = null;
+    }
+    if( display_disabled != old_disabled ) {
+      ctrlt.update && ctrlt.update();
+    }
     return <ReactRete.Control	
       className="control"
-      key={ctrl.key}
-      control={ctrl}
+      key={ctrlt.key}
+      control={ctrlt}
       innerRef={this.props.bindControl}
     />
   }
