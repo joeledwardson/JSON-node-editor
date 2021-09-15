@@ -1,5 +1,6 @@
 import * as Rete from "rete";
 import * as ReactRete from 'rete-react-render-plugin';
+import { bindSocket, bindControl } from "rete-react-render-plugin";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCheck, faPlus, faTimes, faTrash, faMouse } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "react-bootstrap";
@@ -13,7 +14,54 @@ import { ControlPropsBase, ControlTemplate } from "../controls/core";
 export type ListAction = "add" | "remove" | "moveUp" | "moveDown";
 export type ListActionFunction = (index: number, action: ListAction) => void;
 
+export function getTitle(name: string): JSX.Element {
+  return <div className="title">{name}</div>
+}
 
+export function getSocket(io: Rete.IO, typ: string, bindSocket: bindSocket, styles?: CSSProperties): JSX.Element {
+  return <StylableSocket
+    type={typ}
+    socket={io.socket}
+    io={io}
+    innerRef={bindSocket}
+    cssStyle={{background: sockets.get(io.socket.name)?.colour, ...styles}}
+  />
+}
+
+export function getControl(ctrl: Rete.Control, bindControl: bindControl, display_disabled: boolean = false): JSX.Element {
+  (ctrl as ControlTemplate<ControlPropsBase>).props.display_disabled = display_disabled;
+  return <ReactRete.Control	
+    className="control"
+    key={ctrl.key}
+    control={ctrl}
+    innerRef={bindControl}
+  />
+}
+
+export function getOutput(output: Rete.Output, node: Rete.Node, bindControl: bindControl, bindSocket: bindSocket): JSX.Element {
+  let ctrl = node.controls.get(getOutputControls(node)[output.key]);
+  return <div className="output" key={output.key}>
+    {!output.hasConnection() && ctrl && getControl(ctrl, bindControl)}
+    <div className="output-title">{output.name}</div>
+    {getSocket(output, "output", bindSocket)}
+  </div>
+}
+
+export function getInput(input: Rete.Input, bindControl: bindControl, bindSocket: bindSocket): JSX.Element {
+  return <div className="input" key={input.key}>
+    {getSocket(input, "input", bindSocket)}
+    {!input.showControl() && (
+      <div className="input-title">{input.name}</div>
+    )}
+    {input.showControl() && input.control && (
+      <ReactRete.Control
+        className="input-control"
+        control={input.control}
+        innerRef={bindControl}
+      />
+    )}
+  </div>
+}
 
 
 /**
@@ -175,7 +223,7 @@ export abstract class DisplayListBase extends DisplayBase {
  * 
  * The action of clicking either "activate"/"null" an output is controlled by `nullButtonClick()`
  */
-export abstract class DisplayDynamicBase extends DisplayBase {
+export abstract class D extends DisplayBase {
 
   /** process object member null button click -  */
   abstract nullButtonClick(output: Rete.Output): void

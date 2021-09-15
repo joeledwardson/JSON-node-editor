@@ -5,8 +5,8 @@ declare module 'rete-react-render-plugin' {
         Socket as ReteSocket, IO, Node as ReteNode, NodeEditor } from 'rete';
 
 
-    type bindControl = (el: HTMLElement, control: ReteControl) => void;
-    type bindSocket = (el: HTMLElement, type: string, io: IO) => void;
+    export type bindControl = (el: HTMLElement, control: ReteControl) => void;
+    export type bindSocket = (el: HTMLElement, type: string, io: IO) => void;
 
     interface NodeState {
         outputs: Array<Output>

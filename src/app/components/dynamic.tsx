@@ -1,16 +1,16 @@
 import * as Rete from 'rete';
-import { ReteComponent } from "../../rete/component";
-import {sockets} from "../sockets/sockets";
 import * as Sockets from "../sockets/sockets";
 import * as MyControls from "../controls/controls";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
-import { DisplayDynamicBase } from "./display";
+import * as Display from './display';
 import * as Data from "../data/component";
 import {  ComponentBase, TypeList } from "./basic";
-import { getInitial, VariableType } from '../data/component';
-import { TypeVariable } from 'typescript';
-import { stringify } from 'uuid';
-
+import * as ReactRete from 'rete-react-render-plugin';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCheck, faPlus, faTimes, faTrash, faMouse } from "@fortawesome/free-solid-svg-icons";
+import { Button } from "react-bootstrap";
+import { sockets } from "../sockets/sockets";
+import { getOutputControls, getOutputNulls } from "../data/component";
 
 
 /** add custom type to valid type list */
@@ -40,8 +40,23 @@ function get_ref_name(ref_str: string): string | null {
   return /.*\/(?<name>.*)$/.exec(ref_str)?.groups?.name ?? null;
 }
 
-/** Dynamic component */
-class DisplayDynamic extends DisplayDynamicBase {
+/** 
+ * Same as Base Display, except for outputs & their mapped controls:
+ * Outputs can be "nullable", i.e. their key has a "nulled" boolean value (get/set by `getOutputNulls` with output key)  
+ * 
+ * If output is "nullable", it is displayed either with an x to "null" the output or a mouse-icon to "activate" the output
+ * 
+ * "nullable" outputs are displayed as:
+ * - if output key is "nulled" with "null" value set to true, mouse button is displayed to "activate" output
+ *     - displayed without a socket or its mapped control
+ * - if output is not "nulled", with "null" value set to false, x button is displayed to "null" output
+ *     - displayed as normal with its socket and mapped control
+ * 
+ * The action of clicking either "activate"/"null" an output is controlled by `nullButtonClick()`
+ */
+ class DisplayDynamic extends ReactRete.Node {
+
+  /** process object member null button click -  */
   nullButtonClick(output: Rete.Output): void {
     // get "null" value
     let outputNulls = Data.getOutputNulls(this.props.node);
@@ -58,7 +73,76 @@ class DisplayDynamic extends DisplayDynamicBase {
     this.props.node.update();
     this.props.editor.view.updateConnections({node: this.props.node});
   }
+
+  getOutput(output: Rete.Output): JSX.Element {
+    let ctrl = this.props.node.controls.get(getOutputControls(this.props.node)[output.key]);
+    let isNullable: boolean = output.key in getOutputNulls(this.props.node);
+    let isNull: boolean = getOutputNulls(this.props.node)[output.key] === true;
+    let disableCtrl: boolean = output.hasConnection() || isNull;
+    let btnIcon = isNull ? faMouse : faTimes;
+    
+    console.log(`control "${ctrl?.key}" is disabled: "${disableCtrl}`);
+    
+    let btnElement = <Button 
+      variant="secondary" 
+      size="sm" 
+      className="display-button"
+      onClick={()=>this.nullButtonClick(output)}
+    >
+      <FontAwesomeIcon icon={btnIcon} />
+    </Button>
+    let titleElement = <div className="output-title">{output.name}</div>
+
+    return <div className="output" key={output.key}>
+    {/* return <> */}
+      {typeof ctrl !== "undefined" ? Display.getControl(ctrl, this.props.bindControl, disableCtrl) : <div className="control-input"></div>}
+      {isNullable ? btnElement : <div></div>}
+      {titleElement}
+      {Display.getSocket(output, "output", this.props.bindSocket, {visibility: isNull ? "hidden" : "visible"})}
+    {/* </> */}
+    </div>
+  }
+
+  render() {
+    const { node, bindSocket, bindControl } = this.props;
+    const { outputs, controls, inputs, selected } = this.state;
+    let ctrlKeys = Object.values(getOutputControls(this.props.node));    
+    return (
+      <div className={`node ${selected}`}>
+        {Display.getTitle(node.name)}
+        {/* Outputs */}
+        <div className="dynamic-outputs">
+          {outputs.map((output) =>  this.getOutput(output))}
+        </div>
+        {/* Controls (check not mapped to output) */}
+        <div className="controls-container" >
+        {controls.map((control) => !ctrlKeys.includes(control.key) && Display.getControl(control, bindControl))}
+        </div>        
+        {/* Inputs */}
+        {inputs.map((input) => Display.getInput(input, bindControl, bindSocket))}
+      </div>
+    );
+  }
 }
+
+// class DisplayDynamic extends DisplayDynamicBase {
+//   nullButtonClick(output: Rete.Output): void {
+//     // get "null" value
+//     let outputNulls = Data.getOutputNulls(this.props.node);
+    
+//     // if not "null" then user is clicking to null, delete all connections
+//     if(!(outputNulls[output.key])) {
+//       output.connections.forEach(c => this.props.editor.removeConnection(c))
+//     }
+
+//     // invert "null" value
+//     outputNulls[output.key] = !outputNulls[output.key];
+    
+//     // update node and connections
+//     this.props.node.update();
+//     this.props.editor.view.updateConnections({node: this.props.node});
+//   }
+// }
 export class ComponentDynamic extends ComponentBase {
   data = { component: DisplayDynamic };
   socket: Rete.Socket;

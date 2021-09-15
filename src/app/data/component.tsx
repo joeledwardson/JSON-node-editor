@@ -5,7 +5,7 @@ import { getDataAttribute, setDataAttribute } from "./access";
 export interface VariableType {
   types: string[],
   default?: any,
-  dictTypes?: string[]
+  dictTypes?: string[],
   listTypes?: string[]
 }
 
