@@ -1,5 +1,5 @@
 import * as Rete from "rete";
-import { ReteReactControl as ReteControl } from "../../retereact";
+import { ReteReactControl as ReteControl } from "../retereact";
 import * as MySocket from "../sockets/sockets";
 import * as Controls from  "../controls/controls";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
@@ -7,9 +7,8 @@ import * as Display from "./display";
 import { v4 as uuidv4 } from 'uuid';
 import * as Data from "../data/attributes";
 import { TypeList, ComponentBase } from './basic';
-import { OptionLabel } from "../controls/display";
+import { OptionLabel, ctrlValChange } from "../controls/controls";
 import { VariableType } from "../data/attributes";
-import { ctrlValChange } from "../controls/core";
 import { getOutputControls } from "../data/attributes";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
@@ -20,44 +19,6 @@ import {getTitle, getInput, getControl, getSocket} from './display';
 
 type ListAction = "add" | "remove" | "moveUp" | "moveDown";
 type ListActionFunction = (index: number, action: ListAction) => void;
-
-// function listGetOutput(
-//   output: Rete.Output, 
-//   index: number, 
-//   node: Rete.Node,
-//   bindControl: bindControl,
-//   bindSocket: bindSocket,
-//   action: ListActionFunction
-// ): JSX.Element {
-//   let ctrlKey = getOutputControls(node)[output.key];
-//   let ctrl = ctrlKey && node.controls.get(ctrlKey);
-//   return <div className="output" key={output.key}>
-//     <div className="output-title hidden-node-item">
-//       <div className="output-item-controls">
-//         <div className="output-item-arrows">
-//           <div>
-//             <button onClick={() => action(index, "moveUp")} >
-//               <i className="fas fa-chevron-up fa-xs"></i>
-//             </button>
-//           </div>
-//           <div>
-//             <button onClick={() => action(index, "moveDown")} >
-//               <i className="fas fa-chevron-down fa-xs"></i>
-//             </button>
-//           </div>
-//         </div>
-//         <Button variant="light" className="" size="sm" onClick={() => action(index, "add")} >
-//           <FontAwesomeIcon icon={faPlus} />
-//         </Button>
-//         <Button variant="warning" className="" size="sm" onClick={() => action(index, "remove")}>
-//           <FontAwesomeIcon icon={faTrash} />
-//         </Button>
-//         {ctrl && Display.getControl(ctrl, bindControl)}
-//       </div>
-//     </div>
-//     {Display.getSocket(output, "output", bindSocket)}
-//   </div>
-// }
 
 
 /**
@@ -125,9 +86,6 @@ type ListActionFunction = (index: number, action: ListAction) => void;
 }
 
 
-
-
-
 /** 
  * convert types to option label/value pairs with a blank at the start 
  * */
@@ -166,7 +124,7 @@ async function listOutputAction(
     
     // get selected type from type selection control
     const selectedType = ctrlData["Select Type"];
-    let socket = MySocket.sockets.get(selectedType)?.socket;
+    let socket = MySocket.sockets.get(selectedType)?.socket ?? MySocket.anySocket;
     
     
     if (!(socket instanceof Rete.Socket)) {
@@ -193,11 +151,7 @@ async function listOutputAction(
       if( hasOutputControls ) {
         // set ctrl key to unique ID, create new control for output and add to node
         ctrlKey = uuidv4();
-        node.addControl(new Controls.ControlText({
-          key: ctrlKey, 
-          emitter: editor, 
-          value: ""
-        })); 
+        node.addControl(new Controls.ControlText(ctrlKey, editor, {value: ""}));
       } 
 
       // add mapping 
@@ -360,22 +314,21 @@ export abstract class ListComponentBase extends ComponentBase {
   _builder(node: Rete.Node, editor: Rete.NodeEditor) {
     let ctrlData = Data.nGetData(node);
     let socket = getSelectedSocket(ctrlData[this.ctrlSelectKey]);
-    let selectCtrl = new Controls.ControlSelect({
-      emitter: editor, 
-      key: this.ctrlSelectKey, 
-      value: socket.name, 
-      options: typeLabels(), 
-      valueChanger: (ctrl: ReteControl, emitter: Rete.NodeEditor, key: string, data: any) => this.typeSelect(node, ctrl, emitter, data)
-    });
+    let selectCtrl = new Controls.ControlSelect(
+      this.ctrlSelectKey, 
+      editor, {
+        value: socket.name, 
+        options: typeLabels(), 
+      }, 
+      (ctrl: ReteControl, emitter: Rete.NodeEditor, key: string, data: any) => this.typeSelect(node, ctrl, emitter, data)
+    );
     node
       .addInput(new Rete.Input("parent", "Parent", this.socket))
-      .addControl(new Controls.ControlButton({
-        emitter: editor,
-        key: "Add Item", 
+      .addControl(new Controls.ControlButton("Add Item", editor, {
         value: null, // ignored
         buttonInner: "Add Item +", 
-        valueChanger: () => listOutputAction(editor, node, node.outputs.size, "add", this.hasOutputControls)  // add output to end of output list
-      }))
+      }, () => listOutputAction(editor, node, node.outputs.size, "add", this.hasOutputControls)  // add output to end of output list
+      ))
       .addControl(selectCtrl);
     
       
@@ -387,9 +340,7 @@ export abstract class ListComponentBase extends ComponentBase {
       node.addOutput(new Rete.Output(outputKey, outputKey, socket));
 
       // add control using mapped control key
-      this.hasOutputControls && node.addControl(new Controls.ControlText({
-        key: ctrlKey,
-        emitter: editor,
+      this.hasOutputControls && node.addControl(new Controls.ControlText(ctrlKey, editor, {
         value: ctrlData[ctrlKey]
       }));
     });
@@ -404,29 +355,32 @@ export abstract class ListComponentBase extends ComponentBase {
     let connectionCreatedFunc: Data.ConnectionFunc = (connection: Rete.Connection) => {
       let input = connection.input
       let output =  connection.output;
-      if(input.node == node && input.key == "parent" && output.node) {
-        let typeDefs = Data.getTypeDefinitions(output.node);
-        let k = output.name;
-        if( k in typeDefs ) {
-          let typs = this.getParentTypes(typeDefs[k]);
-          if( typs ) {
-            let newSocket = MySocket.multiSocket(typs);
-            this.typeSelect(node, selectCtrl, editor, newSocket.name);
-            setCtrlVisible(false);
-          }
-        }
+      if(input.node === node && input.key === "parent" && output.node) {
+        // let typeDefs = Data.getTypeDefinitions(output.node);
+        // let k = output.name;
+        // if( k in typeDefs ) {
+        //   let typs = this.getParentTypes(typeDefs[k]);
+        //   if( typs ) {
+        //     let newSocket = MySocket.multiSocket(typs);
+        //     this.typeSelect(node, selectCtrl, editor, newSocket.name);
+        //     setCtrlVisible(false);
+        //   }
+        // }
       }
     }
 
     /** on connection removed, set selected type to control and show  */
     let connectionRemovedFunc: Data.ConnectionFunc = (connection: Rete.Connection) => {
-      if(connection.input.node == node && connection.input.key == "parent") {
+      if(connection.input.node === node && connection.input.key === "parent") {
         setCtrlVisible(true);
         this.typeSelect(node, selectCtrl, editor, "Any");
       }
     }
 
-    Data.setConnectionFuncs(node, {"created": connectionCreatedFunc, "removed": connectionRemovedFunc});
+    Data.setConnectionFuncs(node, {
+      "created": connectionCreatedFunc, 
+      "removed": connectionRemovedFunc
+    });
   }
 }
 
@@ -464,33 +418,32 @@ export class ComponentFunctionVar extends ComponentBase {
   _builder(node: Rete.Node, editor: Rete.NodeEditor) {
     let ctrlData = Data.nGetData(node);
     let socket = getSelectedSocket(ctrlData[this.ctrlSelectKey]);
-    let selectCtrl = new Controls.ControlSelect({
-      emitter: editor, 
-      key: this.ctrlSelectKey, 
-      value: socket.name, 
-      options: typeLabels(), 
-      valueChanger: (ctrl: ReteControl, emitter: Rete.NodeEditor, key: string, data: any) => typeSelect(node, ctrl, emitter, data, node.inputs)
-    });
+    let selectCtrl = new Controls.ControlSelect(
+      this.ctrlSelectKey, 
+      editor, 
+      {
+        value: socket.name, 
+        options: typeLabels(),
+      }, 
+      (ctrl: ReteControl, emitter: Rete.NodeEditor, key: string, data: any) => typeSelect(node, ctrl, emitter, data, node.inputs)
+    );
 
     let parent = new Rete.Input("parent", "Parent", socket);
     function findParentBlock(_node: Rete.Node) {
-      if(_node.name == "Function Block") {
+      if(_node.name === "Function Block") {
         let _processor = Data.getGeneralFuncs(_node)["functionBlockProcessor"];
         _processor && _processor();
       } else {
         _node.inputs.forEach(i => i.connections.forEach(c => c.output.node && findParentBlock(c.output.node)));
       }
     }
-    function pls(ctrl: ReteControl, emitter: Rete.NodeEditor, key: string, data: any) {
+    function dataHandler(ctrl: ReteControl, emitter: Rete.NodeEditor, key: string, data: any) {
       ctrlValChange(ctrl, emitter, key, data);
       findParentBlock(node);
     }
-    let nameCtrl = new Controls.ControlText({
-      emitter: editor, 
-      key: "name",
+    let nameCtrl = new Controls.ControlText("name", editor, {
       value: ctrlData["name"] ?? "",
-      valueChanger: pls
-    });
+    }, dataHandler);
     node
       .addControl(selectCtrl)
       .addInput(parent)
@@ -510,18 +463,18 @@ export class ComponentFunctionBlock extends ComponentBase {
   _builder(node: Rete.Node, editor: Rete.NodeEditor) {
     let ctrlData = Data.nGetData(node);
     let socket = getSelectedSocket(ctrlData[this.ctrlSelectKey]);
-    let selectCtrl = new Controls.ControlSelect({
-      emitter: editor, 
-      key: this.ctrlSelectKey, 
-      value: socket.name, 
-      options: typeLabels(), 
-      valueChanger: (ctrl: ReteControl, emitter: Rete.NodeEditor, key: string, data: any) => typeSelect(node, ctrl, emitter, data, node.outputs)
-    });
-    let nameCtrl = new Controls.ControlText({
-      emitter: editor, 
-      key: "name",
+    let selectCtrl = new Controls.ControlSelect(
+      this.ctrlSelectKey, 
+      editor, 
+      {
+        value: socket.name, 
+        options: typeLabels(), 
+      }, 
+      (ctrl: ReteControl, emitter: Rete.NodeEditor, key: string, data: any) => typeSelect(node, ctrl, emitter, data, node.outputs)
+    );
+    let nameCtrl = new Controls.ControlText("name", editor,  {
       value: ctrlData["name"] ?? ""
-    })
+    });
     node
       .addControl(selectCtrl)
       .addOutput(new Rete.Output("output", "Output", socket))
@@ -540,7 +493,7 @@ export class ComponentFunctionBlock extends ComponentBase {
         return nameControl ? String(nameControl.data) : "";
       }
       function nodeProcessor(_node: Rete.Node) {
-        if(_node.name == "Function Variable") {
+        if(_node.name === "Function Variable") {
           let varType: string = getVarType(_node);
           let varName: string = getVarName(_node);
           if(!node.inputs.has(varName)) {
@@ -580,7 +533,8 @@ export class ComponentFunctionCall extends ComponentBase {
   }
 }
 
-export default {
+const _default = {
   ComponentDict,
   ComponentList,
 }
+export default _default;

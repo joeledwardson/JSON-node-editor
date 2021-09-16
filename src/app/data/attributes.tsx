@@ -1,5 +1,6 @@
 import * as Rete from 'rete';
 import { getDataAttribute, setDataAttribute } from "./access";
+import { JSONObject } from '../jsonschema';
 
 /** Variable spec */
 export interface VariableType {
@@ -45,12 +46,12 @@ export function getInitial(node: Rete.Node, key: string, defaultVal: any): any {
 }
 
 /** get type definitions of members from node */
-export function getTypeDefinitions(node: Rete.Node): {[key: string]: VariableType} {
-  return getDataAttribute<VariableType>(node, 'typeDefinitions')
+export function getTypeDefinitions(node: Rete.Node): {[key: string]: JSONObject} {
+  return getDataAttribute<JSONObject>(node, 'typeDefinitions')
 }
 
 /** set type definitions of members from node */
-export function setTypeDefinitions(node: Rete.Node, newDefinitions: {[key: string]: VariableType}): void {
+export function setTypeDefinitions(node: Rete.Node, newDefinitions: {[key: string]: JSONObject}): void {
   setDataAttribute(node, 'typeDefinitions', newDefinitions);
 }
 

@@ -1,5 +1,5 @@
 import * as Rete from "rete";
-import { ReteReactComponent as ReteComponent } from "../../retereact";
+import { ReteReactComponent as ReteComponent } from "../retereact";
 import * as MySocket  from "../sockets/sockets";
 import * as Controls from  "../controls/controls";
 import { getInitial } from "../data/attributes";
@@ -44,12 +44,7 @@ export class ComponentNum extends ComponentBase {
   async _builder(node: Rete.Node, editor: Rete.NodeEditor) {
     node
       .addInput(new Rete.Input("parent", "Parent", MySocket.numberSocket))
-      .addControl(new Controls.ControlNumber({
-        emitter: editor, 
-        key: "Number Input", 
-        value: getInitial(node, "Number Input", 0)
-      }))
-     
+      .addControl(new Controls.ControlNumber("Number Input", editor, {value: getInitial(node, "Number Input", 0)}))
   }
 }
 
@@ -64,9 +59,7 @@ export class ComponentText extends ComponentBase {
   async _builder(node: Rete.Node, editor: Rete.NodeEditor) {
     node
       .addInput(new Rete.Input("parent", "Parent", MySocket.stringSocket))
-      .addControl(new Controls.ControlText({
-        emitter: editor, 
-        key: "Text Input", 
+      .addControl(new Controls.ControlText("Text Input", editor, {
         value: getInitial(node, "Text Input", "")
       }))
      
@@ -84,9 +77,7 @@ export class ComponentBool extends ComponentBase {
   async _builder(node: Rete.Node, editor: Rete.NodeEditor) {
     node
       .addInput(new Rete.Input("parent", "Parent", MySocket.boolSocket))
-      .addControl(new Controls.ControlBool({
-        emitter: editor, 
-        key: "Boolean Input", 
+      .addControl(new Controls.ControlBool("Boolean Input", editor, {
         value: getInitial(node, "Boolean Input", 0) // blank is option for nothing selection
       }));
   }

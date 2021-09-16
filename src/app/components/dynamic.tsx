@@ -6,35 +6,18 @@ import * as Data from "../data/attributes";
 import {  ComponentBase, TypeList } from "./basic";
 import * as ReactRete from 'rete-react-render-plugin';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { ReteReactControl as ReteControl } from "../../retereact";
+import { ReteReactControl as ReteControl } from "../retereact";
 import { faTimes, faMouse } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "react-bootstrap";
 import { sockets } from "../sockets/sockets";
-import { getOutputControls, getOutputNulls } from "../data/attributes";
-
+import { getOutputControls, getOutputNulls, getTypeDefinitions } from "../data/attributes";
+import { JSONObject, JSONValue, isObject, getObject, get_ref_name } from '../jsonschema';
 
 /** add custom type to valid type list */
 export const addType = (newType: string) => TypeList.push(newType);
 
-type JSONObject = { [key: string]: JSONValue }; 
-type JSONValue =
-| Partial<{ [key: string]: JSONValue }>
-| JSONValue[]
-| string
-| number
-| boolean
-| null;
-const isObject = (v: JSONValue) => Boolean(v && typeof v === "object" && !Array.isArray(v));
-const getObject = (v: JSONValue) => isObject(v) ? v as JSONObject : null;
 
 
-/**
- * extract a reference name from JSON schema after the last "/"
- * e.g. get_ref_name("/schemas/hello") = "hello"
- */
-function get_ref_name(ref_str: string): string | null {
-  return /.*\/(?<name>.*)$/.exec(ref_str)?.groups?.name ?? null;
-}
 
 /** 
  * Same as Base Display, except for outputs & their mapped controls:
@@ -333,7 +316,6 @@ export class ComponentDynamic extends ComponentBase {
       // TODO - update control keys so they don't match output keys to avoid confusion?
       Data.getOutputControls(node)[key] = key;
     }
-
     
     if(property["const"]) {
 
@@ -360,8 +342,13 @@ export class ComponentDynamic extends ComponentBase {
       let socket = this.get_socket(property);
       let output = new Rete.Output(key, title, socket)
       node.addOutput(output);
+
+      // set type definition to be read by any child elements
+      getTypeDefinitions(node)[key] = property;
+
     }
   }
+
 
   _builder(node: Rete.Node, editor: Rete.NodeEditor) {
     node.addInput(new Rete.Input("parent", "Parent", this.socket));
@@ -381,7 +368,6 @@ export class ComponentDynamic extends ComponentBase {
         });
       }
     }
-
   }
 }
 

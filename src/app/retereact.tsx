@@ -15,7 +15,10 @@ export abstract class ReteReactControl extends Control {
     abstract component: typeof React.Component; // "component" React property used to render Control with "props" variable
 }
 
-
+/*
+rete react plugin implementation of rete component
+- "data" has an optional "component" attribute used to render
+*/
 export interface DataObject {
     component?: typeof React.Component
 }

@@ -4,14 +4,13 @@ import { sockets, addSocket, anySocket } from "./sockets/sockets";
 import * as BasicComponents from "./components/basic";
 import * as AdvancedComponents from './components/advanced';
 import { ComponentDynamic, addType } from './components/dynamic';
-import { VariableType } from "./data/attributes";
 
 import ReactRenderPlugin from 'rete-react-render-plugin';
 import AreaPlugin from 'rete-area-plugin';
 import ConnectionPlugin from 'rete-connection-plugin';
 import ContextMenuPlugin from 'rete-context-menu-plugin';
 import HistoryPlugin from 'rete-history-plugin';
-import { ReteReactComponent as ReteComponent } from "../retereact";
+import { ReteReactComponent as ReteComponent } from "./retereact";
 
 
 const AdvancedSelectionPlugin = require('@mbraun/rete-advanced-selection-plugin').default;
@@ -61,6 +60,35 @@ const sampleDefs = {
         }
       }
     }
+  },
+  "a": {
+    "title": "A",
+    "type": "object",
+    "properties": {
+      "a": {
+        "title": "A",
+        "anyOf": [
+          {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "required": [
+      "a"
+    ]
   }
 }
 
@@ -132,7 +160,7 @@ export async function createEditor(container: HTMLElement) {
 
   var engine = new Rete.Engine("demo@0.1.0");
 
-  components.map((c) => {
+  components.forEach((c) => {
     editor.register(c);
     engine.register(c);
   });
