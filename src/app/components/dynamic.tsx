@@ -1,16 +1,16 @@
 import * as Rete from 'rete';
 import * as Sockets from "../sockets/sockets";
 import * as MyControls from "../controls/controls";
-import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
 import * as Display from './display';
-import * as Data from "../data/component";
+import * as Data from "../data/attributes";
 import {  ComponentBase, TypeList } from "./basic";
 import * as ReactRete from 'rete-react-render-plugin';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCheck, faPlus, faTimes, faTrash, faMouse } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { ReteReactControl as ReteControl } from "../../retereact";
+import { faTimes, faMouse } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "react-bootstrap";
 import { sockets } from "../sockets/sockets";
-import { getOutputControls, getOutputNulls } from "../data/component";
+import { getOutputControls, getOutputNulls } from "../data/attributes";
 
 
 /** add custom type to valid type list */
@@ -25,17 +25,13 @@ type JSONValue =
 | boolean
 | null;
 const isObject = (v: JSONValue) => Boolean(v && typeof v === "object" && !Array.isArray(v));
-const isArray = (v: JSONValue) => Boolean(v && typeof v === "object" && Array.isArray(v));
-
 const getObject = (v: JSONValue) => isObject(v) ? v as JSONObject : null;
-const getArray = (v: JSONValue) => isArray(v) ? v as Array<JSONObject> : null;
 
-const isJSONObject = (v: JSONObject) => v["type"] && v["type"] === "object";
-const isJSONString = (v: JSONObject) => v["type"] && v["type"] === "string";
-const isJSONNumber = (v: JSONObject) => v["type"] && v["type"] === "number";
-const isJSONInteger = (v: JSONObject) => v["type"] && v["type"] === "integer";
-const isJSONBool = (v: JSONObject) => v["type"] && v["type"] === "boolean";
 
+/**
+ * extract a reference name from JSON schema after the last "/"
+ * e.g. get_ref_name("/schemas/hello") = "hello"
+ */
 function get_ref_name(ref_str: string): string | null {
   return /.*\/(?<name>.*)$/.exec(ref_str)?.groups?.name ?? null;
 }
@@ -69,6 +65,17 @@ function get_ref_name(ref_str: string): string | null {
     // invert "null" value
     outputNulls[output.key] = !outputNulls[output.key];
     
+    let outputControls = Data.getOutputControls(this.props.node);
+    let controlName = outputControls[output.key];
+    if(controlName) {
+      let control = this.props.node.controls.get(controlName);
+      if(control && control instanceof ReteControl) {
+        // set display disabled and update control
+        control.props.display_disabled = outputNulls[output.key];
+        control.update && control.update();
+      }
+    }
+
     // update node and connections
     this.props.node.update();
     this.props.editor.view.updateConnections({node: this.props.node});
@@ -78,10 +85,9 @@ function get_ref_name(ref_str: string): string | null {
     let ctrl = this.props.node.controls.get(getOutputControls(this.props.node)[output.key]);
     let isNullable: boolean = output.key in getOutputNulls(this.props.node);
     let isNull: boolean = getOutputNulls(this.props.node)[output.key] === true;
-    let disableCtrl: boolean = output.hasConnection() || isNull;
     let btnIcon = isNull ? faMouse : faTimes;
     
-    console.log(`control "${ctrl?.key}" is disabled: "${disableCtrl}`);
+    console.log(`control "${ctrl?.key}" is disabled: "${isNull}"`);
     
     let btnElement = <Button 
       variant="secondary" 
@@ -95,7 +101,7 @@ function get_ref_name(ref_str: string): string | null {
 
     return <div className="output" key={output.key}>
     {/* return <> */}
-      {typeof ctrl !== "undefined" ? Display.getControl(ctrl, this.props.bindControl, disableCtrl) : <div className="control-input"></div>}
+      {typeof ctrl !== "undefined" ? Display.getControl(ctrl, this.props.bindControl) : <div className="control-input"></div>}
       {isNullable ? btnElement : <div></div>}
       {titleElement}
       {Display.getSocket(output, "output", this.props.bindSocket, {visibility: isNull ? "hidden" : "visible"})}
@@ -125,24 +131,7 @@ function get_ref_name(ref_str: string): string | null {
   }
 }
 
-// class DisplayDynamic extends DisplayDynamicBase {
-//   nullButtonClick(output: Rete.Output): void {
-//     // get "null" value
-//     let outputNulls = Data.getOutputNulls(this.props.node);
-    
-//     // if not "null" then user is clicking to null, delete all connections
-//     if(!(outputNulls[output.key])) {
-//       output.connections.forEach(c => this.props.editor.removeConnection(c))
-//     }
 
-//     // invert "null" value
-//     outputNulls[output.key] = !outputNulls[output.key];
-    
-//     // update node and connections
-//     this.props.node.update();
-//     this.props.editor.view.updateConnections({node: this.props.node});
-//   }
-// }
 export class ComponentDynamic extends ComponentBase {
   data = { component: DisplayDynamic };
   socket: Rete.Socket;
@@ -157,30 +146,39 @@ export class ComponentDynamic extends ComponentBase {
     this.varSpec = varSpec;
   }
 
-  has_output(property: JSONObject) {
-    if(property["const"]) {
-      return false;
-    } else {
-      return true;
-    }
-  }
-
+  /**
+   * Get socket from JSON schema definition
+   * 
+   * @param property JSON Schema type definition
+   * @returns Socket
+   */
   get_socket(property: JSONObject): Rete.Socket {
     if( !isObject(property) ) {
       console.log(property);
       throw new Error(`^ expected property to be of type object`);
     }
 
-    let varType = property["type"] ? String(property["type"]) : "";
-    let anyOf = property["anyOf"];
-    let varRef = property["$ref"];
-    let varItems = property["items"];
-    let ap = property["additionalProperties"];
+    /**
+     * helper function to create a socket that takes "any" as a child element 
+     * e.g. anySocketContainer(Dict) produces a socket that accepts "any" with name "Dict[any]"
+     **/
     const anySocketContainer = (baseName: string) => Sockets.multiSocket(
       [Sockets.anySocket.name],
       `${baseName}[${Sockets.anySocket.name}]`, 
       Sockets.anyColour
     );
+
+    /**
+     * Create socket with outer name and inner specification. 
+     * name of inner specification key passed as well for error handling
+     * 
+     * e.g. getInnerSocket("items", {type: "boolean"}, "Array") would yield a socket Array[boolean]
+     * 
+     * @param innerVarName key used to retrieve `innerVar` in schema (for error handling)
+     * @param innerVar JSON schema specification of socket inner type
+     * @param baseName outer name for socket
+     * @returns 
+     */
     const getInnerSocket = (innerVarName: string, innerVar: JSONObject, baseName: string) => {
       let innerSocket =  this.get_socket(innerVar);
       if(innerSocket) {
@@ -196,52 +194,99 @@ export class ComponentDynamic extends ComponentBase {
       }
     }
 
+    // read JSON schema definitions
+    let varType = property["type"] ? String(property["type"]) : "";
+    let anyOf = property["anyOf"];
+    let varRef = property["$ref"];
+
     if(varRef) {
+
+      // if a schema reference is passed, used the final part of the reference name for the socket
       if(typeof varRef === "string") {
         let refName = get_ref_name(varRef);
         if( refName ) {
           return Sockets.multiSocket([refName], refName);
         } else {
-          throw new Error('Socket format invalid')
+          throw new Error(`reference name invalid: "${varRef}"`);
         }
       } else {
         throw new Error(`expected "$ref to be a string`);
       }
+
     } else if(["string", "integer", "number", "boolean", "null"].includes(varType)) {
+
+      // match basic JSON schema types (excluding array and object)
       return Sockets.multiSocket([Sockets.JSONTypeConvert(varType)]);
+
     } else if( varType === "array" ) {
+
+      // type is array, parse inner type from "items" key (if given)
       let arrayName = Sockets.JSONTypeConvert("array");
+      let varItems = property["items"];
       if(varItems) {
+
+        // "items" key in JSON Schema passed to indicate inner type
         if(typeof varItems === "object" && Array.isArray(varItems)) {
+
+          // do not currently support tuple types, where "items" is an array of definitions
           throw new Error('Currently do not support items in list form')
+
         } else if(typeof varItems === "object" && !Array.isArray(varItems)) {
+          
+          // inner definition has its own definitions - call function recursively
           return getInnerSocket("items", varItems as JSONObject, arrayName);
+
         } else {
           throw new Error('unknown format of array items');
         }
       } else {
+        // if "items" not passed assume "any" as inner type
         return anySocketContainer(arrayName);
       }
+
     } else if( varType === "object" ) {
+
+      // type "object" is taken as a dict in python
       let objectName = Sockets.JSONTypeConvert("object");
+
       if(property["properties"]) {
+        // at present custom objects with required "properties" as well as additional keys are not supported
+        // they should be defined in $refs
         throw new Error(`property has its own properties set - this should be defined as its own type in "definitions"`);
       }
+
+      let ap = property["additionalProperties"];
       if(ap !== null && typeof ap === "object" && !Array.isArray(ap)) {
-        getInnerSocket("additionalProperties", ap as JSONObject, objectName)
+
+        // additionalProperties defines the type of values for dictionary keys
+        return getInnerSocket("additionalProperties", ap as JSONObject, objectName)
+      
       } else {
+
+        // if additionalProperties not passed assume "any" for inner values
         return anySocketContainer(objectName);
+      
       }
     } else if( anyOf ) {
+
+      // "anyOf" means the type is a Union of different types
       if( typeof anyOf === "object" && Array.isArray(anyOf)) {
+
+        // loop each type definition and create array of sockets
         let innerSockets = anyOf.map(t => this.get_socket(t as JSONObject)).filter((s): s is Rete.Socket => Boolean(s));
+        
+        // concatenate socket names together
         let socketName = Sockets.getTypeString(innerSockets.map(s => s.name));
+        
+        // get socket based on its name from existing list
         let socket = Sockets.sockets.get(socketName)?.socket;
         if(!socket) {
+          // socket doesnt exist, create it and combine with each socket in the list
           let newSocket = Sockets.multiSocket([],  socketName);
           innerSockets.forEach(s => newSocket.combineWith(s));
           return newSocket;
         } else {
+          // socket already exists
           return socket;
         }
       } else {
@@ -249,30 +294,57 @@ export class ComponentDynamic extends ComponentBase {
       }
     } 
       
+
     return Sockets.anySocket;
     
   }
 
+  /**
+   * process a JSON schema "property" for a given definition, by setting node data and adding relevant control/output 
+   */
   process_property(node: Rete.Node, editor: Rete.NodeEditor, key: string, property: JSONObject) {
     let nodeData = Data.nGetData(node);
+
+    /**
+     * helper function to set control value, create control and add control
+     * @param var_default optional default value to create control with 
+     * @param control_type class type of control
+     * @param control_kwargs additional kwargs to pass to control
+     */
     const addControl = (var_default: any, control_type: any, control_kwargs?: {[key: string]: any}) => {
+      // if node is created with data already (`nodeData`) then use
+      // otherwise take JSON schema "default" if exist, or default value passed by user
       let val = nodeData[key] ?? (property && property["default"]) ?? var_default;
+      // assign value to node data
       nodeData[key] = val;
-      let x = {
+      
+      // set base kwargs to pass to control
+      let base_kwargs = {
         emitter: editor, 
         key: key, 
-        value: val
+        value: val,
+        display_disabled: Data.getOutputNulls(node)[key] === true
       }
-      let ctrl = new control_type({...x, ...control_kwargs});
+      // create control with base kwargs and kwargs passed by user
+      let ctrl = new control_type({...base_kwargs, ...control_kwargs});
+      // add control to node
       node.addControl(ctrl);
+      // set output -> control key map
+      // TODO - update control keys so they don't match output keys to avoid confusion?
       Data.getOutputControls(node)[key] = key;
     }
 
-    let var_type = property["type"] ? String(property["type"]) : "";
-
+    
     if(property["const"]) {
+
+      // if JSON property is a "const" then set value in node data but dont create output or control
       nodeData[key] = property["const"];
     } else {
+
+      // get type from property
+      let var_type = property["type"];
+
+      // create control if relevant 
       if( var_type === "string") {
         addControl("", MyControls.ControlText);
       } else if( var_type === "integer" || var_type === "number" ) {
@@ -281,7 +353,10 @@ export class ComponentDynamic extends ComponentBase {
         addControl(null, MyControls.ControlBool);
       } 
       
+      // get title from property if exist, else just use property key
       let title = property["title"] ? String(property["title"]) : key;
+
+      // create socket and add output using socket
       let socket = this.get_socket(property);
       let output = new Rete.Output(key, title, socket)
       node.addOutput(output);
@@ -302,109 +377,11 @@ export class ComponentDynamic extends ComponentBase {
               Data.getOutputNulls(node)[k] = property["default"] === null || property["default"] === undefined;
             }
             this.process_property(node, editor, k, property);
-            // let var_type = property["type"] ? String(property["type"]) : "";
-            // let socket: Rete.Socket = multiSocket([var_type])
-            // node.addOutput(new Rete.Output(k, k, socket));
-            // const addControl = (var_default: any, control_type: any, control_kwargs?: {[key: string]: any}) => {
-            //   let val = nodeData[k] ?? (property && property["default"]) ?? var_default;
-            //   nodeData[k] = val;
-            //   let x = {
-            //     emitter: editor, 
-            //     key: k, 
-            //     value: val
-            //   }
-            //   let ctrl = new control_type({...x, ...control_kwargs});
-            //   node.addControl(ctrl);
-            //   Data.getOutputControls(node)[k] = k;
-            // }
-            // if(property["const"]) {
-            //   nodeData[k] = property["const"];
-            // } else if( var_type === "string") {
-            //   addControl("", MyControls.ControlText);
-            // } else if( var_type === "integer" || var_type === "number" ) {
-            //   addControl(0, MyControls.ControlNumber);
-            // } else if( var_type === "boolean") {
-            //   addControl(null, MyControls.ControlBool);
-            // } else if( var_type === "array" ) {
-            //   if(property["items"]) {
-
-            //   }
-            // }
           }
         });
       }
     }
 
-    // _varSpec.forEach((spec, key) => {
-    //   // check each type in variable spec is valid
-    //   spec.types.forEach(t => {
-    //     if (!TypeList.includes(t))
-    //       throw new Error(`in var "${key}", type "${t}" not recognised`);
-    //       if (!sockets.has(t))
-    //         throw new Error(`in var "${key}", type "${t}" has no socket`);
-    //   });
-      
-    //   // if 'None' is a valid type set null indicator based on default value
-    //   if (spec.types.includes('None'))
-    //   Data.getOutputNulls(node)[key] = spec.default === null;
-        
-    //   // create socket name from list of types combining with list/dict internal types
-    //   let socketName = getTypeString(spec.types.map(s => {
-    //     if(s == 'List') {
-    //       spec.listTypes = spec.listTypes ?? ['Any'];
-    //       return `List[${getTypeString(spec.listTypes)}]`;
-    //     } else if (s == 'Dictionary') {
-    //       spec.dictTypes = spec.dictTypes ?? ['Any'];
-    //       return `Dict[${getTypeString(spec.dictTypes)}]`;
-    //     } else {
-    //       return s;
-    //     }
-    //   }));
-
-    //   // created socket based on constructed name and accepted types
-    //   let socket = multiSocket(spec.types, socketName);
-    //   node.addOutput(new Rete.Output(key, key, socket));
-      
-    //   // type -> control generation mappings
-    //   let typeControls: {[key: string]: () => Rete.Control} = {
-    //     'Text': () => new MyControls.ControlText({
-    //       emitter: editor, 
-    //       key, 
-    //       value: getInitial(node, key, spec.default ?? "")
-    //     }),
-    //     'Number': () => new MyControls.ControlNumber({
-    //       emitter: editor, 
-    //       key, 
-    //       value: getInitial(node, key, spec.default ?? null)
-    //     }),
-    //     'Boolean': () => new MyControls.ControlBool({
-    //       emitter: editor, 
-    //       key, 
-    //       value: getInitial(node, key, spec.default ?? null)
-    //     })
-    //   };
-
-    //   // display control if type is text/number/bool, but can have 'None' valid type as well 
-    //   let nonNullTypes: string[] = spec.types.filter(t => t != 'None');
-    //   if( nonNullTypes.length == 1 && nonNullTypes[0] in typeControls) {
-        
-    //     // generate control based on type
-    //     let ctrl = typeControls[nonNullTypes[0]]();
-
-    //     // add to node and map to output
-    //     node.addControl(ctrl);
-    //     Data.getOutputControls(node)[key] = ctrl.key;
-    //   }
-
-    // });
-
-    // // set type definitions in node data so that connectio components can read list/dict element types
-    // Data.setTypeDefinitions(node, Object.fromEntries(_varSpec));
-  
-  }
-  worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void {
-    // this.varSpec.forEach((spec, k) => outputs[k] = spec);
-    // console.log(this.varSpec);
   }
 }
 

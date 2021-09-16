@@ -1,17 +1,17 @@
 import * as Rete from "rete";
-import * as Data from './data/component';
+import * as Data from './data/attributes';
 import { sockets, addSocket, anySocket } from "./sockets/sockets";
 import * as BasicComponents from "./components/basic";
 import * as AdvancedComponents from './components/advanced';
 import { ComponentDynamic, addType } from './components/dynamic';
-import { VariableType } from "./data/component";
+import { VariableType } from "./data/attributes";
 
 import ReactRenderPlugin from 'rete-react-render-plugin';
 import AreaPlugin from 'rete-area-plugin';
 import ConnectionPlugin from 'rete-connection-plugin';
 import ContextMenuPlugin from 'rete-context-menu-plugin';
 import HistoryPlugin from 'rete-history-plugin';
-import { ReteComponent } from "../rete/component";
+import { ReteReactComponent as ReteComponent } from "../retereact";
 
 
 const AdvancedSelectionPlugin = require('@mbraun/rete-advanced-selection-plugin').default;
@@ -25,6 +25,7 @@ const sampleDefs = {
     "type": "object",
     "additionalProperties": false,
     "isClassDefinition": true,
+    "required": ["cache_count"],
     "properties": {
       "custom_ftr_identifier": {
         "title": "Custom Ftr Identifier",
@@ -43,6 +44,21 @@ const sampleDefs = {
       "cache_insidewindow": {
         "title": "Cache Insidewindow",
         "type": "boolean"
+      }
+    }
+  },
+  'sample_dict': {
+    "title": "hello",
+    "required": "children",
+    "properties": {
+      "a": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        }
       }
     }
   }

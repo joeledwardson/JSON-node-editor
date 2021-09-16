@@ -1,16 +1,130 @@
 import * as Rete from "rete";
-import { ReteComponent } from "../../rete/component";
-import { ReteControl } from "../../rete/control";
+import { ReteReactControl as ReteControl } from "../../retereact";
 import * as MySocket from "../sockets/sockets";
 import * as Controls from  "../controls/controls";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
 import * as Display from "./display";
-import { stringify, v4 as uuidv4 } from 'uuid';
-import * as Data from "../data/component";
+import { v4 as uuidv4 } from 'uuid';
+import * as Data from "../data/attributes";
 import { TypeList, ComponentBase } from './basic';
 import { OptionLabel } from "../controls/display";
-import { VariableType } from "../data/component";
+import { VariableType } from "../data/attributes";
 import { ctrlValChange } from "../controls/core";
+import { getOutputControls } from "../data/attributes";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { Button } from "react-bootstrap";
+import * as ReactRete from 'rete-react-render-plugin';
+import {getTitle, getInput, getControl, getSocket} from './display';
+
+
+type ListAction = "add" | "remove" | "moveUp" | "moveDown";
+type ListActionFunction = (index: number, action: ListAction) => void;
+
+// function listGetOutput(
+//   output: Rete.Output, 
+//   index: number, 
+//   node: Rete.Node,
+//   bindControl: bindControl,
+//   bindSocket: bindSocket,
+//   action: ListActionFunction
+// ): JSX.Element {
+//   let ctrlKey = getOutputControls(node)[output.key];
+//   let ctrl = ctrlKey && node.controls.get(ctrlKey);
+//   return <div className="output" key={output.key}>
+//     <div className="output-title hidden-node-item">
+//       <div className="output-item-controls">
+//         <div className="output-item-arrows">
+//           <div>
+//             <button onClick={() => action(index, "moveUp")} >
+//               <i className="fas fa-chevron-up fa-xs"></i>
+//             </button>
+//           </div>
+//           <div>
+//             <button onClick={() => action(index, "moveDown")} >
+//               <i className="fas fa-chevron-down fa-xs"></i>
+//             </button>
+//           </div>
+//         </div>
+//         <Button variant="light" className="" size="sm" onClick={() => action(index, "add")} >
+//           <FontAwesomeIcon icon={faPlus} />
+//         </Button>
+//         <Button variant="warning" className="" size="sm" onClick={() => action(index, "remove")}>
+//           <FontAwesomeIcon icon={faTrash} />
+//         </Button>
+//         {ctrl && Display.getControl(ctrl, bindControl)}
+//       </div>
+//     </div>
+//     {Display.getSocket(output, "output", bindSocket)}
+//   </div>
+// }
+
+
+/**
+ * Same as Base Display but outputs & their mapped controls are displayed with:
+ * - arrow up button 
+ * - arrow down button 
+ * - plus button
+ * - minus button
+ * the 4 above actions call `ListActionFunction()`
+ */
+ export abstract class DisplayListBase extends ReactRete.Node {
+  abstract action: ListActionFunction
+  getOutput(output: Rete.Output, index: number): JSX.Element {
+    let ctrlKey = getOutputControls(this.props.node)[output.key];
+    let ctrl = ctrlKey && this.props.node.controls.get(ctrlKey);
+    return <div className="output" key={output.key}>
+      <div className="output-title hidden-node-item">
+        <div className="output-item-controls">
+          <div className="output-item-arrows">
+            <div>
+              <button onClick={() => this.action(index, "moveUp")} >
+                <i className="fas fa-chevron-up fa-xs"></i>
+              </button>
+            </div>
+            <div>
+              <button onClick={() => this.action(index, "moveDown")} >
+                <i className="fas fa-chevron-down fa-xs"></i>
+              </button>
+            </div>
+          </div>
+          <Button variant="light" className="" size="sm" onClick={() => this.action(index, "add")} >
+            <FontAwesomeIcon icon={faPlus} />
+          </Button>
+          <Button variant="warning" className="" size="sm" onClick={() => this.action(index, "remove")}>
+            <FontAwesomeIcon icon={faTrash} />
+          </Button>
+          {ctrl && getControl(ctrl, this.props.bindControl)}
+        </div>
+      </div>
+      {getSocket(output, "output", this.props.bindSocket)}
+    </div>
+  }
+
+  render() {
+    const { node, bindSocket, bindControl } = this.props;
+    const { controls, inputs, selected } = this.state;
+    let ctrlMaps = getOutputControls(this.props.node);
+    let ctrlKeys = Object.values(ctrlMaps);    
+    let _outputs = Object.keys(ctrlMaps).map(k => this.props.node.outputs.get(k));    
+    
+    return (
+      <div className={`node ${selected}`}>
+        {getTitle(node.name)}
+        {/* Outputs - display in order of output->ctrl mapping object (if exist) */}
+        { _outputs.map((output, index) => output && this.getOutput(output, index))}
+        {/* Controls (check not mapped to output) */}
+        <div className="controls-container" >
+        {controls.map((control) => !ctrlKeys.includes(control.key) && getControl(control, bindControl))}
+        </div>        
+        {/* Inputs */}
+        {inputs.map((input) => getInput(input, bindControl, bindSocket))}
+      </div>
+    );
+  }
+}
+
+
 
 
 
@@ -171,7 +285,7 @@ async function listOutputAction(
 /** 
  * Dictionary display component - listOutputAction `hasOutputControls` set to true as dictionary outputs have text controls for keys 
  * */
-class DisplayDict extends Display.DisplayListBase {
+class DisplayDict extends DisplayListBase {
   action = (index: number, action: Display.ListAction) => listOutputAction(this.props.editor, this.props.node, index, action, true);
 }
 
@@ -179,7 +293,7 @@ class DisplayDict extends Display.DisplayListBase {
 /** 
  * Display list component - listOutputAction `hasOutputControls` set to false as list outputs do not have have text input keys 
  * */
-class DisplayList extends Display.DisplayListBase {
+class DisplayList extends DisplayListBase{
   action = (index: number, action: Display.ListAction) => listOutputAction(this.props.editor, this.props.node, index, action, false);
 }
 

@@ -1,6 +1,6 @@
 import { NodeEditor } from "rete";
-import { ReteControl as ReteControlBase } from "../../rete/control";
-import { cGetData } from "../data/component";
+import { ReteReactControl as ReteControlBase } from "../../retereact";
+import { cGetData } from "../data/attributes";
 import { CSSProperties } from 'react';
 
 

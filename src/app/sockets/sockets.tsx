@@ -60,7 +60,7 @@ export function JSONTypeConvert(typ: string): string {
     "array": "List",
     "boolean": "Boolean",
     "null": "None",
-    "object": "Dict"
+    "object": "Dictionary"
   }
   return type_maps[typ] ?? typ;
 }

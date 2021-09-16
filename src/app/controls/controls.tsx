@@ -1,7 +1,4 @@
-import { NodeEditor } from "rete";
-import { ReteControl as ReteControlBase } from "../../rete/control";
-import { cGetData } from "../data/component";
-import { CSSProperties } from 'react';
+import { ReteReactControl as ReteControlBase } from "../../retereact";
 import * as Display from './display';
 import { ControlPropsBase, ControlTemplate } from "./core";
 
@@ -36,11 +33,12 @@ export class ControlButton extends ControlTemplate<ControlPropsButton> {
 }
 
 
-export default {
+const _default = {
   ControlBase: ReteControlBase,
   ControlNumber,
   ControlText,
   ControlBool,
   ControlSelect,
   ControlButton,
-}
+};
+export default _default;
