@@ -11,7 +11,7 @@ import ConnectionPlugin from 'rete-connection-plugin';
 import ContextMenuPlugin from 'rete-context-menu-plugin';
 import HistoryPlugin from 'rete-history-plugin';
 import { ReteReactComponent as ReteComponent } from "./retereact";
-
+import {FUNCTION_BLOCK_PROCESSOR} from './components/advanced';
 
 const AdvancedSelectionPlugin = require('@mbraun/rete-advanced-selection-plugin').default;
 const SelectionPlugin: any = require('rete-drag-selection-plugin').default; 
@@ -89,41 +89,80 @@ const sampleDefs = {
     "required": [
       "a"
     ]
+  },
+  "C": {
+    "title": "C",
+    "type": "object",
+    "properties": {
+      "a": {
+        "title": "A",
+        "type": "object",
+        "additionalProperties": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "b": {
+        "title": "B",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "a",
+      "b"
+    ]
+  },
+  "e": {
+    "title": "E",
+    "type": "object",
+    "properties": {
+      "a": {
+        "title": "A",
+        "anyOf": [
+          {
+            "type": "object",
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          {
+            "type": "integer"
+          }
+        ]
+      },
+      "b": {
+        "title": "B",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "a",
+      "b"
+    ]
   }
 }
 
 
 export async function createEditor(container: HTMLElement) {
-  // let objectSpecs = new Map<string, Map<string, VariableType>>();
-  // objectSpecs.set('objA', new Map([
-  //   [
-  //     'sub_features_config',
-  //     {
-  //       types: ['Dictionary', 'None'],
-  //       default: 'None',
-  //       dictTypes: ['Text']
-  //     }
-  //   ], [
-  //     'ftr_identifier',
-  //     {
-  //       types: ['Text'],
-  //       default: 'pls',
-  //     }
-  //   ], [
-  //     'cache_count',
-  //     {
-  //       types: ['Number'],
-  //       default: 2
-  //     }
-  //   ], [
-  //     'cache_secs',
-  //     {
-  //       types: ['Number', 'None'],
-  //       default: 3
-  //     }
-  //   ]
-  // ]));
-
   Object.keys(sampleDefs).forEach(key => {
     addSocket(key);
     addType(key);
@@ -167,7 +206,6 @@ export async function createEditor(container: HTMLElement) {
 
   var n1 = await components[0].createNode({ num: 2 });
   var n2 = await components[0].createNode({ num: 3 });
-  // var add = await components[1].createNode();
   var o = await components[1].createNode({});
   var dk = await components[2].createNode({});
 
@@ -189,6 +227,15 @@ export async function createEditor(container: HTMLElement) {
 
   // editorConnect("num", "num1");
   // editorConnect("num", "num2");
+  const runBlockProcessor = (node: Rete.Node) => {
+    let processor = Data.getGeneralFuncs(node)[FUNCTION_BLOCK_PROCESSOR];
+    if(processor) {
+      processor();
+    }
+    node.inputs.forEach(i => {
+      i.connections.forEach(c => c.output.node && runBlockProcessor(c.output.node));
+    })
+  }
 
   editor.on(
     ["connectioncreated"],
@@ -199,6 +246,7 @@ export async function createEditor(container: HTMLElement) {
           Data.getConnectionFuncs(n)["created"](connection);
         }
       })
+      connection.output.node && runBlockProcessor(connection.output.node);
     }
   )
 
@@ -211,6 +259,7 @@ export async function createEditor(container: HTMLElement) {
           Data.getConnectionFuncs(n)["removed"](connection);
         }
       })
+      connection.output.node && runBlockProcessor(connection.output.node);
     }
   )
 
