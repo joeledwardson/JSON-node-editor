@@ -13,6 +13,12 @@ export interface ControlPropsButton extends ControlPropsBase {
 
 export class ControlNumber extends ControlTemplate<ControlPropsBase> {
   component = Display.InputNumber
+  // constructor(p: ControlPropsBase) {
+  //   super(p);
+  //   let v = this.props.value;
+  //   let t = typeof v;
+  //   this.props.value = t === "null" ? "" : v;
+  // }
 }
 
 export class ControlText extends ControlTemplate<ControlPropsBase> {

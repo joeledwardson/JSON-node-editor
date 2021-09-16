@@ -350,7 +350,7 @@ export class ComponentDynamic extends ComponentBase {
       } else if( var_type === "integer" || var_type === "number" ) {
         addControl(null, MyControls.ControlNumber);
       } else if( var_type === "boolean") {
-        addControl(null, MyControls.ControlBool);
+        addControl("", MyControls.ControlBool);
       } 
       
       // get title from property if exist, else just use property key
