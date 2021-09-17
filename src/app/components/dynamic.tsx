@@ -157,7 +157,7 @@ export class ComponentDynamic extends ComponentBase {
         display_disabled: Data.getOutputNulls(node)[key] === true
       }
       // create control with base kwargs and kwargs passed by user
-      let ctrl = new control_type(key, editor, {...base_kwargs, ...control_kwargs});
+      let ctrl = new control_type(key, editor, node, {...base_kwargs, ...control_kwargs});
       // add control to node
       node.addControl(ctrl);
       // set output -> control key map

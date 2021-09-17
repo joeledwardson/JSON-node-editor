@@ -152,7 +152,7 @@ async function listOutputAction(
       if( hasOutputControls ) {
         // set ctrl key to unique ID, create new control for output and add to node
         ctrlKey = uuidv4();
-        node.addControl(new Controls.ControlText(ctrlKey, editor, {value: ""}));
+        node.addControl(new Controls.ControlText(ctrlKey, editor, node, {value: ""}));
       } 
 
       // add mapping 
@@ -283,8 +283,9 @@ function typeSelect(
   ioMap: Map<string, Rete.IO>
 ): void {
   let socket = MySocket.sockets.get(newType)?.socket ?? MySocket.anySocket;
-  ctrlValChange(ctrl, emitter, ctrl.key, socket.name);
+  Controls.ctrlValProcess(ctrl, emitter, ctrl.key, socket.name);
   socketUpdate(node, emitter, socket, ioMap);
+  emitter.trigger('process');  // trigger process so that connected nodes update
 }
 
 
@@ -325,7 +326,9 @@ export abstract class ListComponentBase extends ComponentBase {
     let socket = getSelectedSocket(ctrlData[TYPE_SELECT_KEY]);
     let selectCtrl = new Controls.ControlSelect(
       TYPE_SELECT_KEY, 
-      editor, {
+      editor, 
+      node,
+      {
         value: socket.name, 
         options: typeLabels(), 
       }, 
@@ -333,10 +336,15 @@ export abstract class ListComponentBase extends ComponentBase {
     );
     node
       .addInput(new Rete.Input("parent", "Parent", this.socket))
-      .addControl(new Controls.ControlButton("Add Item", editor, {
-        value: null, // ignored
-        buttonInner: "Add Item +", 
-      }, () => listOutputAction(editor, node, node.outputs.size, "add", this.hasOutputControls)  // add output to end of output list
+      .addControl(new Controls.ControlButton(
+        "Add Item", 
+        editor, 
+        node, 
+        {
+          value: null, // ignored
+          buttonInner: "Add Item +", 
+        }, 
+        () => listOutputAction(editor, node, node.outputs.size, "add", this.hasOutputControls)  // add output to end of output list
       ))
       .addControl(selectCtrl);
     
@@ -349,7 +357,7 @@ export abstract class ListComponentBase extends ComponentBase {
       node.addOutput(new Rete.Output(outputKey, outputKey, socket));
 
       // add control using mapped control key
-      this.hasOutputControls && node.addControl(new Controls.ControlText(ctrlKey, editor, {
+      this.hasOutputControls && node.addControl(new Controls.ControlText(ctrlKey, editor, node, {
         value: ctrlData[ctrlKey]
       }));
     });
@@ -480,6 +488,7 @@ const FUNCTION_BLOCK = 'Function Block'
 const FUNCTION_VARIABLE = 'Function Variable';
 const FUNCTION_VARIABLE_NAMEVAR = "name";
 export const FUNCTION_BLOCK_PROCESSOR = "functionBlockProcessor";
+const FUNCTION_BLOCK_NAMEVAR = "Function Name";
 
 /** Function block variable  */
 export class ComponentFunctionVar extends ComponentBase {
@@ -520,6 +529,7 @@ export class ComponentFunctionVar extends ComponentBase {
     let selectCtrl = new Controls.ControlSelect(
       TYPE_SELECT_KEY, 
       editor, 
+      node,
       {
         value: socket.name, 
         options: typeLabels(),
@@ -529,12 +539,12 @@ export class ComponentFunctionVar extends ComponentBase {
 
     // create data handler function that updates control value as standard and invokes function block parent processor
     function dataHandler(ctrl: ReteControl, emitter: Rete.NodeEditor, key: string, data: any) {
-      ctrlValChange(ctrl, emitter, key, data);
+      Controls.ctrlValProcess(ctrl, emitter, key, data);
       callBlockProcessor(node);
     }
 
     // create control for variable name that updates parent function block on change
-    let nameCtrl = new Controls.ControlText(FUNCTION_VARIABLE_NAMEVAR, editor, {
+    let nameCtrl = new Controls.ControlText(FUNCTION_VARIABLE_NAMEVAR, editor, node, {
       value: ctrlData[FUNCTION_VARIABLE_NAMEVAR] ?? "",
     }, dataHandler);
 
@@ -557,7 +567,7 @@ export class ComponentFunctionBlock extends ComponentBase {
   data = {component: Display.DisplayBase};
   _builder(node: Rete.Node, editor: Rete.NodeEditor) {
     // mark node as a function block
-    Data.setNodeIdentifiers(node, {"isFunctionBlock": true});
+    Data.setNodeIdentifiers(node, {"isFunctionBlock": true, "functionBlockId": uuidv4()});
 
     // get socket from selected type in node data - otherwise will default to any Socket
     let ctrlData = Data.nGetData(node);
@@ -567,6 +577,7 @@ export class ComponentFunctionBlock extends ComponentBase {
     let selectCtrl = new Controls.ControlSelect(
       TYPE_SELECT_KEY, 
       editor, 
+      node,
       {
         value: socket.name, 
         options: typeLabels(), 
@@ -575,8 +586,8 @@ export class ComponentFunctionBlock extends ComponentBase {
     );
 
     // create function block name control
-    let nameCtrl = new Controls.ControlText("name", editor,  {
-      value: ctrlData["name"] ?? ""
+    let nameCtrl = new Controls.ControlText(FUNCTION_BLOCK_NAMEVAR, editor, node, {
+      value: ctrlData[FUNCTION_BLOCK_NAMEVAR] ?? ""
     });
 
     // add controls and output to node
@@ -587,12 +598,12 @@ export class ComponentFunctionBlock extends ComponentBase {
 
     // helper function to retrieve type selection value (or "any") from function variable component
     const getVarType = (n: Rete.Node) : string => {
-      let typeName = n.controls.get(TYPE_SELECT_KEY)?.data;
+      let typeName = Data.nGetData(n)[TYPE_SELECT_KEY];
       return typeName ? String(typeName) :  MySocket.anySocket.name;
     }
     // helper function to retrieve name (or blank string) from function variable component
     const getVarName = (n: Rete.Node): string => {
-      let name = n.controls.get(FUNCTION_VARIABLE_NAMEVAR)?.data;
+      let name = Data.nGetData(n)[FUNCTION_VARIABLE_NAMEVAR];
       return name ? String(name) : "";
     }
 
@@ -638,17 +649,140 @@ export class ComponentFunctionBlock extends ComponentBase {
   }
 }
 
+
 export class ComponentFunctionCall extends ComponentBase {
   constructor() {
-    super('Function Block');
+    super('Function Call');
   }
   data = {component: Display.DisplayBase}
   _builder(node: Rete.Node, editor: Rete.NodeEditor) {
-    // editor.nodes.forEach(n => {
-    //   if(n.name === FUNCTION_BLOCK) {
-    //     ;
-    //   }
-    // }
+
+    // handle selection change in function block
+    const dataHandler = (ctrl: ReteControl, emitter: Rete.NodeEditor, key: string, data: any) => {
+
+      
+      // update selected function block ID
+      Data.getNodeIdentifiers(node)["selectedFunctionId"] = data;
+
+      // update control value and trigger process
+      Controls.ctrlValProcess(ctrl, emitter, key, data);
+      
+    }
+
+    // create control for selecting function block (leave options as blank, will be updated by process function later)
+    let selectCtrl = new Controls.ControlSelect(
+      "Select Function", 
+      editor, 
+      node,
+      {
+        value: "", 
+        options: [],
+      }, 
+      dataHandler
+    );
+    node.addControl(selectCtrl);
+
+    // processor function to update
+    const updateSelect = () => {
+
+      let options: OptionLabel[] = [];
+      let functionNode: Rete.Node | null = null;  // node instance of selected function block (stays null if not found)
+
+      editor.nodes.forEach(n => {
+        
+        // check node is function block, get its ID and name
+        if(n.name !== FUNCTION_BLOCK) return;
+        let nameData = Data.nGetData(n)[FUNCTION_BLOCK_NAMEVAR];
+        let name = String(nameData);
+        let blockId = Data.getNodeIdentifiers(n)["functionBlockId"]; 
+        
+        // check block matches current selection
+        if(blockId === Data.getNodeIdentifiers(node)["selectedFunctionId"]) {
+          functionNode = n as Rete.Node;  // set node instance to refer to later
+        }
+
+        // add function block name and ID to list of options for control select
+        options.push({'label': name, 'value': blockId});
+      });
+      
+      if(functionNode === null) {
+        
+        // if name is null then selected function block no longer valid (deleted) - clear
+        Data.getNodeIdentifiers(node)["selectedFunctionId"] = "";
+
+        // remove all controls from node except for function block selector
+        node.controls.forEach(c => {
+          if(c.key !== "Select Function") {
+            node.removeControl(c);
+          }
+        });
+
+        // clear control data
+        Data.nSetData(node, {});
+
+        // remove outputs and inputs
+        node.inputs.forEach(i => node.removeInput(i));
+        node.outputs.forEach(o => node.removeOutput(o));
+
+      } 
+
+      // typescript keeps forcing type to null??
+      let _functionNode = functionNode as Rete.Node | null;  
+      if(_functionNode) {
+
+        // get function block output socket
+        let socket = _functionNode.outputs.get("output")?.socket;
+        if(socket) {
+
+          // get parent input - if socket does not match remove
+          let parent = node.inputs.get("parent");
+          if(parent) {
+            if(parent.socket.name !== socket.name) {
+              node.removeInput(parent);
+            }
+          }
+
+          // get parent input again - if not exist re-create with correct socket
+          parent = node.inputs.get("parent"); 
+          if(!parent) {
+            node.addInput(new Rete.Input("parent", "Parent", socket));
+          }
+        }
+
+        // loop function block inputs
+        _functionNode.inputs.forEach(i => {
+
+          // get matching output
+          let output = node.outputs.get(i.key);
+
+          if(output) {
+            if(output.socket.name !== i.socket.name) {
+
+              // remove output if socket doesn't match
+              node.removeOutput(output);
+              // clear data
+              _functionNode && delete Data.nGetData(_functionNode)[i.key];
+
+            }
+          }
+
+          // get output again
+          output = node.outputs.get(i.key);
+          if( !output ) {
+            node.addOutput(new Rete.Output(i.key, i.name, i.socket));
+          }
+        })
+      }
+
+
+      let baseOptions: OptionLabel[] = [{"label": "", "value": ""}] 
+      selectCtrl.props.options = baseOptions.concat(options);
+      selectCtrl.props.value = Data.getNodeIdentifiers(node)["selectedFunctionId"];
+      selectCtrl.update && selectCtrl.update();
+      node.update();
+      
+    }
+    Data.getGeneralFuncs(node)["process"] = updateSelect;    
   }
 }
 

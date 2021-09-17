@@ -44,7 +44,10 @@ export class ComponentNum extends ComponentBase {
   async _builder(node: Rete.Node, editor: Rete.NodeEditor) {
     node
       .addInput(new Rete.Input("parent", "Parent", MySocket.numberSocket))
-      .addControl(new Controls.ControlNumber("Number Input", editor, {value: getInitial(node, "Number Input", 0)}))
+      .addControl(new Controls.ControlNumber("Number Input", editor, node, {
+        value: getInitial(node, "Number Input", 0)
+      }))
+      
   }
 }
 
@@ -59,7 +62,7 @@ export class ComponentText extends ComponentBase {
   async _builder(node: Rete.Node, editor: Rete.NodeEditor) {
     node
       .addInput(new Rete.Input("parent", "Parent", MySocket.stringSocket))
-      .addControl(new Controls.ControlText("Text Input", editor, {
+      .addControl(new Controls.ControlText("Text Input", editor, node, {
         value: getInitial(node, "Text Input", "")
       }))
      
@@ -77,7 +80,7 @@ export class ComponentBool extends ComponentBase {
   async _builder(node: Rete.Node, editor: Rete.NodeEditor) {
     node
       .addInput(new Rete.Input("parent", "Parent", MySocket.boolSocket))
-      .addControl(new Controls.ControlBool("Boolean Input", editor, {
+      .addControl(new Controls.ControlBool("Boolean Input", editor, node, {
         value: getInitial(node, "Boolean Input", 0) // blank is option for nothing selection
       }));
   }

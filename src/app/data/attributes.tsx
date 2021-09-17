@@ -27,15 +27,20 @@ export function getOutputNulls(node: Rete.Node): {[key: string]: boolean} {
 }
 
 
-/** get controls data from node object */
+/** get/set controls data from node object */
 export function nGetData(node: Rete.Node): {[key: string]: any} {
   return getDataAttribute<any>(node, 'controlsData');
 }
+export function nSetData(node: Rete.Node, data: {[key: string]: any}) {
+  setDataAttribute(node, 'controlsData', data);
+}
+
 
 /** get controls data from control object */
 export function cGetData(ctrl: Rete.Control): {[key: string]: any} {
   return nGetData(ctrl.getNode());
 }
+
 
 /** get control initial value from data, or use provided initial value */
 export function getInitial(node: Rete.Node, key: string, defaultVal: any): any {

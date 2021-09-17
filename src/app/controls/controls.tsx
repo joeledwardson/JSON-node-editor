@@ -1,6 +1,6 @@
 import { ReteReactControl as ReteControlBase } from "../retereact";
-import { NodeEditor } from "rete";
-import { cGetData } from "../data/attributes";
+import { Node, NodeEditor } from "rete";
+import { cGetData, nGetData } from "../data/attributes";
 import React from "react";
 import { Form, Button } from 'react-bootstrap';
 import TextareaAutosize from 'react-textarea-autosize';
@@ -27,7 +27,7 @@ export const ctrlValChange: DataHandler = (ctrl: ReteControlBase, emitter: NodeE
 /**
  * control value changes processor - calls value change function and triggers emitter
  */
-const ctrlValProcess: DataHandler = (ctrl: ReteControlBase, emitter: NodeEditor, key: string, data: any): void => {
+export const ctrlValProcess: DataHandler = (ctrl: ReteControlBase, emitter: NodeEditor, key: string, data: any): void => {
   ctrlValChange(ctrl, emitter, key, data);
   emitter.trigger('process');  // trigger process so that connected nodes update
 }
@@ -70,10 +70,11 @@ export function baseRenderKwargs(props: InputProps) {
 
 export abstract class ControlTemplate2<T extends InputProps> extends ReteControlBase {
   props: T
-  constructor(key: string,  emitter: NodeEditor, componentProps: T, dataHandler?: DataHandler) {
+  constructor(key: string,  emitter: NodeEditor, node: Node, componentProps: T, dataHandler?: DataHandler) {
     super(key)
     componentProps.valueChanger = getValueChanger(this, emitter, key, dataHandler);
     this.props = componentProps;
+    nGetData(node)[key] = this.props.value;
   }
 }
 

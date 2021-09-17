@@ -181,7 +181,8 @@ export async function createEditor(container: HTMLElement) {
     new AdvancedComponents.ComponentList(),
     new AdvancedComponents.ComponentDict(),
     new AdvancedComponents.ComponentFunctionBlock(),
-    new AdvancedComponents.ComponentFunctionVar()
+    new AdvancedComponents.ComponentFunctionVar(),
+    new AdvancedComponents.ComponentFunctionCall()
   ];
   Object.entries(sampleDefs).forEach(([key, spec]) => components.push(new ComponentDynamic(key, spec)));
   // objectSpecs.forEach((spec, key) => components.push(new ComponentDynamic(key, spec)));
@@ -267,6 +268,10 @@ export async function createEditor(container: HTMLElement) {
   editor.on(
     ["process", "nodecreated", "noderemoved", "connectioncreated", "connectionremoved"],
     async () => {
+      editor.nodes.forEach(n => {
+        let nodeProcess = Data.getGeneralFuncs(n)["process"];
+        nodeProcess && nodeProcess();
+      })
       console.log("process");
       await engine.abort();
       await engine.process(editor.toJSON());
