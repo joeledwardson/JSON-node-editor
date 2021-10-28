@@ -1,5 +1,5 @@
 import * as Rete from "rete";
-import { ReteReactComponent as ReteComponent } from "../retereact";
+import { ReteReactComponent as ReteComponent } from "rete-react-render-plugin";
 import * as MySocket  from "../sockets/sockets";
 import * as Controls from  "../controls/controls";
 import { getInitial } from "../data/attributes";

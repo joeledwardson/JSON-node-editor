@@ -5,7 +5,7 @@ import * as Data from "../data/attributes";
 import {  ComponentBase, TypeList } from "./basic";
 import * as ReactRete from 'rete-react-render-plugin';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { ReteReactControl as ReteControl } from "../retereact";
+import { ReteReactControl as ReteControl } from "rete-react-render-plugin";
 import { faTimes, faMouse } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "react-bootstrap";
 import { sockets } from "../sockets/sockets";

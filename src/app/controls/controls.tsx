@@ -1,4 +1,4 @@
-import { ReteReactControl as ReteControlBase } from "../retereact";
+import { ReteReactControl as ReteControlBase } from "rete-react-render-plugin";
 import { Node, NodeEditor } from "rete";
 import { cGetData, nGetData } from "../data/attributes";
 import React from "react";

@@ -5,14 +5,17 @@ import * as BasicComponents from "./components/basic";
 import * as AdvancedComponents from './components/advanced';
 import { ComponentDynamic, addType } from './components/dynamic';
 
+
 import ReactRenderPlugin from 'rete-react-render-plugin';
 import AreaPlugin from 'rete-area-plugin';
 import ConnectionPlugin from 'rete-connection-plugin';
 import ContextMenuPlugin from 'rete-context-menu-plugin';
 import HistoryPlugin from 'rete-history-plugin';
-import { ReteReactComponent as ReteComponent } from "./retereact";
+import { ReteReactComponent as ReteComponent } from "rete-react-render-plugin";
 import {FUNCTION_BLOCK_PROCESSOR} from './components/advanced';
 
+
+// const pls = require('rete-react-render-plugin').default;
 const AdvancedSelectionPlugin = require('@mbraun/rete-advanced-selection-plugin').default;
 const SelectionPlugin: any = require('rete-drag-selection-plugin').default; 
 

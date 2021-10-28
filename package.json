@@ -14,7 +14,6 @@
     "@testing-library/user-event": "^12.1.10",
     "@types/jest": "^26.0.15",
     "@types/node": "^12.0.0",
-    "@types/react": "^17.0.0",
     "@types/react-dom": "^17.0.0",
     "@types/uuid": "^8.3.1",
     "bootstrap": "5.0.2",
@@ -61,6 +60,7 @@
     ]
   },
   "devDependencies": {
-    "rete-react-render-plugin": "^0.2.1"
+    "@types/react": "^17.0.33",
+    "rete-react-render-plugin": "file:../react-render-plugin"
   }
 }

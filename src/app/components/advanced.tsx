@@ -1,5 +1,5 @@
 import * as Rete from "rete";
-import { ReteReactControl as ReteControl } from "../retereact";
+import { ReteReactControl as ReteControl } from "rete-react-render-plugin";
 import * as MySocket from "../sockets/sockets";
 import * as Controls from  "../controls/controls";
 import * as Display from "./display";

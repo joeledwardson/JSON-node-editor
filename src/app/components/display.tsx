@@ -1,7 +1,6 @@
 import * as Rete from "rete";
 import * as ReactRete from 'rete-react-render-plugin';
 import { bindSocket, bindControl } from "rete-react-render-plugin";
-import { StylableSocket } from "../sockets/display";
 import { sockets } from "../sockets/sockets";
 import { getOutputControls } from "../data/attributes";
 import { CSSProperties } from "react";
@@ -15,7 +14,7 @@ export function getTitle(name: string): JSX.Element {
 }
 
 export function getSocket(io: Rete.IO, typ: string, bindSocket: bindSocket, styles?: CSSProperties): JSX.Element {
-  return <StylableSocket
+  return <ReactRete.Socket
     type={typ}
     socket={io.socket}
     io={io}
