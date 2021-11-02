@@ -1,7 +1,7 @@
 import { ReteReactControl as ReteControlBase } from "rete-react-render-plugin";
 import { Node, NodeEditor } from "rete";
 import { cGetData, nGetData } from "../data/attributes";
-import React from "react";
+import * as React from "react";
 import { Form, Button } from 'react-bootstrap';
 import TextareaAutosize from 'react-textarea-autosize';
 import { CSSProperties } from 'react';
@@ -97,15 +97,14 @@ export class ControlNumber extends ControlTemplate2<InputProps> {
 /** autosizing textarea element, when editing calls `props.valueChanger()` with text in textarea element  */
 export class InputText extends React.Component<InputProps> {
   render() {
-    const inputKwargs = {
-      ...baseRenderKwargs(this.props), 
-      style: undefined
-    } // dont pass style as textarea doesn't accept CSSProperties?
+    let inputKwargs = baseRenderKwargs(this.props);
+    // dont pass style as textarea doesn't accept CSSProperties?
     return (
       <TextareaAutosize
         rows={1}
         autoFocus
         {...inputKwargs}
+        style={{}}
       />
     );
   }
@@ -188,12 +187,13 @@ export class InputButton extends React.Component<ButtonProps, {clickCount: numbe
   }
   
   render() {
-    const inputKwargs = {
-      ...baseRenderKwargs(this.props), 
-      value: undefined, 
-      onChange: undefined,
+    let inputKwargs = {
+      ...baseRenderKwargs(this.props),
       onClick: () => this.onClick()
-    }  // value not needed for button, onChange replaced with onClick
+    }
+    delete inputKwargs.value;
+    delete inputKwargs.onChange;
+    // value not needed for button, onChange replaced with onClick
     return (
       <Button {...inputKwargs}>{this.props.buttonInner}</Button>
     );

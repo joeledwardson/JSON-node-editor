@@ -1,8 +1,8 @@
 import { useEffect, RefObject } from "react";
 import { createRef } from "react";
-import ReactDOM from "react-dom";
+import * as ReactDOM from "react-dom";
 import { createEditor } from "./app/app";
-import CSS from 'csstype';
+import * as CSS from 'csstype';
 import './styles/styles.scss';
 // eslint-disable-next-line
 const fontawesomeTypes = require('@fortawesome/fontawesome-free/js/all');

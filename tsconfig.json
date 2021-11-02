@@ -1,37 +1,29 @@
 {
   "compilerOptions": {
-    "target": "es6",
     "lib": [
       "dom",
       "dom.iterable",
-      "esnext"
+      "esnext",
+      "ES2019"
     ],
-    "typeRoots": [
-      "customTypes",
-      "node_modules/@types"
-    ],
+    "outDir": "./dist/",
+    "noImplicitAny": true, // dont allow implicit "any" types inferred
+    "module": "esnext", // ES6 means compiled imports modules stay as the modern format (i.e. import {a} from 'b')  https://www.typescriptlang.org/tsconfig#module
+    "target": "es5", // ES5 means arrow functions () => void etc are compiled
+    "jsx": "react-jsx", // compile react code (e.g. <div>hello</div>) to js code (e.g. react.createElement(div, 'hello')) 
     "allowJs": true,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true,
-    "module": "esnext",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "react-jsx",
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "sourceMap": true,
+      "typeRoots": [
+        "customTypes",
+        "node_modules/@types"
+    ],
   },
-  "exclude": [
-    "node_modules",
-    "customTypes"
-  ],
-  "include": [
-    "src"
-  ],
-  "paths": {
-    "baseUrl": "."
-  }
+  "ts-node": {
+    "compilerOptions": {
+      "module": "CommonJS" // for webpack-cli apparently ts-node only accespts commonjs? Need to compile typescript webpack config file
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
 }

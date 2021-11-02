@@ -43,5 +43,13 @@
             "url": "http://localhost:3000",
             "webRoot": "${workspaceFolder}"
         },
+        {
+            "name": "Chrome Viewer",
+            "type": "pwa-chrome",
+            "request": "launch",
+            "url": "http://localhost:9000",
+            "webRoot": "${workspaceRoot}",
+            "preLaunchTask": "start"
+        },
     ]
 }
