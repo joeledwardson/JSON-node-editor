@@ -194,7 +194,18 @@ export async function createEditor(container: HTMLElement) {
   console.log("creating editor...");
   var editor = new Rete.NodeEditor("demo@0.1.0", container);
   editor.use(ReactRenderPlugin);
-  editor.use(AreaPlugin);
+  editor.use(AreaPlugin, {
+    background: true, 
+    snap: true,
+    scaleExtent: {
+      min: 0.5,
+      max: 1,
+    },
+    translateExtent: { 
+      width: 5000, 
+      height: 4000 
+    }
+  });
   editor.use(ConnectionPlugin);
   editor.use(ContextMenuPlugin);
   editor.use(HistoryPlugin);
