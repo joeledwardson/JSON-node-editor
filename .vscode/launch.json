@@ -5,6 +5,19 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Launch webpack",
+            "request": "launch",
+            "runtimeArgs": [
+                "run",
+                "webpack-serve"
+            ],
+            "runtimeExecutable": "npm",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node"
+        },
+        {
             "name": "Launch Schema Script",
             "program": "${workspaceFolder}/scripts/schema-test.js",
             "request": "launch",
@@ -24,22 +37,10 @@
             "preLaunchTask": "tsc: build - tsconfig.json",
             "outFiles": ["${workspaceFolder}/out/**/*.js"]
         },
-
         {
-            "type": "node",
-            "request": "launch",
-            "name": "Launch via yarn",
-            "program": "${workspaceFolder}/node_modules/react-scripts/bin/react-scripts.js",
-            "args": ["start"],
-            "resolveSourceMapLocations": [
-                "${workspaceFolder}/**",
-                "!**/node_modules/**"
-            ],
-        }, 
-        {
+            "name": "Launch Chrome against localhost",
             "type": "pwa-chrome",
             "request": "launch",
-            "name": "Launch Chrome against localhost",
             "url": "http://localhost:3000",
             "webRoot": "${workspaceFolder}"
         },
