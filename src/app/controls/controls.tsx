@@ -99,14 +99,16 @@ export class InputText extends React.Component<InputProps> {
   render() {
     let inputKwargs = baseRenderKwargs(this.props);
     // dont pass style as textarea doesn't accept CSSProperties?
+    // return <textarea {...inputKwargs} />
     return (
       <TextareaAutosize
-        rows={1}
-        autoFocus
-        {...inputKwargs}
-        style={{}}
+        // rows={1}
+        // autoFocus
+        // {...inputKwargs}
+        // style={null}
       />
     );
+    // return <div></div>
   }
 }
 export class ControlText extends ControlTemplate2<InputProps> {

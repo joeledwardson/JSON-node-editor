@@ -204,7 +204,7 @@ export async function createEditor(container: HTMLElement) {
     translateExtent: { 
       width: 5000, 
       height: 4000 
-    }
+    },
   });
   editor.use(ConnectionPlugin);
   editor.use(ContextMenuPlugin);
