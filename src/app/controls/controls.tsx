@@ -102,10 +102,10 @@ export class InputText extends React.Component<InputProps> {
     // return <textarea {...inputKwargs} />
     return (
       <TextareaAutosize
-        // rows={1}
-        // autoFocus
-        // {...inputKwargs}
-        // style={null}
+        rows={1}
+        autoFocus
+        {...inputKwargs}
+        style={null}
       />
     );
     // return <div></div>
