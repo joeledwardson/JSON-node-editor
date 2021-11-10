@@ -16,10 +16,10 @@ type DataHandler = (ctrl: ReteControlBase, emitter: NodeEditor, key: string, dat
 /**
  * default function for value changes
  * set control instance props value so react control updates on re-render, and update node data
+ * N.B. this function should be used over ctrlValProcess() to avoid entering infinite loop if control triggers emitter 'process'
  */
 export const ctrlValChange: DataHandler = (ctrl: ReteControlBase, emitter: NodeEditor, key: string, data: any): void => {
   ctrl.props.value = data;  // update props value used to update control value when re-rendering
-  ctrl.data = data; // TODO - this is necessary?
   cGetData(ctrl)[key] = data;  //  put into node data objects for connections
   ctrl.update && ctrl.update();  // re-render
 }
@@ -33,15 +33,6 @@ export const ctrlValProcess: DataHandler = (ctrl: ReteControlBase, emitter: Node
 }
 
 
-export function getValueChanger(control: ReteControlBase, emitter: NodeEditor, key: string, dataHandler?: DataHandler) {
-  if(dataHandler) {
-    return (data: unknown) => dataHandler(control, emitter, key, data)
-  } else {
-    return (data: unknown) => ctrlValProcess(control, emitter, key, data)
-  }
-}
-
-
 /** base interface for any HTML element with a "value" attribute */
 interface HTMLTarget {
   value?: any
@@ -49,31 +40,45 @@ interface HTMLTarget {
 
 /** props passed to control input React components */
 export interface InputProps {
-    value: any;
-    valueChanger?: (data: unknown) => void;
-    style?: CSSProperties;
-    className?: string;
+    value: any; // initial value for control
+    valueChanger?: (data: unknown) => void; // custom handling of user entering new value in control
+    style?: CSSProperties; 
+    className?: string; // CSS class names
     componentDidMount?: () => void;
-    display_disabled?: boolean;
+    display_disabled?: boolean; // set to true to disable display
 };
 
-
+/** base render arguments to pass to react render control components */
 export function baseRenderKwargs(props: InputProps) {
   return {
     style: props.style,
-    className: "control-input input-group " + (props.className ?? ""),
+    className: "control-input input-group " + (props.className ?? ""), // append control CSS class to custom classes passed
     value: props.value,
     onChange: <Type extends HTMLTarget>(e: React.FormEvent<Type>) => props.valueChanger && props.valueChanger(e.currentTarget.value),
-    disabled: props.display_disabled ? true : undefined
+    disabled: props.display_disabled ? true : undefined // set html disabled if display is disabled
   }
 }
 
-export abstract class ControlTemplate2<T extends InputProps> extends ReteControlBase {
+/** 
+ * Control template
+ * Input props can be extended in implementations
+  */
+export abstract class ControlTemplate<T extends InputProps> extends ReteControlBase {
   props: T
   constructor(key: string,  emitter: NodeEditor, node: Node, componentProps: T, dataHandler?: DataHandler) {
     super(key)
-    componentProps.valueChanger = getValueChanger(this, emitter, key, dataHandler);
+
+    // if data handler passed wrap in (data) => () function, else use default control data process function
+    if(dataHandler) {
+      componentProps.valueChanger = (data: unknown) => dataHandler(this, emitter, key, data);
+    } else {
+      componentProps.valueChanger = (data) => ctrlValProcess(this, emitter, key, data)
+    }
+
+    // set props instance to be passed to react component on render
     this.props = componentProps;
+
+    // set node data value based on initial value passed
     nGetData(node)[key] = this.props.value;
   }
 }
@@ -89,7 +94,7 @@ export class InputNumber extends React.Component<InputProps> {
     );
   }
 }
-export class ControlNumber extends ControlTemplate2<InputProps> {
+export class ControlNumber extends ControlTemplate<InputProps> {
   component = InputNumber
 }
 
@@ -108,10 +113,9 @@ export class InputText extends React.Component<InputProps> {
         style={null}
       />
     );
-    // return <div></div>
   }
 }
-export class ControlText extends ControlTemplate2<InputProps> {
+export class ControlText extends ControlTemplate<InputProps> {
   component = InputText
 }
 
@@ -131,7 +135,7 @@ export class InputBool extends React.Component<InputProps> {
     )
   }
 }
-export class ControlBool extends ControlTemplate2<InputProps> {
+export class ControlBool extends ControlTemplate<InputProps> {
   component = InputBool
 }
 
@@ -144,7 +148,7 @@ export type OptionLabel = {
 }
 /** select element props also include options to display */
 export interface SelectProps extends InputProps {
-options: Array<OptionLabel>
+  options: Array<OptionLabel>
 }
 export class InputSelect extends React.Component<SelectProps> {
   render() {
@@ -163,12 +167,17 @@ export class InputSelect extends React.Component<SelectProps> {
     )
   }
 }
-export class ControlSelect extends ControlTemplate2<SelectProps> {
+export class ControlSelect extends ControlTemplate<SelectProps> {
   component = InputSelect
 }
 
 
-/** button whose body is suppoed through `props.buttonInner` - on click calls `props.valueChanger` with number of clicks */
+/** 
+ * Button control
+ * button body is supported through passing text or react element in `props.buttonInner`
+ * onClick calls `props.valueChanger` with number of clicks 
+ * control "value" contains number of clicks
+ * */
 /** button props also include string/element to display in button */
 export interface ButtonProps extends InputProps {
   buttonInner: string | JSX.Element
@@ -180,12 +189,12 @@ export class InputButton extends React.Component<ButtonProps, {clickCount: numbe
       clickCount: 0
     }
   }
-  componentDidMount = () => this.props.componentDidMount && this.props.componentDidMount()  // dont need to set value on component loaded
-  
+
   onClick() {
-    this.setState((state) => ({clickCount: state.clickCount + 1}));
-    let vc = this.props.valueChanger;
-    vc && vc(this.state.clickCount);
+    this.setState((state) => ({
+      clickCount: state.clickCount + 1
+    }));
+    this.props.valueChanger && this.props.valueChanger(this.state.clickCount);
   }
   
   render() {
@@ -202,7 +211,7 @@ export class InputButton extends React.Component<ButtonProps, {clickCount: numbe
   }
 }
 // rete control class for holding a button object
-export class ControlButton extends ControlTemplate2<ButtonProps> {
+export class ControlButton extends ControlTemplate<ButtonProps> {
   component = InputButton
 }
 

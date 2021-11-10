@@ -2,14 +2,6 @@ import * as Rete from 'rete';
 import { getDataAttribute, setDataAttribute } from "./access";
 import { JSONObject } from '../jsonschema';
 
-/** Variable spec */
-export interface VariableType {
-  types: string[],
-  default?: any,
-  dictTypes?: string[],
-  listTypes?: string[]
-}
-
 
 /** get mappings of node outputs to output controls */
 export function getOutputControls(node: Rete.Node): {[key: string]: string} {
@@ -42,10 +34,7 @@ export function cGetData(ctrl: Rete.Control): {[key: string]: any} {
 }
 
 
-/** get control initial value from data, or use provided initial value */
-export function getInitial(node: Rete.Node, key: string, defaultVal: any): any {
-  return nGetData(node)[key] ?? defaultVal;
-}
+
 
 /** Type definitions for each output of node */
 export function getTypeDefinitions(node: Rete.Node): {[key: string]: JSONObject} {
@@ -91,4 +80,9 @@ export function getNodeIdentifiers(node: Rete.Node): {[key: string]: any} {
 }
 export function setNodeIdentifiers(node: Rete.Node, attributes: {[key: string]: any}) {
   setDataAttribute(node, "nodeIdentifiers", attributes);
+}
+
+/** General attributes */
+export function getGeneralAttributes(node: Rete.Node): {[key: string]: any} {
+  return getDataAttribute<any>(node, "generalAttributes");
 }

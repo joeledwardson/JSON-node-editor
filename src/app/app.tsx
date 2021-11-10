@@ -4,6 +4,7 @@ import { sockets, addSocket, anySocket } from "./sockets/sockets";
 import * as BasicComponents from "./components/basic";
 import * as AdvancedComponents from './components/advanced';
 import { ComponentDynamic, addType } from './components/dynamic';
+import * as FunctionComponents from './components/functionblock';
 
 
 import ReactRenderPlugin from 'rete-react-render-plugin';
@@ -12,7 +13,6 @@ import ConnectionPlugin from 'rete-connection-plugin';
 import ContextMenuPlugin from 'rete-context-menu-plugin';
 import HistoryPlugin from 'rete-history-plugin';
 import { ReteReactComponent as ReteComponent } from "rete-react-render-plugin";
-import {FUNCTION_BLOCK_PROCESSOR} from './components/advanced';
 
 
 // const pls = require('rete-react-render-plugin').default;
@@ -183,9 +183,9 @@ export async function createEditor(container: HTMLElement) {
     new BasicComponents.ComponentNull(),
     new AdvancedComponents.ComponentList(),
     new AdvancedComponents.ComponentDict(),
-    new AdvancedComponents.ComponentFunctionBlock(),
-    new AdvancedComponents.ComponentFunctionVar(),
-    new AdvancedComponents.ComponentFunctionCall()
+    new FunctionComponents.ComponentFunctionBlock(),
+    new FunctionComponents.ComponentFunctionVar(),
+    new FunctionComponents.ComponentFunctionCall()
   ];
   Object.entries(sampleDefs).forEach(([key, spec]) => components.push(new ComponentDynamic(key, spec)));
   // objectSpecs.forEach((spec, key) => components.push(new ComponentDynamic(key, spec)));
@@ -207,7 +207,7 @@ export async function createEditor(container: HTMLElement) {
     },
   });
   editor.use(ConnectionPlugin);
-  editor.use(ContextMenuPlugin);
+  editor.use(ContextMenuPlugin, {searchBar: true});
   editor.use(HistoryPlugin);
   editor.use(SelectionPlugin, { enabled: true });
   editor.use(AdvancedSelectionPlugin);
@@ -243,7 +243,7 @@ export async function createEditor(container: HTMLElement) {
   // editorConnect("num", "num1");
   // editorConnect("num", "num2");
   const runBlockProcessor = (node: Rete.Node) => {
-    let processor = Data.getGeneralFuncs(node)[FUNCTION_BLOCK_PROCESSOR];
+    let processor = Data.getGeneralFuncs(node)[FunctionComponents.FUNCTION_BLOCK_PROCESSOR];
     if(processor) {
       processor();
     }

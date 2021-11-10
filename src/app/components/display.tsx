@@ -6,9 +6,6 @@ import { getOutputControls } from "../data/attributes";
 import { CSSProperties } from "react";
 
 
-export type ListAction = "add" | "remove" | "moveUp" | "moveDown";
-export type ListActionFunction = (index: number, action: ListAction) => void;
-
 export function getTitle(name: string): JSX.Element {
   return <div className="title">{name}</div>
 }
@@ -33,9 +30,9 @@ export function getControl(ctrl: Rete.Control, bindControl: bindControl): JSX.El
 }
 
 export function getOutput(output: Rete.Output, node: Rete.Node, bindControl: bindControl, bindSocket: bindSocket): JSX.Element {
-  let ctrl = node.controls.get(getOutputControls(node)[output.key]);
+  // let ctrl = node.controls.get(getOutputControls(node)[output.key]);
   return <div className="output" key={output.key}>
-    {!output.hasConnection() && ctrl && getControl(ctrl, bindControl)}
+    {/* {!output.hasConnection() && ctrl && getControl(ctrl, bindControl)} */}
     <div className="output-title">{output.name}</div>
     {getSocket(output, "output", bindSocket)}
   </div>
@@ -58,6 +55,48 @@ export function getInput(input: Rete.Input, bindControl: bindControl, bindSocket
 }
 
 
+export function renderComponent<T extends ReactRete.NodeProps, S extends ReactRete.NodeState>(
+  props: T,
+  state: S,
+  opts?: {
+    getRenderTitle?: (props: T) => JSX.Element,
+    getOutputs?: (props: T) => JSX.Element[], 
+    getControls? :(props: T) => JSX.Element[] 
+    getInputs?: (props: T) => JSX.Element[] 
+  }
+): JSX.Element {
+  const _getTitle = opts?.getRenderTitle ?? (
+    (props: T) => getTitle(props.node.name)
+  );
+  const _getOutputs = opts?.getOutputs ?? (
+    (props: T) => Array.from(props.node.outputs.values())
+    .map(o => getOutput(o, props.node, props.bindControl, props.bindSocket))
+  );
+  const _getControls = opts?.getControls ?? (
+    (props: T) => Array.from(props.node.controls.values())
+    .map(c => getControl(c, props.bindControl))
+  );
+  const _getInputs = opts?.getInputs ?? (
+    (props: T) => Array.from(props.node.inputs.values())
+    .map(i => getInput(i, props.bindControl, props.bindSocket))
+  );
+
+  return (
+    <div className={`node ${state.selected}`}>
+      {/* Title */}
+      {_getTitle(props)}
+      {/* Outputs and their mapped controls */}
+      {_getOutputs(props)}
+      {/* Controls (check not mapped to output) */}
+      <div className="controls-container" >
+      {_getControls(props)}
+      </div>        
+      {/* Inputs */}
+      {_getInputs(props)}
+    </div>
+  );
+}
+
 /**
  * Basic Component Display Class
  * Displays: 
@@ -68,23 +107,6 @@ export function getInput(input: Rete.Input, bindControl: bindControl, bindSocket
  */
 export class DisplayBase extends ReactRete.Node {
   render() {
-    const { node, bindSocket, bindControl } = this.props;
-    const { outputs, controls, inputs, selected } = this.state;
-    let ctrlKeys = Object.values(getOutputControls(this.props.node));    
-    
-    return (
-      <div className={`node ${selected}`}>
-        {/* Title */}
-        {getTitle(node.name)}
-        {/* Outputs and their mapped controls */}
-        {outputs.map((output) => getOutput(output, node, bindControl, bindSocket))}
-        {/* Controls (check not mapped to output) */}
-        <div className="controls-container" >
-        {controls.map((control) => !ctrlKeys.includes(control.key) && getControl(control, bindControl))}
-        </div>        
-        {/* Inputs */}
-        {inputs.map((input) => getInput(input, bindControl, bindSocket))}
-      </div>
-    );
+    return renderComponent(this.props, this.state);
   }
 }
