@@ -29,7 +29,7 @@ export const ctrlValChange: DataHandler = (ctrl: ReteControlBase, emitter: NodeE
  */
 export const ctrlValProcess: DataHandler = (ctrl: ReteControlBase, emitter: NodeEditor, key: string, data: any): void => {
   ctrlValChange(ctrl, emitter, key, data);
-  emitter.trigger('process');  // trigger process so that connected nodes update
+  // emitter.trigger('process');  // trigger process so that connected nodes update
 }
 
 

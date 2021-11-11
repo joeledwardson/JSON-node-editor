@@ -13,7 +13,7 @@ import { faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "react-bootstrap";
 import * as ReactRete from 'rete-react-render-plugin';
 import {getTitle, getInput, getControl, getSocket, getOutput, getOutput} from './display';
-import { getJSONSocket, getObject, isObject, JSONObject, JSONValue } from "../jsonschema";
+import { getJSONSocket, getObject, isObject, JSONObject, JSONObject, JSONValue } from "../jsonschema";
 import { JSONTypeConvert } from '../jsonschema';
 import XLSXColumn from 'xlsx-column';
 
@@ -22,6 +22,11 @@ export type ActionName = "add" | "remove" | "moveUp" | "moveDown";
 export const TYPE_SELECT_KEY = "Select Type";
 export type ActionProcess = (node: Rete.Node, editor: Rete.NodeEditor, idx: number) => void;
 export type ActionCall = (index: number, name: ActionName) => void;
+
+
+/** get socket from selected name, else "any" socket */
+export const getSelectedSocket = (selectedSocket: any) => MySocket.sockets.get(selectedSocket).socket ?? MySocket.anySocket;
+
 
 /**
  * List Actions for add/remove/move up/move down
@@ -35,10 +40,12 @@ export var listActions: {[index in ActionName]: ActionProcess} = {
     
     // get selected type from type selection control
     const selectedType = Data.nGetData(node)[TYPE_SELECT_KEY];
-    let socket = MySocket.sockets.get(selectedType)?.socket ?? MySocket.anySocket;
+    let socket = getSelectedSocket(selectedType);
 
     // increment output count tracker - incremented when new outputs added but not decrements when removed to avoid name conflict
     let generalAttrs = Data.getGeneralAttributes(node);
+    if(typeof(generalAttrs.outputTracker) !== "number")
+      generalAttrs.outputTracker = 1;
     generalAttrs.outputTracker += 1;
 
     // generate name with excel style key (e.g. 27 => 'AA')
@@ -176,7 +183,7 @@ export var listActions: {[index in ActionName]: ActionProcess} = {
  * - minus button
  * the 4 above actions call `ActionFunction()` with the corresponding `ActionName`
  */
-export function listGetOutput<T extends NodeProps>(
+export function getElementaryOutput<T extends NodeProps>(
   index: number, 
   actions: {[index in ActionName]: ActionProcess},
   props: T,
@@ -215,6 +222,7 @@ export function listGetOutput<T extends NodeProps>(
   </div>
 }
 
+
 export function getUnmappedControls(node: Rete.Node): Rete.Control[] {
   // get outputs not mapped to an output
   let outputControlKeys = Object.values(getOutputControls(node));
@@ -225,7 +233,7 @@ export function getUnmappedControls(node: Rete.Node): Rete.Control[] {
 export class DisplayList extends ReactRete.Node {
   render() {
     return Display.renderComponent(this.props, this.state, {
-      getOutputs: (props: NodeProps) => Object.entries(getOutputControls(props.node)).map((_, index) => listGetOutput(index, listActions, props)),
+      getOutputs: (props: NodeProps) => Object.entries(getOutputControls(props.node)).map((_, index) => getElementaryOutput(index, listActions, props)),
       getControls: (props: NodeProps) => getUnmappedControls(props.node).map(c => getControl(c, props.bindControl))
     })
   }
@@ -244,8 +252,6 @@ export function typeLabels(): Array<OptionLabel> {
     value: v
   })));
 }
-
-
 
 
 /** 
@@ -270,41 +276,43 @@ function socketUpdate(node: Rete.Node, emitter: Rete.NodeEditor, newSocket: Rete
 }
 
 
-/** 
- * Process a control selecting a variable type by updating the control value and updating input/output sockets 
-*/
-export function typeSelect(
-  node: Rete.Node, 
-  ctrl: ReteControl, 
-  emitter: Rete.NodeEditor, 
-  newType: any,
-  ioMap: Map<string, Rete.IO>
-): void {
-  let socket = MySocket.sockets.get(newType)?.socket ?? MySocket.anySocket;
-  Controls.ctrlValProcess(ctrl, emitter, ctrl.key, socket.name);
-  socketUpdate(node, emitter, socket, ioMap);
-  emitter.trigger('process');  // trigger process so that connected nodes update
-}
-
-
-/**  
- * check node data for control value containing selected type to use in retrieving a socket
- * - if control data doesn't contain selected type of value is invalid, return the "any" type
+/**
+ * Set output type definitions
+ *  loop outputs and set JSON specification for each output  
  */
-// TODO - is this needed?
-export function getSelectedSocket(typ: string): Rete.Socket {
-  return TypeList.includes(typ) ? (MySocket.sockets.get(typ)?.socket ?? MySocket.anySocket) : MySocket.anySocket;  
+ const setAllTypeDefinitions = (node: Rete.Node, spec: JSONObject) => {
+  Data.setTypeDefinitions(
+    node, 
+    Object.fromEntries(
+      Object.values(node.outputs).map(o => [o.key, spec])
+    )
+  );
 }
 
 
-// loop outputs and set type definitions for each output to be reference by their own connections
-function updateOutputTypes(node: Rete.Node, newType: string) {
-  let typeMap = Data.getTypeMap(node);
-  let innerTypeDefs = Data.getTypeDefinitions(node);
-  node.outputs.forEach(o => {
-    innerTypeDefs[o.key] = typeMap[newType];
-  })
+/** Update selected type 
+ * - output json schema definitions
+ * - type name on selected control
+ * - output sockets
+ **/
+function changeSelectedType(
+  node: Rete.Node, 
+  typeMap: {[key: string]: JSONObject}, 
+  newName: string,
+  selectControl: ReactRete.ReteReactControl,
+  editor: Rete.NodeEditor,
+) {
+  // set JSON schema for each output (read when node connects to output)
+  setAllTypeDefinitions(node, typeMap[newName]);
+
+  // update type select control with new selected socket name
+  Controls.ctrlValProcess(selectControl, editor, selectControl.key, newName);
+
+  // replace output sockets
+  let socketHolder = MySocket.sockets.get(newName);
+  socketHolder && socketUpdate(node, editor, socketHolder.socket, node.outputs);
 }
+
 
 /** 
  * Build type selection control
@@ -315,15 +323,16 @@ function buildSelectControl(node: Rete.Node, editor: Rete.NodeEditor): Controls.
   let socket = getSelectedSocket(ctrlData[TYPE_SELECT_KEY]);
 
   // select control to set types on outputs
-  let selectValChange = (ctrl: ReteControl, emitter: Rete.NodeEditor, key: string, data: any) => {
-    updateOutputTypes(node, data);
-    typeSelect(node, ctrl, emitter, data, node.outputs);
-  }
+  let selectValChange = (
+    ctrl: ReteControl, emitter: Rete.NodeEditor, key: string, data: any
+  ) => changeSelectedType(node, Data.getTypeDefinitions(node), data, ctrl, emitter);
+
   return new Controls.ControlSelect(TYPE_SELECT_KEY, editor, node, {
     value: socket.name, 
     options: typeLabels(), 
   }, selectValChange);
 }
+
 
 /**
  * Build add element button
@@ -337,54 +346,65 @@ function buildAddButton(node: Rete.Node, editor: Rete.NodeEditor, addAction: Act
   }, addButtonAction);
 }
 
-/**
- * Build node with parent, add button and type selection control 
- */
-function buildNode(node: Rete.Node, editor: Rete.NodeEditor, addAction: ActionProcess, socket: Rete.Socket): void {
-  node
-  .addInput(new Rete.Input("parent", "Parent", socket))
-  .addControl(buildAddButton(node, editor, addAction))
-  .addControl(buildSelectControl(node, editor));
-}
 
-/**
- * Validate JSON value matches type 
- * check a JSON value is an object, and contains a type that matches the current component specified type 
- * */
-const validType = (property: JSONValue, name: string) => {
-  if(property && typeof(property) === "object" && !Array.isArray(property)) {
-    if(typeof(property.type) === "string" && JSONTypeConvert(property.type) === name) {
-      return true;
+/** 
+   * map of socket/output name to Schema definitions
+   *  if the parent definition is a union (e.g. in python List[string] | List[int | int]) then there are 2 options to select from
+   *  the output map would be {"Text": {"type": "array", "items": ...}}
+   * 
+   * using the example above "a" properties would be stored and read by child nodes connected
+   */
+function getTypeMap(
+  spec: JSONObject,
+  validator: ((spec: JSONValue) => boolean),
+  getInnerSpec: ((spec: JSONObject) => JSONValue)
+): {[key: string]: JSONObject} {
+
+  let typeMap: {[key: string]: JSONObject} = {};
+  const assignMap = (spec: JSONObject) => {
+    let innerSpec = getInnerSpec(spec);
+    if(innerSpec && typeof(innerSpec) === "object" && !Array.isArray(innerSpec)) {
+      let newSocket = getJSONSocket(innerSpec);
+      typeMap[newSocket.name] = innerSpec;
     }
+  }   
+
+  // if parent type is valid (e.g. List[string]) 
+  if(validator(spec))
+    assignMap(spec); 
+
+  // check for parent type is a union "anyOf" (e.g. List[string] | List[int]) - loop through each in union
+  if(spec.anyOf && Array.isArray(spec.anyOf)) {
+    spec.anyOf.forEach(iSpec => {
+      if(iSpec && typeof(iSpec) === "object" && !Array.isArray(iSpec) && validator(iSpec))
+        assignMap(iSpec)
+    });
   }
-  return false;
+  return typeMap;
 }
 
 
-/** check a JSONValue is an object
- * if it is an object, generate a socket and use the created socket name as a key to the JSON spec
- * and add to the valid socket name map
- *  */
-const assignSpec = (spec: JSONValue, typeMap: {[key: string]: JSONObject}) => {
-  let _spec = getObject(spec);
-  if(_spec) {
-    let socketName = getJSONSocket(_spec).name;
-    typeMap[socketName] = _spec;
-  }
-} 
+/** validate a connection is connected to the parent input socket */
+const isParent = (cn: Rete.Connection, n: Rete.Node) => cn.input.node === n && cn.input.key === "parent" && !!cn.output.node
+
 
 /**
  * Connection created processor 
  * on connection created, set selected type to parent specification (if exists) and hide type selection control 
  * */
-const connectionCreatedFunc = (connection: Rete.Connection, node: Rete.Node, socket: Rete.Socket, innerTypeKey: string) => {
-  let input = connection.input
+const connectionCreatedFunc = (
+  connection: Rete.Connection,
+  selectControl: ReactRete.ReteReactControl,
+  editor: Rete.NodeEditor,
+  validator: ((spec: JSONValue) => boolean),
+  getInnerSpec: ((spec: JSONObject) => JSONValue)
+) => {
   let output =  connection.output;
-
-  // check that the connection created is "parent" input to another node's output
-  if(!(input.node === node && input.key === "parent" && output.node))
-    return
+  let node = connection.input.node;
   
+  // by default clear type map
+  Data.setTypeMap(node, {});
+
   // get type definitions from other node and check that the output connected has type definitions
   // e.g. if parent has output "outputA" then in JSON schema should expect to see "properties": {
   // "properties": {
@@ -393,46 +413,38 @@ const connectionCreatedFunc = (connection: Rete.Connection, node: Rete.Node, soc
   //       "properties": {
   //          ...
   let typeDefs = Data.getTypeDefinitions(output.node);
-  let parentTypes = typeDefs[output.key];
-  if(!parentTypes || !isObject(parentTypes))
+  // index to type definition of parent node - in the above example `output.key` would be "a"
+  let spec = typeDefs[output.key];
+  // check is object
+  if(!spec || !isObject(spec))
     return 
 
-  // map of socket/output name to Schema definitions
-  // using the example above "a" properties would be stored and read by child nodes connected
-  let typeMap: {[key: string]: JSONObject} = {};
-
-  // check for parent type is a union "anyOf" - loop through each in union
-  let anyOf = parentTypes.anyOf;
-  if(anyOf && Array.isArray(anyOf)) {
-    anyOf.forEach(t => {
-      
-      // check type matches component
-      let o = getObject(t);
-      if(o && validType(o, socket.name)) {
-
-        // get type spec using "items" or "additionalProperties" and retrieve socket info
-        assignSpec(o[innerTypeKey], typeMap);
-      
-      }
-    });
-  }
-  else {
-
-    // parent is a single definition 
-    assignSpec(parentTypes[innerTypeKey], typeMap);
-
-  }
+  // get type map - if no valid configurations found, exit
+  let typeMap = getTypeMap(spec, validator, getInnerSpec);
+  if(!Object.keys(typeMap).length) return
 
   // assign socket name => JSON schema map to node for future reference when selecting type
   Data.setTypeMap(node, typeMap);
 
-  // set type select to each of the socket names
-  selectCtrl.props.options = Object.keys(typeMap).map(nm => ({"label": nm, "value": nm}));
-  
   // use first in list for selected socket
   let newName =  Object.keys(typeMap)[0];
-  this.typeSelect(node, selectCtrl, editor, newName);
 
+  // update selected type
+  changeSelectedType(node, typeMap, newName, selectControl, editor);
+}
+
+
+/** on connection removed  */
+const connectionRemovedFunc = (node: Rete.Node, selectControl: ReactRete.ReteReactControl, editor: Rete.NodeEditor) => {
+  // clear output type definitions
+  Data.setTypeDefinitions(node, {});
+
+  // reset select type options to defaults
+  selectControl.props.options = typeLabels();
+
+  // change sockets/connections and reset type to "any"
+  let newName = MySocket.anySocket.name;
+  changeSelectedType(node, {}, newName, selectControl, editor);
 }
 
 
@@ -584,6 +596,48 @@ export class ComponentList extends ListComponentBase {
   data = {component: DisplayList}
   constructor() {	
       super('List');
+  }
+}
+
+
+export class ComponentList2 extends ComponentBase {
+  data = {component: DisplayList}
+  constructor() {
+    super('List');
+  }
+  _builder(node: Rete.Node, editor: Rete.NodeEditor) {
+    // build node with list action to add and list socket
+    let socket = MySocket.listSocket;
+    let selectControl = buildSelectControl(node, editor);
+    node
+      .addInput(new Rete.Input("parent", "Parent", socket))
+      .addControl(buildAddButton(node, editor, listActions["add"]))
+      .addControl(selectControl);
+      
+    // add output for each specified in data passed to builder
+    let outputCtrls = Data.getOutputControls(node);
+    Object.entries(outputCtrls).forEach(([outputKey, ctrlKey]) => node.addOutput(new Rete.Output(outputKey, outputKey, socket)));
+
+    //   // add output using the output key
+    //   node.addOutput(new Rete.Output(outputKey, outputKey, socket));
+
+    //   // add control using mapped control key
+    //   this.hasOutputControls && node.addControl(new Controls.ControlText(ctrlKey, editor, node, {
+    //     value: ctrlData[ctrlKey]
+    //   }));
+    // });
+
+    Data.setConnectionFuncs(node, {
+      "created": (connection: Rete.Connection) => {
+        if(isParent(connection, node)) {
+          connectionCreatedFunc(connection, selectControl, editor, 
+            (spec: JSONValue) => !!spec && typeof(spec) === "object" && !Array.isArray(spec) && !!spec.items,
+            (spec: JSONObject) => spec.items
+          )
+        }
+      }, 
+      "removed": (connection: Rete.Connection) => isParent(connection, node) && connectionRemovedFunc(node, selectControl, editor)
+    });
   }
 }
 
