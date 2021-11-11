@@ -1,5 +1,7 @@
 import * as Rete from 'rete';
+import * as Sockets from './sockets/sockets';
 import { multiSocket, sockets, anySocket, getTypeString } from './sockets/sockets';
+
 
 export type JSONObject = { [key: string]: JSONValue }; 
 export type JSONValue =
@@ -20,18 +22,16 @@ export const getObject = (v: JSONValue) => isObject(v) ? v as JSONObject : null;
   return /.*\/(?<name>.*)$/.exec(ref_str)?.groups?.name ?? null;
 }
 
-export function JSONTypeConvert(typ: string): string {
-  let type_maps: { [key: string]: string } = {
-    "string": "Text",
-    "integer": "Number",
-    "number": "Number",
-    "array": "List",
-    "boolean": "Boolean",
-    "null": "None",
-    "object": "Dictionary"
-  }
-  return type_maps[typ] ?? typ;
+let type_maps: { [key: string]: string } = {
+  "string": "Text",
+  "integer": "Number",
+  "number": "Number",
+  "array": "List",
+  "boolean": "Boolean",
+  "null": "None",
+  "object": "Dictionary"
 }
+export const JSONTypeConvert = (typ: string) => type_maps[typ] ?? typ;
 
 /**
  * Get socket from JSON schema definition
@@ -184,4 +184,90 @@ export function getJSONSocket(property: JSONObject | null | undefined): Rete.Soc
   } 
     
   return anySocket;
+}
+
+type SocketMap = {
+  check: (spec: JSONObject) => boolean,
+  getSocket: (spec: JSONObject, caller: (spec: JSONValue) => Rete.Socket) => Rete.Socket
+}
+let socketMaps: SocketMap[] = [
+  {
+    check: (spec: JSONObject) => !!spec["$ref"],
+    getSocket: (spec: JSONObject) => {
+      let varRef = spec["$ref"]
+      // if a schema reference is passed, used the final part of the reference name for the socket
+      if(typeof varRef !== "string") throw new Error(`expected "$ref to be a string`);
+      let refName = get_ref_name(varRef);
+      if( !refName ) throw new Error(`reference name invalid: "${varRef}"`);
+      return multiSocket([refName], refName);
+    }
+  }, {
+    check: (spec: JSONObject) => spec.type === "array",
+    getSocket: (spec: JSONObject, caller: (spec: JSONValue) => Rete.Socket) => {
+      // type is array, parse inner type from "items" key (if given)
+      let items = spec.items;
+        
+      // "items" key in JSON Schema passed to indicate inner type
+      // do not currently support tuple types, where "items" is an array of definitions
+      if(typeof items === "object" && Array.isArray(items))
+        throw new Error('Currently do not support items in list form')
+
+      return multiSocket(["List"], `List[${caller(items).name}]`, Sockets.listColour);
+    }
+  }, {
+    check: (spec: JSONObject) => spec.type === "object",
+    getSocket: (spec: JSONObject, caller: (spec: JSONValue) => Rete.Socket) => {  
+      // at present custom objects with required "properties" as well as additional keys are not supported
+      // they should be defined in $refs
+      if(spec.properties)
+        throw new Error(`property has its own properties set - this should be defined as its own type in "definitions"`);
+
+      return multiSocket(["Dict"], `Dict[${caller(spec.additionalProperties).name}]`, Sockets.dictColour);
+    }
+  }, {
+    check: (spec: JSONObject) => !!spec.anyOf,
+    getSocket: (spec: JSONObject, caller: (spec: JSONValue) => Rete.Socket) => {
+      let anyOf = spec.anyOf;
+      if(!(typeof anyOf === "object" && Array.isArray(anyOf)))
+        throw new Error(`expected "anyOf" of property to be an array`);
+      
+      // loop array elements and get sockets, then extract names
+      let innerSockets = anyOf.map(t => caller(t));
+      let socketName = getTypeString(innerSockets.map(s => s.name));
+      
+      // return socket if exists
+      let socket = sockets.get(socketName)?.socket;
+      if(socket) return socket;
+
+      // socket doesnt exist, create it and combine with each socket in the list
+      let newSocket = multiSocket([],  socketName);
+      innerSockets.forEach(s => {
+        newSocket.combineWith(s)
+        s.compatible.forEach(_s => newSocket.combineWith(_s));
+      });
+      return newSocket;
+    }
+  }
+]
+let coreLookups: [string, Rete.Socket][] = [
+  ["string", Sockets.stringSocket],
+  ["integer", Sockets.numberSocket],
+  ["number", Sockets.numberSocket],
+  ["boolean", Sockets.boolSocket],
+  ["null", Sockets.nullSocket]
+]
+let coreMaps: SocketMap[] = coreLookups.map(([typ, socket]) => ({
+  check: (spec: JSONObject) => spec.type === typ,
+  getSocket: () => socket
+}));
+socketMaps.concat(coreMaps);
+
+export function getJSONSocket2(property: JSONValue | null | undefined): Rete.Socket {
+  if(property && typeof(property) == "object" && !Array.isArray(property)) {
+    socketMaps.forEach(m => {
+      if (m.check(property))
+        return m.getSocket(property, getJSONSocket2);
+    });
+  }
+  return anySocket
 }
