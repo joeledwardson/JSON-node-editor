@@ -1,46 +1,115 @@
-# Getting Started with Create React App
+# JSON Node Editor
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Node editor based around `rete.js` framework for editing JSON data.
 
-## Available Scripts
+As opposed to editing YAML/JSON data in text format:
 
-In the project directory, you can run:
+```JSON
+{
+    "a": {
+        "b": 1,
+        "c": "hello"
+    }
+}
+```
 
-### `yarn start`
+the editor allows setting values in nodes, where sub-elements (like "b" and "c" to "a" above) are represented by connecting an output to subsequent nodes.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+### Schema
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+The editor supports JSON editing via a schema. 
 
-### `yarn test`
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
 
-### `yarn build`
+JSON Schema definitions is taken from here (Release 2019-09): https://json-schema.org/understanding-json-schema/UnderstandingJSONSchema.pdf 
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Known limitations
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+- `#ref` must conform to standardised form: `#/.../.../<refName>` 
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- foreign schemas not supported
 
-### `yarn eject`
+- Schema composition:
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+  - currently `anyOf` supported, but not the following:
+    - `allOf`
+    - `oneOf`
+    - `not`
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+- JSON `object`
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+  - `properties` not supported , only `additionalProperties` like a Python `dictionary`
+  - Keywords not supported on html user input:
+    - `patternProperties`
+    - `propertyNames`
+    - `minProperties`
+    - `maxProperties`
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+- JSON `integer`
 
-## Learn More
+  - Input only validated if numeric, not if integer
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+- JSON `number`:
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+  - The following keywords not validated on html user input:
+    - `multipleOf`
+    - `minimum`
+    - `exclusiveMinimum`
+    - `maximum` 
+    - `exclusiveMaximum`
+
+- JSON `array` types
+
+  - *tuple validation* not supported where `items` is specified as a list, only `list validation`, where `items` is a JSON `object` schema
+  - Keywords unsupported
+    - `additionalItems`
+    - `contains`
+    - `minItems`
+    - `maxItems`
+    - `uniqueItems`
+
+- `enumerations`
+
+  
+
+> Output JSON can be validated against schema, just not in html input
+
+
+
+### Components
+
+Each element in JSON is represented by a visual node in the editor - this could be a complex object or just a number or a string. By default a set of core components are provided as standard
+
+**Text Component**
+
+The text component provides a text area for input
+
+**Number Component**
+
+Input restricted to numeric values
+
+**Boolean Component**
+
+Boolean components provide a dropdown selection for `True` and `False`, with an option for blank (null)
+
+**Select Component**
+
+Dropdown component, same as Boolean, except the user specifies the options to display
+
+ ### Elementary Components
+
+Elementary components have individual outputs representing a single element, to be connecting to another node where data is entered.
+
+For each output, functionality is provided to:
+
+- **Insert** a new output directly after
+- **Delete** the output
+- Move the output ***up*** in the list 
+- Move the output ***down*** in the list
+
+(insert diagram how schema is passed down tree)
+
+### Named Components
+
+Named components are defined in the schema 
+
