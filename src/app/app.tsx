@@ -2,7 +2,8 @@ import * as Rete from "rete";
 import * as Data from './data/attributes';
 import { sockets, addSocket, anySocket } from "./sockets/sockets";
 import * as BasicComponents from "./components/basic";
-import * as AdvancedComponents from './components/advanced';
+import { ComponentDict } from "./components/dictionary";
+import { ComponentList } from "./components/list";
 import { ComponentDynamic, addType } from './components/dynamic';
 import * as FunctionComponents from './components/functionblock';
 
@@ -181,11 +182,11 @@ export async function createEditor(container: HTMLElement) {
     new BasicComponents.ComponentText(),
     new BasicComponents.ComponentBool(),
     new BasicComponents.ComponentNull(),
-    new AdvancedComponents.ComponentList(),
-    new AdvancedComponents.ComponentDict(),
-    new FunctionComponents.ComponentFunctionBlock(),
-    new FunctionComponents.ComponentFunctionVar(),
-    new FunctionComponents.ComponentFunctionCall()
+    new ComponentList(),
+    new ComponentDict(),
+    // new FunctionComponents.ComponentFunctionBlock(),
+    // new FunctionComponents.ComponentFunctionVar(),
+    // new FunctionComponents.ComponentFunctionCall()
   ];
   Object.entries(sampleDefs).forEach(([key, spec]) => components.push(new ComponentDynamic(key, spec)));
   // objectSpecs.forEach((spec, key) => components.push(new ComponentDynamic(key, spec)));
@@ -243,13 +244,13 @@ export async function createEditor(container: HTMLElement) {
   // editorConnect("num", "num1");
   // editorConnect("num", "num2");
   const runBlockProcessor = (node: Rete.Node) => {
-    let processor = Data.getGeneralFuncs(node)[FunctionComponents.FUNCTION_BLOCK_PROCESSOR];
-    if(processor) {
-      processor();
-    }
-    node.inputs.forEach(i => {
-      i.connections.forEach(c => c.output.node && runBlockProcessor(c.output.node));
-    })
+    // let processor = Data.getGeneralFuncs(node)[FunctionComponents.FUNCTION_BLOCK_PROCESSOR];
+    // if(processor) {
+    //   processor();
+    // }
+    // node.inputs.forEach(i => {
+    //   i.connections.forEach(c => c.output.node && runBlockProcessor(c.output.node));
+    // })
   }
 
   editor.on(

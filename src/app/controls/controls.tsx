@@ -1,6 +1,6 @@
 import { ReteReactControl as ReteControlBase } from "rete-react-render-plugin";
 import { Node, NodeEditor } from "rete";
-import { cGetData, nGetData } from "../data/attributes";
+import { getControlsData } from "../data/attributes";
 import * as React from "react";
 import { Form, Button } from 'react-bootstrap';
 import TextareaAutosize from 'react-textarea-autosize';
@@ -20,7 +20,7 @@ type DataHandler = (ctrl: ReteControlBase, emitter: NodeEditor, key: string, dat
  */
 export const ctrlValChange: DataHandler = (ctrl: ReteControlBase, emitter: NodeEditor, key: string, data: any): void => {
   ctrl.props.value = data;  // update props value used to update control value when re-rendering
-  cGetData(ctrl)[key] = data;  //  put into node data objects for connections
+  getControlsData(ctrl.getNode())[key] = data;  //  put into node data objects for connections
   ctrl.update && ctrl.update();  // re-render
 }
 
@@ -79,7 +79,7 @@ export abstract class ControlTemplate<T extends InputProps> extends ReteControlB
     this.props = componentProps;
 
     // set node data value based on initial value passed
-    nGetData(node)[key] = this.props.value;
+    getControlsData(node)[key] = this.props.value;
   }
 }
 

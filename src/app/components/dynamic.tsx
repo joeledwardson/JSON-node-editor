@@ -9,7 +9,7 @@ import { ReteReactControl as ReteControl } from "rete-react-render-plugin";
 import { faTimes, faMouse } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "react-bootstrap";
 import { sockets } from "../sockets/sockets";
-import { getOutputControls, getOutputNulls, getTypeDefinitions } from "../data/attributes";
+import { getOutputControls, getOutputNulls, getOutputSchemas } from "../data/attributes";
 import { JSONObject, JSONValue, getObject, getJSONSocket } from '../jsonschema';
 
 
@@ -136,7 +136,7 @@ export class ComponentDynamic extends ComponentBase {
    * process a JSON schema "property" for a given definition, by setting node data and adding relevant control/output 
    */
   process_property(node: Rete.Node, editor: Rete.NodeEditor, key: string, property: JSONObject) {
-    let nodeData = Data.nGetData(node);
+    let nodeData = Data.getControlsData(node);
 
     /**
      * helper function to set control value, create control and add control
@@ -192,7 +192,7 @@ export class ComponentDynamic extends ComponentBase {
       node.addOutput(output);
 
       // set type definition to be read by any child elements
-      getTypeDefinitions(node)[key] = property;
+      getOutputSchemas(node)[key] = property;
       /** on connection created, set selected type to parent specification (if exists) and hide type selection control */
       
 

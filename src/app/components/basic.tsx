@@ -2,7 +2,7 @@ import * as Rete from "rete";
 import { ReteReactComponent as ReteComponent } from "rete-react-render-plugin";
 import * as MySocket  from "../sockets/sockets";
 import * as Controls from  "../controls/controls";
-import { nGetData } from "../data/attributes";
+import { getControlsData } from "../data/attributes";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
 import * as Display from "./display";
 
@@ -19,7 +19,7 @@ export let TypeList: Array<string> = [
 
 /** get control initial value from data, or use provided initial value */
 function getInitial(node: Rete.Node, key: string, defaultVal: any): any {
-  return nGetData(node)[key] ?? defaultVal;
+  return getControlsData(node)[key] ?? defaultVal;
 }
 
 /** base component - empty worker and _builder() that checks emitter is non-null */
