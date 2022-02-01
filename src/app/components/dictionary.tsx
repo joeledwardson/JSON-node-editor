@@ -5,9 +5,11 @@ import * as Data from "../data/attributes";
 import { ComponentBase } from './basic';
 import { JSONObject, JSONValue } from "../jsonschema";
 import * as List from './list';
-import * as ENode from './elementary/node';
-import * as EDisplay from './elementary/display';
-import { getSelectedSocket, isInput } from "./_helpers";
+import * as ENode from '../elementary/elementary';
+import * as EDisplay from '../elementary/display';
+import * as Display from '../display';
+import * as ReactRete from 'rete-react-render-plugin';
+import { getSelectedSocket, isInput } from "../helpers";
 
 
 /**
@@ -49,13 +51,22 @@ function dictRemove(node: Rete.Node, editor: Rete.NodeEditor, idx: number) {
 
 
 const DICT_SELECT_KEY = "Select Type";
-const dictActions = {
+const dictActions: EDisplay.Actions = {
   "add": (node: Rete.Node, editor: Rete.NodeEditor, idx: number) => dictAdd(node, editor, idx, DICT_SELECT_KEY),
   "remove": (node: Rete.Node, editor: Rete.NodeEditor, idx: number) => dictRemove(node, editor, idx),
   "moveUp": (node: Rete.Node, editor: Rete.NodeEditor, idx: number) => List.elementUp(node, editor, idx),
   "moveDown": (node: Rete.Node, editor: Rete.NodeEditor, idx: number) => List.elementDown(node, editor, idx)
 }
-var DisplayDict = EDisplay.getDisplayClass(dictActions);
+class DisplayDict extends ReactRete.Node {
+  render() {
+    return Display.renderComponent(
+      this.props, 
+      this.state,
+      (props: ReactRete.NodeProps) => EDisplay.renderElementaryOutputs(props, dictActions),
+      (props: ReactRete.NodeProps) => EDisplay.renderUnmappedControls(props),
+    )
+  }
+}
 
 
 

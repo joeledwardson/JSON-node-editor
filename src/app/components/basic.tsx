@@ -4,7 +4,7 @@ import * as MySocket  from "../sockets/sockets";
 import * as Controls from  "../controls/controls";
 import { getControlsData } from "../data/attributes";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
-import * as Display from "./display";
+import * as Display from "../display";
 
 
 /** list of available types */

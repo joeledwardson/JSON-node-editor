@@ -1,13 +1,14 @@
 import * as Rete from "rete";
 import * as Display from "../display";
 import * as ReactRete from 'rete-react-render-plugin';
-import * as Data from '../../data/attributes';
+import * as Data from '../data/attributes';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "react-bootstrap";
 
 export type ActionName = "add" | "remove" | "moveUp" | "moveDown";
 export type ActionProcess = (node: Rete.Node, editor: Rete.NodeEditor, idx: number) => void;
+export type Actions = {[index in ActionName]: ActionProcess};
 
 /**
  * Same as Base Display but outputs & their mapped controls are displayed with:
@@ -19,7 +20,7 @@ export type ActionProcess = (node: Rete.Node, editor: Rete.NodeEditor, idx: numb
  */
 export function getElementaryOutput<T extends ReactRete.NodeProps>(
   index: number, 
-  actions: {[index in ActionName]: ActionProcess},
+  actions: Actions,
   props: T,
 ): JSX.Element {
   let outputMap = Data.getOutputControls(props.node);
@@ -65,17 +66,14 @@ export function getUnmappedControls(node: Rete.Node): Rete.Control[] {
 }
 
 
-/** generate elementary display class passing actions for elementary buttons  */
-export function getDisplayClass(actions: {[index in ActionName]: ActionProcess}) : typeof ReactRete.Node {
-  return class DisplayClass extends ReactRete.Node {
-    render() {
-      return Display.renderComponent(this.props, this.state, {
-        getOutputs: (props: ReactRete.NodeProps) => Object.entries(Data.getOutputControls(props.node))
-        .map((_, index) => getElementaryOutput(index, actions, props)),
-  
-        getControls: (props: ReactRete.NodeProps) => getUnmappedControls(props.node)
-        .map(c => Display.getControl(c, props.bindControl))
-      })
-    }
-  }
+/** render elementary outputs with their mapped controls */
+export function renderElementaryOutputs(props: ReactRete.NodeProps, actions: Actions): JSX.Element[] {
+  return Object.entries(Data.getOutputControls(props.node))
+  .map((_, index) => getElementaryOutput(index, actions, props))
+}
+
+
+/** render controls not mapped to outputs */
+export function renderUnmappedControls(props: ReactRete.NodeProps): JSX.Element[] {
+  return getUnmappedControls(props.node).map(c => Display.getControl(c, props.bindControl))
 }

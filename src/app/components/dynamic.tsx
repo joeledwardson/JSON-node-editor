@@ -1,6 +1,6 @@
 import * as Rete from 'rete';
 import * as MyControls from "../controls/controls";
-import * as Display from './display';
+import * as Display from '../display';
 import * as Data from "../data/attributes";
 import {  ComponentBase, TypeList } from "./basic";
 import * as ReactRete from 'rete-react-render-plugin';

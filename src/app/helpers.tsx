@@ -1,4 +1,4 @@
-import * as Sockets from "../sockets/sockets";
+import * as Sockets from "./sockets/sockets";
 import * as Rete from 'rete';
 
 /** get socket from selected name, else "any" socket */

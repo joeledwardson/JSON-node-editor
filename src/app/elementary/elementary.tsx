@@ -1,11 +1,11 @@
 import * as Rete from "rete";
-import * as MySocket from "../../sockets/sockets";
-import * as Controls from  "../../controls/controls";
-import * as Data from "../../data/attributes";
-import { TypeList } from '../basic';
+import * as MySocket from "../sockets/sockets";
+import * as Controls from  "../controls/controls";
+import * as Data from "../data/attributes";
+import { TypeList } from '../components/basic';
 import * as ReactRete from 'rete-react-render-plugin';
-import { getJSONSocket, isObject, JSONObject, JSONValue } from "../../jsonschema";
-import { getSelectedSocket } from '../_helpers';
+import { getJSONSocket, isObject, JSONObject, JSONValue } from "../jsonschema";
+import { getSelectedSocket } from '../helpers';
 import { ActionProcess, ActionName } from "./display";
 
 

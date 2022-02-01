@@ -1,11 +1,13 @@
 import * as Rete from "rete";
 import * as MySocket from "../sockets/sockets";
 import * as Data from "../data/attributes";
-import * as ENode from './elementary/node';
-import * as EDisplay from './elementary/display';
+import * as ENode from '../elementary/elementary';
+import * as EDisplay from '../elementary/display';
+import * as Display from '../display';
+import * as ReactRete from 'rete-react-render-plugin';
 import {  ComponentBase } from './basic';
 import { JSONObject, JSONValue } from "../jsonschema";
-import { getSelectedSocket, isInput, updateViewConnections } from "./_helpers";
+import { getSelectedSocket, isInput, updateViewConnections } from "../helpers";
 import XLSXColumn from 'xlsx-column';
 
 
@@ -161,13 +163,22 @@ export function elementDown(node: Rete.Node, editor: Rete.NodeEditor, idx: numbe
 
 
 const LIST_SELECT_KEY = "Select Type";
-const listActions = {
+const listActions: EDisplay.Actions = {
   "add": (node: Rete.Node, editor: Rete.NodeEditor, idx: number) => elementAdd(node, editor, idx, LIST_SELECT_KEY),
   "remove": (node: Rete.Node, editor: Rete.NodeEditor, idx: number) => elementRemove(node, editor, idx),
   "moveUp": (node: Rete.Node, editor: Rete.NodeEditor, idx: number) => elementUp(node, editor, idx),
   "moveDown": (node: Rete.Node, editor: Rete.NodeEditor, idx: number) => elementDown(node, editor, idx)
 }
-var DisplayList = EDisplay.getDisplayClass(listActions);
+class DisplayList extends ReactRete.Node {
+  render() {
+    return Display.renderComponent(
+      this.props, 
+      this.state,
+      (props: ReactRete.NodeProps) => EDisplay.renderElementaryOutputs(props, listActions),
+      (props: ReactRete.NodeProps) => EDisplay.renderUnmappedControls(props),
+    )
+  }
+}
 
 
 export class ComponentList extends ComponentBase {

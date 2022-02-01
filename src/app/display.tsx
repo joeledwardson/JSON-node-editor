@@ -1,8 +1,7 @@
 import * as Rete from "rete";
 import * as ReactRete from 'rete-react-render-plugin';
 import { bindSocket, bindControl } from "rete-react-render-plugin";
-import { sockets } from "../sockets/sockets";
-import { getOutputControls } from "../data/attributes";
+import { sockets } from "./sockets/sockets";
 import { CSSProperties } from "react";
 
 
@@ -54,45 +53,41 @@ export function getInput(input: Rete.Input, bindControl: bindControl, bindSocket
   </div>
 }
 
+export function getOutputs<T extends ReactRete.NodeProps>(props: T): JSX.Element[] {
+  return Array.from(props.node.outputs.values()).
+  map(o => getOutput(o, props.node, props.bindControl, props.bindSocket))
+}
+
+export function getControls<T extends ReactRete.NodeProps>(props: T): JSX.Element[] {
+  return Array.from(props.node.controls.values())
+  .map(c => getControl(c, props.bindControl))
+}
+
+export function getInputs<T extends ReactRete.NodeProps>(props: T): JSX.Element[] {
+  return Array.from(props.node.inputs.values())
+  .map(i => getInput(i, props.bindControl, props.bindSocket))
+}
 
 export function renderComponent<T extends ReactRete.NodeProps, S extends ReactRete.NodeState>(
   props: T,
   state: S,
-  opts?: {
-    getRenderTitle?: (props: T) => JSX.Element,
-    getOutputs?: (props: T) => JSX.Element[], 
-    getControls? :(props: T) => JSX.Element[] 
-    getInputs?: (props: T) => JSX.Element[] 
-  }
+  renderOutputs = (props: T) => getOutputs(props),
+  renderControls = (props: T) => getControls(props),
+  renderTitle = (props: T) => getTitle(props.node.name),
+  renderInputs = (props: T) => getInputs(props),
 ): JSX.Element {
-  const _getTitle = opts?.getRenderTitle ?? (
-    (props: T) => getTitle(props.node.name)
-  );
-  const _getOutputs = opts?.getOutputs ?? (
-    (props: T) => Array.from(props.node.outputs.values())
-    .map(o => getOutput(o, props.node, props.bindControl, props.bindSocket))
-  );
-  const _getControls = opts?.getControls ?? (
-    (props: T) => Array.from(props.node.controls.values())
-    .map(c => getControl(c, props.bindControl))
-  );
-  const _getInputs = opts?.getInputs ?? (
-    (props: T) => Array.from(props.node.inputs.values())
-    .map(i => getInput(i, props.bindControl, props.bindSocket))
-  );
-
   return (
     <div className={`node ${state.selected}`}>
       {/* Title */}
-      {_getTitle(props)}
+      {renderTitle(props)}
       {/* Outputs and their mapped controls */}
-      {_getOutputs(props)}
+      {renderOutputs(props)}
       {/* Controls (check not mapped to output) */}
       <div className="controls-container" >
-      {_getControls(props)}
+      {renderControls(props)}
       </div>        
       {/* Inputs */}
-      {_getInputs(props)}
+      {renderInputs(props)}
     </div>
   );
 }
