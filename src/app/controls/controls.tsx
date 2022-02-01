@@ -4,9 +4,7 @@ import { getControlsData } from "../data/attributes";
 import * as React from "react";
 import { Form, Button } from 'react-bootstrap';
 import TextareaAutosize from 'react-textarea-autosize';
-import { CSSProperties } from 'react';
 import Select from 'react-select';
-import {OnChangeValue} from 'react-select'
 
 
 /** 
@@ -15,70 +13,47 @@ import {OnChangeValue} from 'react-select'
 type DataHandler = (ctrl: ReteControlBase, emitter: NodeEditor, key: string, data: any) => void;
 
 
+
 /**
  * default function for value changes
  * set control instance props value so react control updates on re-render, and update node data
  * N.B. this function should be used over ctrlValProcess() to avoid entering infinite loop if control triggers emitter 'process'
  */
-export const ctrlValChange: DataHandler = (ctrl: ReteControlBase, emitter: NodeEditor, key: string, data: any): void => {
+export const ctrlValProcess: DataHandler = (ctrl: ReteControlBase, emitter: NodeEditor, key: string, data: any): void => {
   ctrl.props.value = data;  // update props value used to update control value when re-rendering
   getControlsData(ctrl.getNode())[key] = data;  //  put into node data objects for connections
   ctrl.update && ctrl.update();  // re-render
 }
 
-/**
- * control value changes processor - calls value change function and triggers emitter
- */
-export const ctrlValProcess: DataHandler = (ctrl: ReteControlBase, emitter: NodeEditor, key: string, data: any): void => {
-  ctrlValChange(ctrl, emitter, key, data);
-  // emitter.trigger('process');  // trigger process so that connected nodes update
-}
-
-
-/** base interface for any HTML element with a "value" attribute */
-interface HTMLTarget {
-  value?: any
-}
 
 /** props passed to control input React components */
-export interface InputProps {
-    value: any; // initial value for control
-    valueChanger?: (data: unknown) => void; // custom handling of user entering new value in control
-    style?: CSSProperties; 
+export interface InputProps<ValueType> {
+    value: ValueType; // initial value for control
+    valueChanger?: (data: ValueType) => void; // custom handling of user entering new value in control
     className?: string; // CSS class names
-    componentDidMount?: () => void;
     display_disabled?: boolean; // set to true to disable display
 };
 
-/** base render arguments to pass to react render control components */
-export function baseRenderKwargs(props: InputProps) {
-  return {
-    style: props.style,
-    className: "control-input input-group " + (props.className ?? ""), // append control CSS class to custom classes passed
-    value: props.value,
-    onChange: <Type extends HTMLTarget>(e: React.FormEvent<Type>) => props.valueChanger && props.valueChanger(e.currentTarget.value),
-    disabled: props.display_disabled ? true : undefined // set html disabled if display is disabled
-  }
+/** get css classes for control groups combined with any additional class names */
+function getControlClasses(customClasses: string | undefined): string {
+  return 'control-input input-group ' + customClasses ?? '';
 }
+
 
 /** 
  * Control template
  * Input props can be extended in implementations
   */
-export abstract class ControlTemplate<T extends InputProps> extends ReteControlBase {
-  props: T
-  constructor(key: string,  emitter: NodeEditor, node: Node, componentProps: T, dataHandler?: DataHandler) {
+export abstract class ControlTemplate<T, P extends InputProps<T>> extends ReteControlBase {
+  props: P
+  constructor(key: string,  emitter: NodeEditor, node: Node, componentProps: P, dataHandler: DataHandler=ctrlValProcess) {
     super(key)
-
-    // if data handler passed wrap in (data) => () function, else use default control data process function
-    if(dataHandler) {
-      componentProps.valueChanger = (data: unknown) => dataHandler(this, emitter, key, data);
-    } else {
-      componentProps.valueChanger = (data) => ctrlValProcess(this, emitter, key, data)
-    }
 
     // set props instance to be passed to react component on render
     this.props = componentProps;
+
+    // set value changer wrapped function
+    this.props.valueChanger = (data: any) => dataHandler(this, emitter, key, data);
 
     // set node data value based on initial value passed
     getControlsData(node)[key] = this.props.value;
@@ -86,46 +61,51 @@ export abstract class ControlTemplate<T extends InputProps> extends ReteControlB
 }
 
 /** input element only accepting numbers, when editing calls `props.valueChanger()` with the number in input */
-export class InputNumber extends React.Component<InputProps> {
+type NumberProps = InputProps<number>
+export class InputNumber extends React.Component<NumberProps> {
   render() {
     return (
       <input 
-        type="number" 
-        {...baseRenderKwargs(this.props)}
+        type="number"
+        value={this.props.value}
+        onChange={(e: React.FormEvent<HTMLInputElement>) => this.props.valueChanger(Number(e.currentTarget.value))}
+        className={getControlClasses(this.props.className)}
+        disabled={this.props.display_disabled ? true : undefined}
       />
     );
   }
 }
-export class ControlNumber extends ControlTemplate<InputProps> {
+export class ControlNumber extends ControlTemplate<number, NumberProps> {
   component = InputNumber
 }
 
 
 /** autosizing textarea element, when editing calls `props.valueChanger()` with text in textarea element  */
-export class InputText extends React.Component<InputProps> {
+type TextProps = InputProps<string>
+export class InputText extends React.Component<TextProps> {
   render() {
-    let inputKwargs = baseRenderKwargs(this.props);
-    // dont pass style as textarea doesn't accept CSSProperties?
-    // return <textarea {...inputKwargs} />
     return (
       <TextareaAutosize
+        className={getControlClasses(this.props.className)}
+        value={this.props.value}
+        disabled={this.props.display_disabled}
         rows={1}
+        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => this.props.valueChanger(e.currentTarget.value)}
         autoFocus
-        {...inputKwargs}
         style={null}
       />
     );
   }
 }
-export class ControlText extends ControlTemplate<InputProps> {
+export class ControlText extends ControlTemplate<string, TextProps> {
   component = InputText
 }
 
 
 /** select input with (blank, true, false) options - on select change calls `props.valueChanger()` with either blank, 1 or 0 
  * (cannot use boolean values in html so true/false are 1/0) */
-type boolKey = '' | 'True' | 'False'
-const boolLookup: {[key in boolKey]: {value: string, label: string}} = {
+type BoolKey = '' | 'True' | 'False'
+const boolLookup: {[key in BoolKey]: {value: string, label: string}} = {
   '': {
     value: '', 
     label: ' '
@@ -139,26 +119,21 @@ const boolLookup: {[key in boolKey]: {value: string, label: string}} = {
     label: 'True'
   }
 }
-export class InputBool extends React.Component<InputProps> {
+type BoolProps = InputProps<BoolKey>
+export class InputBool extends React.Component<BoolProps> {
   render() {
     return (
       <Select
-        className={"control-input input-group " + (this.props.className ?? "")}
-        value={boolLookup[this.props.value as boolKey]}
-        onChange={(newValue: OnChangeValue<HTMLTarget, false>) => this.props.valueChanger && this.props.valueChanger(newValue.value)}
-        // onChange={(newValue: OnChangeValue) => console.log(value)}
-        // onChange={(value: any) => this.props.valueChanger && this.props.valueChanger()
-        //   if(this.props.valueChanger) {
-        //     this.props.valueChanger(value)
-        //   }
-        // })},
+        className={getControlClasses(this.props.className)}
+        value={boolLookup[this.props.value]}
+        onChange={(newValue: {value: string, label: string}) => this.props.valueChanger(newValue.value as BoolKey)}
         options={Object.values(boolLookup)}
-        isDisabled={this.props.display_disabled ? true : undefined}
+        isDisabled={this.props.display_disabled}
       />
     )
   }
 }
-export class ControlBool extends ControlTemplate<InputProps> {
+export class ControlBool extends ControlTemplate<BoolKey, BoolProps> {
   component = InputBool
 }
 
@@ -167,10 +142,10 @@ export class ControlBool extends ControlTemplate<InputProps> {
 /** value & label pairs displayed in select options */
 export type OptionLabel = {
   label: string, 
-  value: string | number
+  value: string
 }
 /** select element props also include options to display */
-export interface SelectProps extends InputProps {
+export interface SelectProps extends InputProps<string> {
   options: Array<OptionLabel>
 }
 export class InputSelect extends React.Component<SelectProps> {
@@ -178,19 +153,19 @@ export class InputSelect extends React.Component<SelectProps> {
     return (
       <Form.Select 
         aria-label="Select"
-        {...baseRenderKwargs(this.props)}
+        className={getControlClasses(this.props.className)}
+        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => this.props.valueChanger(e.currentTarget.value)}
+        disabled={this.props.display_disabled}
+        value={this.props.value}
       >
         {this.props.options.map(opt =>
-            <option 
-                key={opt.value} 
-                value={opt.value}
-            >{opt.label}</option>
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
         )}
       </Form.Select>
     )
   }
 }
-export class ControlSelect extends ControlTemplate<SelectProps> {
+export class ControlSelect extends ControlTemplate<string, SelectProps> {
   component = InputSelect
 }
 
@@ -202,7 +177,7 @@ export class ControlSelect extends ControlTemplate<SelectProps> {
  * control "value" contains number of clicks
  * */
 /** button props also include string/element to display in button */
-export interface ButtonProps extends InputProps {
+export interface ButtonProps extends InputProps<number> {
   buttonInner: string | JSX.Element
 }
 export class InputButton extends React.Component<ButtonProps, {clickCount: number}> {
@@ -213,28 +188,25 @@ export class InputButton extends React.Component<ButtonProps, {clickCount: numbe
     }
   }
 
-  onClick() {
+  onClick = () => {
     this.setState((state) => ({
       clickCount: state.clickCount + 1
     }));
-    this.props.valueChanger && this.props.valueChanger(this.state.clickCount);
+    this.props.valueChanger(this.state.clickCount);
   }
   
   render() {
-    let inputKwargs = {
-      ...baseRenderKwargs(this.props),
-      onClick: () => this.onClick()
-    }
-    delete inputKwargs.value;
-    delete inputKwargs.onChange;
-    // value not needed for button, onChange replaced with onClick
     return (
-      <Button {...inputKwargs}>{this.props.buttonInner}</Button>
+      <Button
+         className={getControlClasses(this.props.className)}
+         disabled={this.props.display_disabled}
+         onChange={(e: React.FormEvent<HTMLButtonElement>) => this.onClick()}
+      >{this.props.buttonInner}</Button>
     );
   }
 }
 // rete control class for holding a button object
-export class ControlButton extends ControlTemplate<ButtonProps> {
+export class ControlButton extends ControlTemplate<number, ButtonProps> {
   component = InputButton
 }
 
