@@ -22,6 +22,7 @@
     "json-schema-parser": "^0.1.0",
     "node-sass": "^6.0.1",
     "react-bootstrap": "^2.0.0-beta.4",
+    "react-select": "^5.2.2",
     "react-textarea-autosize": "^8.3.3",
     "rete": "^1.4.5",
     "rete-area-plugin": "github:joeledwardson/area-plugin#withbuild",

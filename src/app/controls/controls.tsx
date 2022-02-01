@@ -5,6 +5,7 @@ import * as React from "react";
 import { Form, Button } from 'react-bootstrap';
 import TextareaAutosize from 'react-textarea-autosize';
 import { CSSProperties } from 'react';
+import Select from 'react-select';
 
 
 /** 
@@ -125,13 +126,16 @@ export class ControlText extends ControlTemplate<InputProps> {
 export class InputBool extends React.Component<InputProps> {
   render() {
     return (
-      <select
-        {...baseRenderKwargs(this.props)}
-      >
-        <option className="bold-input" value={""}></option>
-        <option className="bold-input" value={1} >True</option>
-        <option className="bold-input" value={0} >False</option>
-      </select>
+      <Select
+        className={"control-input input-group " + (this.props.className ?? "")}
+        value={this.props.value}
+        // onChange={(value: any) => this.props.valueChanger && this.props.valueChanger()
+        //   if(this.props.valueChanger) {
+        //     this.props.valueChanger(value)
+        //   }
+        // })},
+        isDisabled={this.props.display_disabled ? true : undefined}
+      />
     )
   }
 }
