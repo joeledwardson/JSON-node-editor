@@ -31,10 +31,11 @@ export const addType = (newType: string) => TypeList.push(newType);
  * 
  * The action of clicking either "activate"/"null" an output is controlled by `nullButtonClick()`
  */
- class DisplayDynamic extends ReactRete.Node {
+class DisplayDynamic extends ReactRete.Node {
 
   /** process object member null button click -  */
   nullButtonClick(output: Rete.Output): void {
+
     // ignore click if output has a connection
     if(output.hasConnection()) {
       return;
@@ -51,6 +52,7 @@ export const addType = (newType: string) => TypeList.push(newType);
     // invert "null" value
     outputNulls[output.key] = !outputNulls[output.key];
     
+    // if output has mapped control, disable it
     let outputControls = Data.getOutputControls(this.props.node);
     let controlName = outputControls[output.key];
     if(controlName) {
@@ -68,30 +70,34 @@ export const addType = (newType: string) => TypeList.push(newType);
   }
 
   getOutput(output: Rete.Output): JSX.Element {
-    let ctrl = this.props.node.controls.get(getOutputControls(this.props.node)[output.key]);
+    let ctrlKey = getOutputControls(this.props.node)[output.key];
+    let ctrl = this.props.node.controls.get(ctrlKey);
     let isNullable: boolean = output.key in getOutputNulls(this.props.node);
     let isNull: boolean = getOutputNulls(this.props.node)[output.key] === true;
     let btnIcon = isNull ? faMouse : faTimes;
     
     console.log(`control "${ctrl?.key}" is disabled: "${isNull}"`);
     
-    let btnElement = <Button 
+    let nullButton = <Button 
       variant="secondary" 
       size="sm" 
       className="display-button"
-      onClick={()=>this.nullButtonClick(output)}
-    >
+      onClick={()=>this.nullButtonClick(output)}>
       <FontAwesomeIcon icon={btnIcon} />
     </Button>
     let titleElement = <div className="output-title">{output.name}</div>
+    
+    // if no control, use blank div with css class to ensure spacing 
+    let controlElement = <div className="control-input"></div>;
+    if(ctrl) {
+      controlElement = Display.getControl(ctrl, this.props.bindControl);
+    }
 
     return <div className="output" key={output.key}>
-    {/* return <> */}
-      {typeof ctrl !== "undefined" ? Display.getControl(ctrl, this.props.bindControl) : <div className="control-input"></div>}
-      {isNullable ? btnElement : <div></div>}
+      {controlElement}
+      {isNullable ? nullButton : <div></div>}
       {titleElement}
       {Display.getSocket(output, "output", this.props.bindSocket, {visibility: isNull ? "hidden" : "visible"})}
-    {/* </> */}
     </div>
   }
 
@@ -138,65 +144,55 @@ export class ComponentDynamic extends ComponentBase {
   process_property(node: Rete.Node, editor: Rete.NodeEditor, key: string, property: JSONObject) {
     let nodeData = Data.getControlsData(node);
 
-    /**
-     * helper function to set control value, create control and add control
-     * @param var_default optional default value to create control with 
-     * @param control_type class type of control
-     * @param control_kwargs additional kwargs to pass to control
-     */
-    const addControl = (var_default: any, control_type: any, control_kwargs?: {[key: string]: any}) => {
-      // if node is created with data already (`nodeData`) then use
-      // otherwise take JSON schema "default" if exist, or default value passed by user
-      let val = nodeData[key] ?? (property && property["default"]) ?? var_default;
-      // assign value to node data
-      nodeData[key] = val;
-      
-      // set base kwargs to pass to control
-      let base_kwargs = {
-        value: val,
-        display_disabled: Data.getOutputNulls(node)[key] === true
-      }
-      // create control with base kwargs and kwargs passed by user
-      let ctrl = new control_type(key, editor, node, {...base_kwargs, ...control_kwargs});
+    // get control value - try node data, then JSON default then user default
+    const getValue = (var_default: any) => nodeData[key] ?? (property && property["default"]) ?? var_default;
+    
+    if(property["const"]) {
+      // if JSON property is a "const" then set value in node data but dont create output or control
+      nodeData[key] = property["const"];
+      return;
+    } 
+
+    // get type from property
+    let var_type = property["type"];
+
+    // get control if valid based on variable type
+    const getControl = () => {
+      if( var_type === "string") { 
+        return new MyControls.ControlText(key, editor, node, {value: getValue("")});
+      } else if( var_type === "integer" || var_type === "number" ) {
+        return new MyControls.ControlNumber(key, editor, node, {value: getValue(0)});
+      } else if( var_type === "boolean") {
+        return new MyControls.ControlBool(key, editor, node, {value: getValue("")});
+      } 
+      return null;
+    }
+    let control = getControl();
+
+    if(control) {
       // add control to node
-      node.addControl(ctrl);
+      node.addControl(control);
+
+      // set node data (in case value was pulled from JSON schema or default)
+      nodeData[key] = control.props.value;
+
       // set output -> control key map
       // TODO - update control keys so they don't match output keys to avoid confusion?
       Data.getOutputControls(node)[key] = key;
     }
-    
-    if(property["const"]) {
-
-      // if JSON property is a "const" then set value in node data but dont create output or control
-      nodeData[key] = property["const"];
-    } else {
-
-      // get type from property
-      let var_type = property["type"];
-
-      // create control if relevant 
-      if( var_type === "string") {
-        addControl("", MyControls.ControlText);
-      } else if( var_type === "integer" || var_type === "number" ) {
-        addControl(null, MyControls.ControlNumber);
-      } else if( var_type === "boolean") {
-        addControl("", MyControls.ControlBool);
-      } 
       
-      // get title from property if exist, else just use property key
-      let title = property["title"] ? String(property["title"]) : key;
+    // get title from property if exist, else just use property key
+    let title = property["title"] ? String(property["title"]) : key;
 
-      // create socket and add output using socket
-      let socket = getJSONSocket(property);
-      let output = new Rete.Output(key, title, socket)
-      node.addOutput(output);
+    // create socket and add output using socket
+    let socket = getJSONSocket(property);
+    let output = new Rete.Output(key, title, socket)
+    node.addOutput(output);
 
-      // set type definition to be read by any child elements
-      getOutputSchemas(node)[key] = property;
-      /** on connection created, set selected type to parent specification (if exists) and hide type selection control */
-      
-
-    }
+    // set type definition to be read by any child elements
+    getOutputSchemas(node)[key] = property;
+    /** on connection created, set selected type to parent specification (if exists) and hide type selection control */
+     
   }
 
 
