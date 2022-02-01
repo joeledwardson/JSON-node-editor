@@ -102,41 +102,6 @@ export class ControlText extends ControlTemplate<string, TextProps> {
 }
 
 
-/** select input with (blank, true, false) options - on select change calls `props.valueChanger()` with either blank, 1 or 0 
- * (cannot use boolean values in html so true/false are 1/0) */
-type BoolKey = '' | 'True' | 'False'
-const boolLookup: {[key in BoolKey]: {value: string, label: string}} = {
-  '': {
-    value: '', 
-    label: ' '
-  },
-  'False': {
-    value: 'False', 
-    label: 'False'
-  },
-  'True': {
-    value: 'True', 
-    label: 'True'
-  }
-}
-type BoolProps = InputProps<BoolKey>
-export class InputBool extends React.Component<BoolProps> {
-  render() {
-    return (
-      <Select
-        className={getControlClasses(this.props.className)}
-        value={boolLookup[this.props.value]}
-        onChange={(newValue: {value: string, label: string}) => this.props.valueChanger(newValue.value as BoolKey)}
-        options={Object.values(boolLookup)}
-        isDisabled={this.props.display_disabled}
-      />
-    )
-  }
-}
-export class ControlBool extends ControlTemplate<BoolKey, BoolProps> {
-  component = InputBool
-}
-
 
 /** select input where the options are passed in the constructor - on select change calls `props.valueChanger()` with key of option selected */
 /** value & label pairs displayed in select options */
@@ -150,18 +115,16 @@ export interface SelectProps extends InputProps<string> {
 }
 export class InputSelect extends React.Component<SelectProps> {
   render() {
+    var optionMap: {[key: string]: OptionLabel} = {};
+    this.props.options.forEach(opt => {optionMap[opt.value] = opt});
     return (
-      <Form.Select 
-        aria-label="Select"
+      <Select 
         className={getControlClasses(this.props.className)}
-        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => this.props.valueChanger(e.currentTarget.value)}
-        disabled={this.props.display_disabled}
-        value={this.props.value}
-      >
-        {this.props.options.map(opt =>
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-        )}
-      </Form.Select>
+        value={optionMap[this.props.value]}
+        onChange={(newValue: {value: string, label: string}) => this.props.valueChanger(newValue.value)}
+        options={this.props.options}
+        isDisabled={this.props.display_disabled}
+      />
     )
   }
 }
@@ -169,6 +132,29 @@ export class ControlSelect extends ControlTemplate<string, SelectProps> {
   component = InputSelect
 }
 
+
+type BoolKey = '' | 'True' | 'False';
+type BoolProps = InputProps<BoolKey>;
+function getSelectProps(props: BoolProps): SelectProps {
+  return {...props, options: [
+    {
+      value: '', 
+      label: ' '
+    }, {
+      value: 'False', 
+      label: 'False'
+    }, {
+      value: 'True', 
+      label: 'True'
+    }
+  ]}
+}
+export class ControlBool extends ControlTemplate<string, SelectProps> {
+  component = InputSelect
+  constructor(key: string,  emitter: NodeEditor, node: Node, componentProps: BoolProps, dataHandler: DataHandler=ctrlValProcess) {
+    super(key, emitter, node, getSelectProps(componentProps), dataHandler);
+  }
+}
 
 /** 
  * Button control
@@ -200,7 +186,7 @@ export class InputButton extends React.Component<ButtonProps, {clickCount: numbe
       <Button
          className={getControlClasses(this.props.className)}
          disabled={this.props.display_disabled}
-         onChange={(e: React.FormEvent<HTMLButtonElement>) => this.onClick()}
+         onClick={() => this.onClick()}
       >{this.props.buttonInner}</Button>
     );
   }
