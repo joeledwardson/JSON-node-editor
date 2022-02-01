@@ -86,7 +86,7 @@ export class ComponentBool extends ComponentBase {
     node
       .addInput(new Rete.Input("parent", "Parent", MySocket.boolSocket))
       .addControl(new Controls.ControlBool("Boolean Input", editor, node, {
-        value: getInitial(node, "Boolean Input", 0) // blank is option for nothing selection
+        value: getInitial(node, "Boolean Input", '') // blank is option for nothing selection
       }));
   }
 }

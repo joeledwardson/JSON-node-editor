@@ -6,6 +6,7 @@ import { Form, Button } from 'react-bootstrap';
 import TextareaAutosize from 'react-textarea-autosize';
 import { CSSProperties } from 'react';
 import Select from 'react-select';
+import {OnChangeValue} from 'react-select'
 
 
 /** 
@@ -123,17 +124,35 @@ export class ControlText extends ControlTemplate<InputProps> {
 
 /** select input with (blank, true, false) options - on select change calls `props.valueChanger()` with either blank, 1 or 0 
  * (cannot use boolean values in html so true/false are 1/0) */
+type boolKey = '' | 'True' | 'False'
+const boolLookup: {[key in boolKey]: {value: string, label: string}} = {
+  '': {
+    value: '', 
+    label: ' '
+  },
+  'False': {
+    value: 'False', 
+    label: 'False'
+  },
+  'True': {
+    value: 'True', 
+    label: 'True'
+  }
+}
 export class InputBool extends React.Component<InputProps> {
   render() {
     return (
       <Select
         className={"control-input input-group " + (this.props.className ?? "")}
-        value={this.props.value}
+        value={boolLookup[this.props.value as boolKey]}
+        onChange={(newValue: OnChangeValue<HTMLTarget, false>) => this.props.valueChanger && this.props.valueChanger(newValue.value)}
+        // onChange={(newValue: OnChangeValue) => console.log(value)}
         // onChange={(value: any) => this.props.valueChanger && this.props.valueChanger()
         //   if(this.props.valueChanger) {
         //     this.props.valueChanger(value)
         //   }
         // })},
+        options={Object.values(boolLookup)}
         isDisabled={this.props.display_disabled ? true : undefined}
       />
     )
