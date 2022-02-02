@@ -10,7 +10,7 @@ import Select from 'react-select';
 /** 
  * function to update control value passed into react component itself 
  * */
-type DataHandler = (ctrl: ReteControlBase, emitter: NodeEditor, key: string, data: any) => void;
+export type DataHandler = (ctrl: ReteControlBase, emitter: NodeEditor, key: string, data: any) => void;
 
 
 

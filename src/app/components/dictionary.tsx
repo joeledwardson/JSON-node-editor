@@ -109,7 +109,7 @@ export class ComponentDict extends ComponentBase {
           // set type select to each of the socket names
           selectControl.props.options = Object.keys(socketSchemas).map(nm => ({"label": nm, "value": nm}));
         }
-        ENode.changeSelectedType(node, getSelectedSocket(socketKeys[0]).name, selectControl, editor);        
+        ENode.selectControlChange(node, getSelectedSocket(socketKeys[0]).name, selectControl, editor);        
       }, 
       "removed": (connection: Rete.Connection) => {
         if(isInput(connection, node, "parent"))

@@ -2,7 +2,7 @@ import * as Sockets from "./sockets/sockets";
 import * as Rete from 'rete';
 
 /** get socket from selected name, else "any" socket */
-export function getSelectedSocket(selectedSocket: any) {
+export function getSelectedSocket(selectedSocket: string) {
   return Sockets.sockets.get(selectedSocket)?.socket ?? Sockets.anySocket;
 }
 
