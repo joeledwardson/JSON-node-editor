@@ -162,6 +162,42 @@ const sampleDefs = {
       "a",
       "b"
     ]
+  },
+  "hello": {
+    "title": "Hello",
+    "type": "object",
+    "properties": {
+        "name": {
+            "title": "Name",
+            "type": "string"
+        },
+        "another": {
+            "title": "Another",
+            "type": "string"
+        },
+        "pls": {
+            "title": "Pls",
+            "default": "hello",
+            "type": "string"
+        },
+        "count": {
+            "title": "Count",
+            "type": "integer"
+        },
+        "seven": {
+            "title": "Seven",
+            "default": 7,
+            "type": "integer"
+        },
+        "d": {
+            "title": "D",
+            "type": "object"
+        }
+    },
+    "required": [
+        "name",
+        "count"
+    ]
   }
 }
 
