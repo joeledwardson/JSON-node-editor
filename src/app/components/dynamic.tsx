@@ -141,11 +141,8 @@ export class ComponentDynamic extends ComponentBase {
   /**
    * process a JSON schema "property" for a given definition, by setting node data and adding relevant control/output 
    */
-  process_property(node: Rete.Node, editor: Rete.NodeEditor, key: string, property: JSONObject) {
+  process_property(node: Rete.Node, editor: Rete.NodeEditor, key: string, property: JSONObject, null_value: boolean): void {
     let nodeData = Data.getControlsData(node);
-
-    // get control value - try node data, then JSON default then user default
-    const getValue = (var_default: any) => nodeData[key] ?? (property && property["default"]) ?? var_default;
     
     if(property["const"]) {
       // if JSON property is a "const" then set value in node data but dont create output or control
@@ -158,12 +155,19 @@ export class ComponentDynamic extends ComponentBase {
 
     // get control if valid based on variable type
     const getControl = () => {
+
+      // get control value - try node data, then JSON default then user default
+      const getValue = (usr_default: any) => nodeData[key] ?? (property && property["default"]) ?? usr_default;
+
+      // get control args with value and display disabled (common to all controls)
+      const getArgs = (usr_default: any) => ({value: getValue(usr_default), display_disabled: null_value}); 
+
       if( var_type === "string") { 
-        return new MyControls.ControlText(key, editor, node, {value: getValue("")});
+        return new MyControls.ControlText(key, editor, node, getArgs(""));
       } else if( var_type === "integer" || var_type === "number" ) {
-        return new MyControls.ControlNumber(key, editor, node, {value: getValue(0)});
+        return new MyControls.ControlNumber(key, editor, node, getArgs(0));
       } else if( var_type === "boolean") {
-        return new MyControls.ControlBool(key, editor, node, {value: getValue("")});
+        return new MyControls.ControlBool(key, editor, node, getArgs(""));
       } 
       return null;
     }
@@ -191,56 +195,69 @@ export class ComponentDynamic extends ComponentBase {
 
     // set type definition to be read by any child elements
     getOutputSchemas(node)[key] = property;
-    /** on connection created, set selected type to parent specification (if exists) and hide type selection control */
-     
   }
 
 
   _builder(node: Rete.Node, editor: Rete.NodeEditor) {
     node.addInput(new Rete.Input("parent", "Parent", this.socket));
     let spec = getObject(this.varSpec);
-    if(spec) {
-      let required: string[] = spec["required"] as string[] ?? [];
-      let properties = getObject(spec["properties"]);
-      if(properties) {
-        Object.entries(properties).forEach(([k, v]) => {
-          let property = getObject(v);
-          if(property) {
-            if( !required.includes(k) ) {
-              Data.getOutputNulls(node)[k] = property["default"] === null || property["default"] === undefined;
-            }
-            this.process_property(node, editor, k, property);
-          }
-        });
+    if(!spec) return; 
+    
+    // get list of required properties
+    let required: string[] = spec["required"] as string[] ?? [];
+    let properties = getObject(spec["properties"]);
+    if(!properties) return;
+      
+    // loop properties
+    Object.entries(properties).forEach(([k, v]) => {
+      let property = getObject(v);
+      if(property) {
+
+        // by default dont null output
+        let null_output = false;
+        if( !required.includes(k) ) {
+          // property not required - set to null if default is null or no default provided
+          // pydantic will not set a JSON "default" value if default "None" is provided, hence checking for default "undefined" 
+          null_output = property["default"] === null || property["default"] === undefined;
+          Data.getOutputNulls(node)[k] = null_output;
+        }
+
+        // pass JSON property to be processed with output null to show/hide control
+        this.process_property(node, editor, k, property, null_output);
+      }
+    });
+
+    /** get control mapped to connection output (if connection matches node) */
+    const getOutputControl = (connection: Rete.Connection) => {
+
+      // check connection output matches node
+      if(!(connection.output.node === node))
+        return null;
+      
+      // get control key mapped to output
+      let controlKey = getOutputControls(node)[connection.output.key];
+      
+      // get control instance if exists, cast to control template type
+      type PropsAny = MyControls.InputProps<any>;
+      return node.controls.get(controlKey) as MyControls.ControlTemplate<any, PropsAny>
+    }
+
+    /** on connection created - if output has connection, disable control*/
+    const connectionCreatedFunc: Data.ConnectionFunc = (connection: Rete.Connection) => {
+      let control = getOutputControl(connection);
+      if(control) {
+        control.props.display_disabled = true;
+        if(control.update) control.update();
       }
     }
 
-    const processControl = (connection: Rete.Connection, func: (control: ReteControl) => void) => {
-      let input = connection.input
-      let output =  connection.output;
-      // check that the connection created is "parent" input to another node's output
-      if(!(output.node === node && input.node))
-        return
-      let controlKey = getOutputControls(node)[output.key];
-      let control = node.controls.get(controlKey);
-      if(control && control instanceof ReteControl) {
-        func(control);
-        control.update && control.update();
-      }
-    }
-    /** on connection created */
-    const connectionCreatedFunc: Data.ConnectionFunc = (connection: Rete.Connection) => {
-      processControl(connection, (control: ReteControl) => {
-        // output has connection, diable control
-        control.props.display_disabled = true;
-      })
-    }
-    /** on connection removed  */
+    /** on connection removed - set disabled state to stored null value */
     const connectionRemovedFunc: Data.ConnectionFunc = (connection: Rete.Connection) => {
-      processControl(connection, (control: ReteControl) => {
-          // connection removed, set disabled to stored null value
-          control.props.display_disabled = getOutputNulls(node)[connection.output.key];
-      });
+      let control = getOutputControl(connection);
+      if(control) {
+        control.props.display_disabled = getOutputNulls(node)[connection.output.key];
+        if(control.update) control.update();
+      }
     }
     Data.setConnectionFuncs(node, {
       "created": connectionCreatedFunc, 
