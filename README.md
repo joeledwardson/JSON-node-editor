@@ -113,3 +113,44 @@ For each output, functionality is provided to:
 
 Named components are defined in the schema 
 
+## Understanding the Codebase
+
+### Data Attributes
+
+It appears the `retejs` framework was designed to have the node `data` variable act as an index signature for control keys and values.
+
+```typescript
+export class Control {
+
+    key: string;
+    data: unknown = {};
+    parent: Node | Input | null = null;
+	...
+    getData(key: string) {
+        return this.getNode().data[key];
+    }
+
+    putData(key: string, data: unknown) {
+        this.getNode().data[key] = data;
+    }  
+}
+```
+
+ However, this is not suitable for this application which requires more layers of storage.
+
+Thus, data `attributes` are defined, where controls data as above would be under "controlsData", and so forth, so node `data` looks like:
+
+```json
+{
+    "controlsData": {
+        "control_1": "a",
+        "control_2": "b"
+    },
+    "outputMappings": {
+        "output_1": "control_1"
+    }
+}
+```
+
+`Retejs` does not natively support outputs having controls, which is achieved by mapping output keys to control keys above. This tells the editor to display a control next to a particular output
+
