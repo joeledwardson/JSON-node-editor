@@ -49,18 +49,17 @@ export function getSocketSchemas(node: Rete.Node): {[key: string]: JSONObject} {
 }
 
 
-/** connection processing function type */
-export type ConnectionFunc = (connection: Rete.Connection) => void;
-/** connection processing name */
-export type ConnectionEventType = "created" | "removed";
-/** get connection processing functions */
-export function getConnectionFuncs(node: Rete.Node): {[key in ConnectionEventType]: ConnectionFunc} {
-  return getDataAttribute<ConnectionFunc>(node, 'connectionFuncs') as {[key in ConnectionEventType]: ConnectionFunc};
+/** 
+ * connection processing function type
+ * */
+export type ConnectionFunc = (connection: Rete.Connection, editor: Rete.NodeEditor, isInput: boolean) => void;
+export interface ConnectionFuncs {
+  created ?: ConnectionFunc,
+  removed ?: ConnectionFunc
 }
-/** set connection processing functions */
-export function setConnectionFuncs(node: Rete.Node, funcs: {[key in ConnectionEventType]: ConnectionFunc}): void {
-  return setDataAttribute<ConnectionFunc>(node, 'connectionFuncs', funcs);
-}
+/** map of node name to connection processor functions */
+export var nodeConnectionFuns: {[key: string]: ConnectionFuncs} = {};
+
 
 
 /** get general functions */

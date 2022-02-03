@@ -10,6 +10,7 @@ import * as EDisplay from '../elementary/display';
 import * as Display from '../display';
 import * as ReactRete from 'rete-react-render-plugin';
 import { getSelectedSocket, isInput } from "../helpers";
+import { ControlSelect } from "../controls/controls";
 
 
 /**
@@ -95,26 +96,44 @@ export class ComponentDict extends ComponentBase {
           value: ctrlData[ctrlKey]
         }));
     });
+  }
+}
 
-    Data.setConnectionFuncs(node, {
-      "created": (connection: Rete.Connection) => {
-        if(!isInput(connection, node, "parent")) return;
-        let socketSchemas = ENode.readParentSchemas(connection, 
-          (spec: JSONValue) => !!spec && typeof(spec) === "object" && !Array.isArray(spec) && !!spec.additionalProperties,
-          (spec: JSONObject) => spec.additionalProperties
-        )
-        Data.setSocketSchemas(connection.input.node, socketSchemas);
-        let socketKeys = Object.keys(socketSchemas); 
-        if(socketKeys.length) {
-          // set type select to each of the socket names
-          selectControl.props.options = Object.keys(socketSchemas).map(nm => ({"label": nm, "value": nm}));
-        }
-        ENode.selectControlChange(node, getSelectedSocket(socketKeys[0]).name, selectControl, editor);        
-      }, 
-      "removed": (connection: Rete.Connection) => {
-        if(isInput(connection, node, "parent"))
-          ENode.resetTypes(node, selectControl, editor)
+/** validate input node is dict and connection input is "parent" */
+const validateConnection = (connection: Rete.Connection, isInput: boolean) => isInput && connection.input.key === "parent";
+
+Data.nodeConnectionFuns["Dictionary"] = {
+  created: (connection: Rete.Connection, editor: Rete.NodeEditor, isInput: boolean) => {
+    if(!validateConnection(connection, isInput)) return;
+    let node = connection.input.node;
+
+    // read schemas from output, for dict inner variables name is defined in JSON "additionalProperties" attribute 
+    let socketSchemas = ENode.readParentSchemas(connection, 
+      (spec: JSONValue) => !!spec && typeof(spec) === "object" && !Array.isArray(spec) && !!spec.additionalProperties,
+      (spec: JSONObject) => spec.additionalProperties
+    );
+
+    Data.setSocketSchemas(node, socketSchemas);  // set socket name => schemas map for type selection
+    let socketKeys = Object.keys(socketSchemas);  // get socket names from schema map keys   
+    let selectControl = node.controls.get(DICT_SELECT_KEY) as Controls.ControlSelect;   // get select control
+
+    if(selectControl) {
+      // set type select to each of the socket names
+      selectControl.props.options = Object.keys(socketSchemas).map(nm => ({"label": nm, "value": nm}));
+      
+      // change control select value with first key in list or any socket
+      let socketName = socketKeys.length >= 1 ? socketKeys[0] : MySocket.anySocket.name;
+      ENode.selectControlChange(node, socketName, selectControl, editor);        
+    }
+  },
+  removed: (connection: Rete.Connection, editor: Rete.NodeEditor, isInput: boolean) => {
+    if(validateConnection(connection, isInput)) {
+      // on connection remove, reset control type selection to default list
+      let node = connection.input.node;
+      let selectControl = node.controls.get(DICT_SELECT_KEY) as ControlSelect;
+      if(selectControl) {
+        ENode.resetTypes(node, selectControl, editor);
       }
-    });
+    }
   }
 }

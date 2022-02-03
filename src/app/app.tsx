@@ -293,12 +293,19 @@ export async function createEditor(container: HTMLElement) {
     ["connectioncreated"],
     async (connection: Rete.Connection) => {
       await engine.abort();
-      [connection.input.node, connection.output.node].forEach(n => {
-        if(n && Data.getConnectionFuncs(n) && Data.getConnectionFuncs(n)["created"]) {
-          Data.getConnectionFuncs(n)["created"](connection);
-        }
-      })
-      connection.output.node && runBlockProcessor(connection.output.node);
+
+      // run connection created processor on output node if function is defined
+      let oFuncs = Data.nodeConnectionFuns[connection.output.node.name];
+      if(oFuncs && oFuncs.created) {
+        oFuncs.created(connection, editor, false);
+      }
+
+      // run connection created processor on input node if function is defined
+      let iFuncs = Data.nodeConnectionFuns[connection.input.node.name];
+      if(iFuncs && iFuncs.created) {
+        iFuncs.created(connection, editor, true);
+      }
+
     }
   )
 
@@ -306,12 +313,18 @@ export async function createEditor(container: HTMLElement) {
     ["connectionremoved"],
     async (connection: Rete.Connection) => {
       await engine.abort();
-      [connection.input.node, connection.output.node].forEach(n => {
-        if(n && Data.getConnectionFuncs(n) && Data.getConnectionFuncs(n)["removed"]) {
-          Data.getConnectionFuncs(n)["removed"](connection);
-        }
-      })
-      connection.output.node && runBlockProcessor(connection.output.node);
+
+      // run connection removed processor on output node if function is defined
+      let oFuncs = Data.nodeConnectionFuns[connection.output.node.name];
+      if(oFuncs && oFuncs.removed) {
+        oFuncs.removed(connection, editor, false);
+      }
+
+      // run connection created processor on input node if function is defined
+      let iFuncs = Data.nodeConnectionFuns[connection.input.node.name];
+      if(iFuncs && iFuncs.removed) {
+        iFuncs.removed(connection, editor, true);
+      }
     }
   )
 

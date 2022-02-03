@@ -124,18 +124,67 @@ class DisplayDynamic extends ReactRete.Node {
 }
 
 
+/** helper function to get control mapped to dynamic output  */
+const getOutputControl = (node: Rete.Node, outputKey: string) => {
+  // get control key mapped to output
+  let controlKey = getOutputControls(node)[outputKey];
+
+  // get control instance if exists, cast to control template type
+  type PropsAny = MyControls.InputProps<any>;
+  return node.controls.get(controlKey) as MyControls.ControlTemplate<any, PropsAny>
+}
+
+
+/** on connection created
+ * when connection is created from dynamic node output to another node input: 
+ *  control mapped to output must be disabled
+ * */
+const connectionCreatedFunc: Data.ConnectionFunc = (connection: Rete.Connection, editor: Rete.NodeEditor, isInput: boolean) => {
+  if(isInput) return;
+  let control = getOutputControl(connection.output.node, connection.output.key);
+  if(control) {
+    control.props.display_disabled = true;
+    if(control.update) control.update();
+  }
+}
+
+
+/** on connection removed 
+ * when connection is removed from dynamic node output to another node input: 
+ *  control mapped to output must be set stored null value */
+const connectionRemovedFunc: Data.ConnectionFunc = (connection: Rete.Connection, editor: Rete.NodeEditor, isInput: boolean) => {
+  if(isInput) return;
+  let control = getOutputControl(connection.output.node, connection.output.key);
+  if(control) {
+    let node = connection.output.node;
+    control.props.display_disabled = getOutputNulls(node)[connection.output.key];
+    if(control.update) control.update();
+  }
+}
+
+
 export class ComponentDynamic extends ComponentBase {
   data = { component: DisplayDynamic };
   socket: Rete.Socket;
   varSpec: JSONValue;
   constructor(name: string, varSpec: JSONValue) {
     super(name);
+
+    // get socket based on node name
     let socket = sockets.get(name)?.socket;
     if (!socket) {
+      // TODO - make customised error
       throw new Error(`expected socket "${name}" to exist!`);
     }
     this.socket = socket;
     this.varSpec = varSpec;
+
+    // set connection created/removed
+    Data.nodeConnectionFuns[name] = {
+      created: connectionCreatedFunc,
+      removed: connectionRemovedFunc
+    }
+
   }
 
   /**
@@ -225,43 +274,6 @@ export class ComponentDynamic extends ComponentBase {
         // pass JSON property to be processed with output null to show/hide control
         this.process_property(node, editor, k, property, null_output);
       }
-    });
-
-    /** get control mapped to connection output (if connection matches node) */
-    const getOutputControl = (connection: Rete.Connection) => {
-
-      // check connection output matches node
-      if(!(connection.output.node === node))
-        return null;
-      
-      // get control key mapped to output
-      let controlKey = getOutputControls(node)[connection.output.key];
-      
-      // get control instance if exists, cast to control template type
-      type PropsAny = MyControls.InputProps<any>;
-      return node.controls.get(controlKey) as MyControls.ControlTemplate<any, PropsAny>
-    }
-
-    /** on connection created - if output has connection, disable control*/
-    const connectionCreatedFunc: Data.ConnectionFunc = (connection: Rete.Connection) => {
-      let control = getOutputControl(connection);
-      if(control) {
-        control.props.display_disabled = true;
-        if(control.update) control.update();
-      }
-    }
-
-    /** on connection removed - set disabled state to stored null value */
-    const connectionRemovedFunc: Data.ConnectionFunc = (connection: Rete.Connection) => {
-      let control = getOutputControl(connection);
-      if(control) {
-        control.props.display_disabled = getOutputNulls(node)[connection.output.key];
-        if(control.update) control.update();
-      }
-    }
-    Data.setConnectionFuncs(node, {
-      "created": connectionCreatedFunc, 
-      "removed": connectionRemovedFunc
     });
   }
 }
