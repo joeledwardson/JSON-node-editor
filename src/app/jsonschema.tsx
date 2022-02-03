@@ -12,7 +12,7 @@ export type JSONValue =
 | boolean
 | null;
 export const isObject = (v: JSONValue) => Boolean(v && typeof v === "object" && !Array.isArray(v));
-export const getObject = (v: JSONValue) => isObject(v) ? v as JSONObject : null;
+export const getObject: (v: JSONValue) => JSONObject | null = (v: JSONValue) => isObject(v) ? v as JSONObject : null;
 
 /**
  * extract a reference name from JSON schema after the last "/"

@@ -102,15 +102,26 @@ export class ComponentDict extends ComponentBase {
 /** validate input node is dict and connection input is "parent" */
 const validateConnection = (connection: Rete.Connection, isInput: boolean) => isInput && connection.input.key === "parent";
 
+/** process connections when node connects to dict "parent" input, reading its schemas */
 Data.nodeConnectionFuns["Dictionary"] = {
   created: (connection: Rete.Connection, editor: Rete.NodeEditor, isInput: boolean) => {
     if(!validateConnection(connection, isInput)) return;
     let node = connection.input.node;
 
-    // read schemas from output, for dict inner variables name is defined in JSON "additionalProperties" attribute 
-    let socketSchemas = ENode.readParentSchemas(connection, 
-      (spec: JSONValue) => !!spec && typeof(spec) === "object" && !Array.isArray(spec) && !!spec.additionalProperties,
-      (spec: JSONObject) => spec.additionalProperties
+    // get schema map from connected node and index to output
+    let output = connection.output;
+    let schema = Data.getOutputSchemas(output.node)[output.key];
+    
+    // retrieve socket name to schema map from connection schemas
+    let socketSchemas = ENode.getSpecMap(schema, 
+      (s: JSONObject) => s.type === "object",
+      (s: JSONObject) => {
+        if(typeof(s.additionalProperties) === "object" && !Array.isArray(s.additionalProperties)) {
+          return s.additionalProperties;
+        } else {
+          return {};
+        }
+      }
     );
 
     Data.setSocketSchemas(node, socketSchemas);  // set socket name => schemas map for type selection

@@ -213,12 +213,21 @@ Data.nodeConnectionFuns["List"] = {
     if(!validateConnection(connection, isInput)) return;
     let node = connection.input.node;
 
-    // read schemas from output, for list inner variables name is defined in JSON "items" attribute 
-    let socketSchemas = ENode.readParentSchemas(connection, 
-      (spec: JSONValue) => !!spec && typeof(spec) === "object" && !Array.isArray(spec) && !!spec.items,
-      (spec: JSONObject) => spec.items
+    // get schema map from connected node and index to output
+    let output = connection.output;
+    let schema = Data.getOutputSchemas(output.node)[output.key];
+    
+    // retrieve socket name to schema map from connection schemas
+    let socketSchemas = ENode.getSpecMap(schema, 
+      (s: JSONObject) => s.type === "array",
+      (s: JSONObject) => {
+        if(typeof(s.items) === "object" && !Array.isArray(s.items)) {
+          return s.items;
+        } else {
+          return {};
+        }
+      }
     );
-
     Data.setSocketSchemas(node, socketSchemas);  // set socket name => schemas map for type selection
     let socketKeys = Object.keys(socketSchemas);  // get socket names from schema map keys   
     let selectControl = node.controls.get(LIST_SELECT_KEY) as ControlSelect;   // get select control

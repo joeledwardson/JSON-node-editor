@@ -4,7 +4,7 @@ import * as Controls from  "../controls/controls";
 import * as Data from "../data/attributes";
 import { TypeList } from '../components/basic';
 import * as ReactRete from 'rete-react-render-plugin';
-import { getJSONSocket, isObject, JSONObject, JSONValue } from "../jsonschema";
+import { getJSONSocket, getObject, isObject, JSONObject, JSONValue } from "../jsonschema";
 import { getSelectedSocket } from '../helpers';
 import { ActionProcess, ActionName } from "./display";
 
@@ -129,72 +129,73 @@ export function buildAddButton(node: Rete.Node, editor: Rete.NodeEditor, addActi
 
 /** 
  * map of socket/output name to Schema definitions
- *  if the parent definition is a union (e.g. in python List[string] | List[int | int]) then there are 2 options to select from
- *  the output map would be {"Text": {"type": "array", "items": ...}}
  * 
- * using the example above "a" properties would be stored and read by child nodes connected
+ * Example:
+ * if the current node is a list and parent definition is a union (e.g. in python List[string] | List[int | str]): 
+ *    there are 2 options to select from, List[str] and List[int | str]
+ * 
+ * list node would then want to select either "str" or "int | str" at its output nodes
+ * Thus, the "Text" selection would map to schema:
+ * {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+ * the "Text | Number" selection would map to schema:
+    {
+      "type": "object",
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "string"
+          }
+        ]
+      }
+    }
  */
-export function getInnerSpecs(
-  spec: JSONObject,
-  validator: ((spec: JSONValue) => boolean),
-  getInnerSpec: ((spec: JSONObject) => JSONValue)
+export function getSpecMap(
+  spec: JSONValue,
+  validator: ((spec: JSONObject) => boolean),
+  getInnerSpec: ((spec: JSONObject) => JSONObject)
 ): {[key: string]: JSONObject} {
 
   let typeMap: {[key: string]: JSONObject} = {};
-  const assignMap = (spec: JSONObject) => {
-    let innerSpec = getInnerSpec(spec);
-    if(innerSpec && typeof(innerSpec) === "object" && !Array.isArray(innerSpec)) {
-      let newSocket = getJSONSocket(innerSpec);
-      typeMap[newSocket.name] = innerSpec;
-    }
-  }   
-
-  // if parent type is valid (e.g. List[string]) 
-  if(validator(spec))
-    assignMap(spec); 
-
-  // check for parent type is a union "anyOf" (e.g. List[string] | List[int]) - loop through each in union
-  else if(spec.anyOf && Array.isArray(spec.anyOf)) {
-    spec.anyOf.forEach(iSpec => {
-      if(iSpec && typeof(iSpec) === "object" && !Array.isArray(iSpec) && validator(iSpec))
-        assignMap(iSpec)
-    });
+  
+  // helper function to assign inner specification to map with socket name
+  const assignInner = (outerSpec: JSONObject) => {
+    let innerSpec = getInnerSpec(outerSpec);
+    typeMap[getJSONSocket(innerSpec).name] = innerSpec;
   }
+
+  // check spec is an object
+  if(typeof(spec) === "object" && !Array.isArray(spec)) {
+
+    // set single selection if spec is valid
+    if(validator(spec)) {
+      assignInner(spec);
+    }
+
+    // check for parent type is a union "anyOf" (e.g. List[string] | List[int]) - loop through each in union and assign
+    else if(spec.anyOf && Array.isArray(spec.anyOf)) {
+      
+      // loop through union
+      spec.anyOf.forEach(s => {
+
+        // check inner spec meets validation and is obejct
+        if(typeof(s) === "object" && !Array.isArray(s) && validator(s)) {
+          assignInner(s);
+        }
+      });
+    }
+  }
+
   return typeMap;
 }
 
-
-
-
-/**
- * Connection created processor 
- * on connection created, set selected type to parent specification (if exists) and hide type selection control 
- * */
-export function readParentSchemas(
-  connection: Rete.Connection,
-  validator: ((spec: JSONValue) => boolean),
-  getInnerSpec: ((spec: JSONObject) => JSONValue)
-) {
-
-  // get type definitions from other node and check that the output connected has type definitions
-  // e.g. if parent has output "outputA" then in JSON schema should expect to see "properties": {
-  // "properties": {
-  //   "a": {
-  //     {
-  //       "properties": {
-  //          ...
-  let typeDefs = Data.getOutputSchemas(connection.output.node);
-
-  // index to type definition of parent node - in the above example `output.key` would be "a"
-  let spec = typeDefs[connection.output.key];
-
-  // check is object
-  if (!spec || !isObject(spec))
-    return {};
-
-  // get type map - if no valid configurations found, exit
-  return getInnerSpecs(spec, validator, getInnerSpec);
-}
 
 
 /** Reset types
