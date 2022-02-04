@@ -62,26 +62,29 @@ export var nodeConnectionFuns: {[key: string]: ConnectionFuncs} = {};
 
 
 
-/** get general functions */
-export function getGeneralFuncs(node: Rete.Node): {[key: string]: () => void} {
-  return getDataAttribute<() => void>(node, "generalFuncs");
-}
-/** set general functions */
-export function setGeneralFuncs(node: Rete.Node, funcs: {[key: string]: () => void}) {
-  setDataAttribute(node, "generalFuncs", funcs);
-}
+// /** get general functions */
+// export function getGeneralFuncs(node: Rete.Node): {[key: string]: () => void} {
+//   return getDataAttribute<() => void>(node, "generalFuncs");
+// }
+// /** set general functions */
+// export function setGeneralFuncs(node: Rete.Node, funcs: {[key: string]: () => void}) {
+//   setDataAttribute(node, "generalFuncs", funcs);
+// }
 
 
-/** Node identifiers */
-export function getNodeIdentifiers(node: Rete.Node): {[key: string]: any} {
-  return getDataAttribute<any>(node, "nodeIdentifiers");
-}
-export function setNodeIdentifiers(node: Rete.Node, attributes: {[key: string]: any}) {
-  setDataAttribute(node, "nodeIdentifiers", attributes);
-}
+// /** Node identifiers */
+// export function getNodeIdentifiers(node: Rete.Node): {[key: string]: any} {
+//   return getDataAttribute<any>(node, "nodeIdentifiers");
+// }
+// export function setNodeIdentifiers(node: Rete.Node, attributes: {[key: string]: any}) {
+//   setDataAttribute(node, "nodeIdentifiers", attributes);
+// }
 
 
 /** get general attributes */
-export function getGeneralAttributes(node: Rete.Node): {[key: string]: any} {
-  return getDataAttribute<any>(node, "generalAttributes");
+export interface GeneralAttributes {
+  outputTracker?: number
+}
+export function getGeneralAttributes(node: Rete.Node): GeneralAttributes {
+  return getDataAttribute<any>(node, "generalAttributes") as GeneralAttributes;
 }

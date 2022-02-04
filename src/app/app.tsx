@@ -333,8 +333,8 @@ export async function createEditor(container: HTMLElement) {
     ["process", "nodecreated", "noderemoved", "connectioncreated", "connectionremoved"],
     async () => {
       editor.nodes.forEach(n => {
-        let nodeProcess = Data.getGeneralFuncs(n)["process"];
-        nodeProcess && nodeProcess();
+        // let nodeProcess = Data.getGeneralFuncs(n)["process"];
+        // nodeProcess && nodeProcess();
       })
       console.log("process");
       await engine.abort();
