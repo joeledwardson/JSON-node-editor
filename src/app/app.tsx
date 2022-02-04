@@ -6,7 +6,7 @@ import { ComponentDict } from "./components/dictionary";
 import { ComponentList } from "./components/list";
 import { ComponentDynamic, addType } from './components/dynamic';
 import * as FunctionComponents from './components/functionblock';
-
+// import * as pls from 'rete/types/events';
 
 import ReactRenderPlugin from 'rete-react-render-plugin';
 import AreaPlugin from 'rete-area-plugin';
@@ -16,7 +16,6 @@ import HistoryPlugin from 'rete-history-plugin';
 import { ReteReactComponent as ReteComponent } from "rete-react-render-plugin";
 
 
-// const pls = require('rete-react-render-plugin').default;
 const AdvancedSelectionPlugin = require('@mbraun/rete-advanced-selection-plugin').default;
 const SelectionPlugin: any = require('rete-drag-selection-plugin').default; 
 
@@ -256,6 +255,8 @@ export async function createEditor(container: HTMLElement) {
     engine.register(c);
   });
 
+  engine.bind("controlUpdate");
+
   var n1 = await components[0].createNode({ num: 2 });
   var n2 = await components[0].createNode({ num: 3 });
   var o = await components[1].createNode({});
@@ -328,15 +329,18 @@ export async function createEditor(container: HTMLElement) {
     }
   )
 
+  editor.on('process', () => {
+    console.log('editor process');
+  });
 
   editor.on(
     ["process", "nodecreated", "noderemoved", "connectioncreated", "connectionremoved"],
     async () => {
-      editor.nodes.forEach(n => {
+      // editor.nodes.forEach(n => {
         // let nodeProcess = Data.getGeneralFuncs(n)["process"];
         // nodeProcess && nodeProcess();
-      })
-      console.log("process");
+      // })
+      console.log("editor change");
       await engine.abort();
       await engine.process(editor.toJSON());
     }

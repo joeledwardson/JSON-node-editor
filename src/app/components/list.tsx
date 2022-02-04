@@ -49,6 +49,8 @@ export function elementAdd(node: Rete.Node, editor: Rete.NodeEditor, idx: number
   Data.setOutputControls(node, Object.fromEntries(newMappings));
   node.update();
 
+  editor.trigger('process');  // trigger editor change event
+
   // update node view  
   updateViewConnections([node], editor);
 
@@ -104,6 +106,8 @@ export function elementRemove(node: Rete.Node, editor: Rete.NodeEditor, idx: num
   Data.setOutputControls(node, Object.fromEntries(newMappings));
   node.update();
 
+  editor.trigger('process');  // trigger editor change event
+
   // for each affected node update its connections
   updateViewConnections(Array.from(nds), editor);
 }
@@ -132,6 +136,8 @@ export function elementUp(node: Rete.Node, editor: Rete.NodeEditor, idx: number)
   Data.setOutputControls(node, Object.fromEntries(newMappings));
   node.update();
 
+  editor.trigger('process');  // trigger editor change event
+
   // update node view  
   updateViewConnections([node], editor);
 }
@@ -157,6 +163,8 @@ export function elementDown(node: Rete.Node, editor: Rete.NodeEditor, idx: numbe
   // update output mappings and node
   Data.setOutputControls(node, Object.fromEntries(newMappings));
   node.update();
+
+  editor.trigger('process');  // trigger editor change event
 
   // update node view  
   updateViewConnections([node], editor);

@@ -22,6 +22,7 @@ export type DataHandler = (ctrl: ReteControlBase, emitter: NodeEditor, key: stri
 export const ctrlValProcess: DataHandler = (ctrl: ReteControlBase, emitter: NodeEditor, key: string, data: any): void => {
   ctrl.props.value = data;  // update props value used to update control value when re-rendering
   getControlsData(ctrl.getNode())[key] = data;  //  put into node data objects for connections
+  emitter.trigger("process");  // trigger process on control change
   ctrl.update && ctrl.update();  // re-render
 }
 
