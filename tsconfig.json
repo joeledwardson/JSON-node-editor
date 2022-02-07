@@ -7,6 +7,7 @@
       "ES2019"
     ],
     "outDir": "./dist/",
+    "allowSyntheticDefaultImports": true,
     "noImplicitAny": true, // dont allow implicit "any" types inferred
     "module": "esnext", // ES6 means compiled imports modules stay as the modern format (i.e. import {a} from 'b')  https://www.typescriptlang.org/tsconfig#module
     "target": "es5", // ES5 means arrow functions () => void etc are compiled
@@ -14,9 +15,8 @@
     "allowJs": true,
     "moduleResolution": "node",
     "sourceMap": true,
-      "typeRoots": [
-        "customTypes",
-        "node_modules/@types"
+    "typeRoots": [
+      "node_modules/@types"
     ],
   },
   "ts-node": {

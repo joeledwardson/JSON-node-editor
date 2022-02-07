@@ -40,7 +40,10 @@
     "xlsx-column": "^2.2.1"
   },
   "scripts": {
-    "webpack-serve": "webpack serve"
+    "webpack-serve": "webpack serve",
+    "build": "npm run build:src && npm run build:types",
+    "build:src": "tsc -p tsconfig.json",
+    "build:types": "tsc -p configs/tsconfig.types.json"
   },
   "eslintConfig": {
     "extends": [
