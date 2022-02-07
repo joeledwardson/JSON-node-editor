@@ -2,6 +2,7 @@
   "name": "json-node-editor",
   "version": "0.1.0",
   "private": true,
+  "types": "./types/app/app.d.ts",
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "^9.0.9",
     "@fortawesome/fontawesome-free": "^5.15.3",
