@@ -21,7 +21,12 @@ function Editor() {
   const divRef: RefObject<HTMLInputElement> = createRef()
 
   useEffect(() => {
-    divRef.current && createEditor(divRef.current);
+    if(divRef.current) {
+      console.log('creating editor in component...');
+      createEditor(divRef.current);
+    } else {
+      console.log('no ref element :(');
+    }
   })
 
   return (
