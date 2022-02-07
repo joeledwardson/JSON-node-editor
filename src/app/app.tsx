@@ -5,7 +5,6 @@ import * as BasicComponents from "./components/basic";
 import { ComponentDict } from "./components/dictionary";
 import { ComponentList } from "./components/list";
 import { ComponentDynamic, addType } from './components/dynamic';
-import * as FunctionComponents from './components/functionblock';
 
 import ReactRenderPlugin from 'rete-react-render-plugin';
 import AreaPlugin from 'rete-area-plugin';
@@ -318,10 +317,6 @@ export async function createEditor(container: HTMLElement) {
   editor.on(
     ["process", "nodecreated", "noderemoved", "connectioncreated", "connectionremoved"],
     async () => {
-      // editor.nodes.forEach(n => {
-        // let nodeProcess = Data.getGeneralFuncs(n)["process"];
-        // nodeProcess && nodeProcess();
-      // })
       console.log("editor change");
       // await engine.abort();
       // await engine.process(editor.toJSON());
