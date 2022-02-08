@@ -1,18 +1,5 @@
 @import "bootstrap";
 
-// .node {
-//     width: 4rem;
-// }
-
-// .hidden-node-item {
-//     visibility: hidden;
-// }
-
-
-// .node:hover * {
-//     visibility: visible;
-// }
-
 .bold-input {
     font-size: large;
     font-weight: bold;
@@ -27,9 +14,6 @@
 }
 
 .dynamic-outputs {
-    // display: grid;
-    // align-items: center;
-    // grid-template-columns: repeat(4, auto);
     .control {
         @extend .me-1;
         @extend .ms-1;
@@ -37,7 +21,6 @@
         flex-grow: 1;
     }
     .display-button {
-        // padding: 0.3rem;
         opacity: 0.5;
         @extend .me-1;
         @extend .ms-1;
@@ -94,10 +77,6 @@
     .control {
         padding: 0;
     }
-}
-
-.controls-container {
-    // display: flex;
 }
 
 .control-input {
