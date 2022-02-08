@@ -2,7 +2,11 @@
   "name": "json-node-editor",
   "version": "0.1.0",
   "private": true,
+  "keywords": ["node-editor", "node", "editor", "json", "schema", "retejs"],
+  "description": "Visual node based editor for JSON data",
+  "homepage": "https://github.com/joeledwardson/JSON-node-editor",
   "types": "./types/app/app.d.ts",
+  "main": "./dist/app/app.js",
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "^9.0.9",
     "@fortawesome/fontawesome-free": "^5.15.3",
