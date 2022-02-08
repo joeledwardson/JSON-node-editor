@@ -1,8 +1,8 @@
-var json = require("./example-schema.json");
-const $RefParser = require("@apidevtools/json-schema-ref-parser");
+// var json = require("./example-schema.json");
+// const $RefParser = require("@apidevtools/json-schema-ref-parser");
 
 
-var my_debiug = 1;
+// var my_debiug = 1;
 
 // var json = {
 //   "$id": "https://example.com/arrays.schema.json",
