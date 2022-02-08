@@ -2,17 +2,23 @@
   "name": "json-node-editor",
   "version": "0.1.0",
   "private": true,
-  "keywords": ["node-editor", "node", "editor", "json", "schema", "retejs"],
+  "keywords": [
+    "node-editor",
+    "node",
+    "editor",
+    "json",
+    "schema",
+    "retejs"
+  ],
   "description": "Visual node based editor for JSON data",
   "homepage": "https://github.com/joeledwardson/JSON-node-editor",
-  "types": "./types/app/app.d.ts",
-  "main": "./dist/app/app.js",
+  "types": "./types/app.d.ts",
+  "main": "./dist/app.js",
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "^9.0.9",
     "@fortawesome/fontawesome-free": "^5.15.3",
     "@fortawesome/fontawesome-svg-core": "^1.2.35",
     "@fortawesome/free-solid-svg-icons": "^5.15.3",
-    "@fortawesome/react-fontawesome": "^0.1.14",
     "@mbraun/rete-advanced-selection-plugin": "^0.0.1-beta.0",
     "@testing-library/jest-dom": "^5.11.4",
     "@testing-library/react": "^11.1.0",
@@ -26,9 +32,6 @@
     "html-webpack-plugin": "^5.5.0",
     "json-schema-parser": "^0.1.0",
     "node-sass": "^6.0.1",
-    "react-bootstrap": "^2.0.0-beta.4",
-    "react-select": "^5.2.2",
-    "react-textarea-autosize": "^8.3.3",
     "rete": "^1.4.5",
     "rete-area-plugin": "github:joeledwardson/area-plugin#withbuild",
     "rete-connection-plugin": "^0.9.0",
@@ -68,6 +71,12 @@
       "last 1 safari version"
     ]
   },
+  "peerDependencies": {
+    "@fortawesome/react-fontawesome": "^0.1.17",
+    "react-bootstrap": "^2.1.2",
+    "react-select": "^5.2.2",
+    "react-textarea-autosize": "^8.3.3"
+  },
   "devDependencies": {
     "@babel/core": "^7.16.0",
     "@babel/plugin-transform-runtime": "^7.16.0",
@@ -75,12 +84,14 @@
     "@babel/preset-react": "^7.16.0",
     "@babel/preset-typescript": "^7.16.0",
     "@types/react": "^17.0.33",
+    "@types/react-bootstrap": "^0.32.29",
     "@types/react-dom": "^17.0.10",
+    "@types/react-fontawesome": "^1.6.5",
+    "@types/react-select": "^5.0.1",
+    "@types/react-textarea-autosize": "^4.3.6",
     "@types/webpack-dev-server": "^4.3.1",
     "babel-loader": "^8.2.3",
     "bootstrap": "^5.1.3",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2",
     "ts-loader": "^9.2.6",
     "typescript": "^4.4.4",
     "webpack-dev-server": "^4.4.0"
