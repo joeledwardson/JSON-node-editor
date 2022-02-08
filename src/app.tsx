@@ -10,7 +10,7 @@ import { JSONObject, JSONValue } from "./jsonschema";
 import './styles.css';
 
 
-export function init(schema: JSONObject | null, editor: Rete.NodeEditor) {
+export function init(schema: JSONObject | null, editor: Rete.NodeEditor, engine: Rete.Engine) {
   
   // create stock components
   var components: Array<ReteComponent> = [
@@ -39,6 +39,7 @@ export function init(schema: JSONObject | null, editor: Rete.NodeEditor) {
   // register each component to engine and editor
   components.forEach((c) => {
     editor.register(c);
+    engine.register(c);
   });
 
 
