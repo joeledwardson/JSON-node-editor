@@ -7,6 +7,7 @@ import { ComponentList } from "./components/list";
 import { ComponentDynamic, addType } from './components/dynamic';
 import { ReteReactComponent as ReteComponent } from "rete-react-render-plugin";
 import { JSONObject, JSONValue } from "./jsonschema";
+import './styles.css';
 
 
 export function init(schema: JSONObject | null, editor: Rete.NodeEditor) {
