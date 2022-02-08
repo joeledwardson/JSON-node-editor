@@ -14,10 +14,7 @@
     "jsx": "react-jsx", // compile react code (e.g. <div>hello</div>) to js code (e.g. react.createElement(div, 'hello')) 
     "allowJs": true,
     "moduleResolution": "node",
-    "sourceMap": true,
-    "typeRoots": [
-      "node_modules/@types"
-    ],
+    "sourceMap": true
   },
   "ts-node": {
     "compilerOptions": {
