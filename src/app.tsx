@@ -6,8 +6,9 @@ import { ComponentDict } from "./components/dictionary";
 import { ComponentList } from "./components/list";
 import { ComponentDynamic, addType } from './components/dynamic';
 import { ReteReactComponent as ReteComponent } from "rete-react-render-plugin";
-import { JSONObject, JSONValue } from "./jsonschema";
+import { getJSONSocket, getJSONSocket2, isObject, JSONObject, JSONValue } from "./jsonschema";
 import './styles.css';
+import { DisplayBase } from "./display";
 
 
 export function init(schema: JSONObject | null, editor: Rete.NodeEditor, engine: Rete.Engine) {
@@ -30,8 +31,23 @@ export function init(schema: JSONObject | null, editor: Rete.NodeEditor, engine:
     });
 
     // create dynamic components for each schema definition
-    Object.entries(schema).forEach(([key, spec]) => components.push(new ComponentDynamic(key, spec)));
+    Object.entries(schema).forEach(([key, spec]) => components.push(new ComponentDynamic(key, spec)));    
   }
+
+  // add root component
+  class RootComponent extends BasicComponents.ComponentBase {
+    data = {component: DisplayBase}
+    constructor() {
+      super('pls');
+    }
+    _builder(node: Rete.Node, editor: Rete.NodeEditor) {
+      let socket = getJSONSocket(schema);
+      node.addOutput(new Rete.Output("data", "Data", socket));
+        // set type definition to be read by any child elements
+        Data.getOutputSchemas(node)["data"] = schema;
+    }
+  }
+  components.push(new RootComponent());
 
   // combine each socket with the "any" socket
   sockets.forEach(s => anySocket.combineWith(s.socket));
