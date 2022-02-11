@@ -38,13 +38,16 @@ export function init(schema: JSONObject | null, editor: Rete.NodeEditor, engine:
   class RootComponent extends BasicComponents.ComponentBase {
     data = {component: DisplayBase}
     constructor() {
-      super('pls');
+      super('root');
     }
     _builder(node: Rete.Node, editor: Rete.NodeEditor) {
       let socket = getJSONSocket(schema);
       node.addOutput(new Rete.Output("data", "Data", socket));
-        // set type definition to be read by any child elements
-        Data.getOutputSchemas(node)["data"] = schema;
+      // set type definition to be read by any child elements
+      Data.getOutputMap(node).push({
+        outputKey: "data",
+        schema: schema
+      })
     }
   }
   components.push(new RootComponent());

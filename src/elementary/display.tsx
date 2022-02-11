@@ -23,11 +23,9 @@ export function getElementaryOutput<T extends ReactRete.NodeProps>(
   actions: Actions,
   props: T,
 ): JSX.Element {
-  let outputMap = Data.getOutputControls(props.node);
-  let outputKey = Object.keys(outputMap)[index];
-  let output = props.node.outputs.get(outputKey);
-  let ctrlKey = outputMap[outputKey];
-  let control = props.node.controls.get(ctrlKey);
+  let oMap = Data.getOutputMap(props.node)[index];
+  let output = props.node.outputs.get(oMap.outputKey);
+  let control = props.node.controls.get(oMap.nameKey);
   const exAction = (name: ActionName) => actions[name](props.node, props.editor, index); 
   return <div className="output" key={output.key}>
     <div className="output-title hidden-node-item">
@@ -60,16 +58,16 @@ export function getElementaryOutput<T extends ReactRete.NodeProps>(
 
 /** get controls not mapped to an output */
 export function getUnmappedControls(node: Rete.Node): Rete.Control[] {  
-  let outputControlKeys = Object.values(Data.getOutputControls(node));
-  return Array.from(node.controls.values())
-  .filter(c => !outputControlKeys.includes(c.key))
+  let outputMaps = Data.getOutputMap(node);
+  return Array.from(node.controls.values()) 
+  .filter(ctrl => !outputMaps.find(o => o.dataKey == ctrl.key || o.nameKey == ctrl.key));
 }
 
 
 /** render elementary outputs with their mapped controls */
 export function renderElementaryOutputs(props: ReactRete.NodeProps, actions: Actions): JSX.Element[] {
-  return Object.entries(Data.getOutputControls(props.node))
-  .map((_, index) => getElementaryOutput(index, actions, props))
+  let outputMaps = Data.getOutputMap(props.node);
+  return outputMaps.map((o, i) => o.outputKey && getElementaryOutput(i, actions, props));
 }
 
 

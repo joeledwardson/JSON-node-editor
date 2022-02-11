@@ -21,7 +21,7 @@ import { anySocket } from "../sockets/sockets";
  * - {output: control} key mappings from `getOutputControls()` function is used to track order of outputs but the `control` values are effectively ignored 
  * - getGeneralAttributes().outputTracker is used to track the total number of outputs added over time to create new names
 */
-export function elementAdd(node: Rete.Node, editor: Rete.NodeEditor, idx: number, typeSelectKey: string): string {
+export function elementAdd(node: Rete.Node, editor: Rete.NodeEditor, idx: number, typeSelectKey: string): Data.OutputMap {
   // get selected type from type selection control
   const selectedType = Data.getControlsData(node)[typeSelectKey];
   let socket = getSelectedSocket(selectedType);
@@ -42,11 +42,13 @@ export function elementAdd(node: Rete.Node, editor: Rete.NodeEditor, idx: number
   node.addOutput(newOutput);
 
   // add mapping of new output key to same key for control (although control not actually created)
-  let newMappings = Object.entries(Data.getOutputControls(node));
-  newMappings.splice(newIndex, 0, [newKey, newKey]);
+  let outputMaps = Data.getOutputMap(node);
+  let newMap = {
+    outputKey: newKey
+  }
+  outputMaps.splice(newIndex, 0, newMap);
 
   // update output mappings and node
-  Data.setOutputControls(node, Object.fromEntries(newMappings));
   node.update();
 
   editor.trigger('process');  // trigger editor change event
@@ -55,37 +57,27 @@ export function elementAdd(node: Rete.Node, editor: Rete.NodeEditor, idx: number
   updateViewConnections([node], editor);
 
   // return new output key
-  return newOutput.key;
+  return newMap;
 }
 
 
 export function elementRemove(node: Rete.Node, editor: Rete.NodeEditor, idx: number) {
-      
-  // get number of existing outputs
-  const nOutputs = node.outputs.size;
+  let outputMaps = Data.getOutputMap(node);
 
   // check index in range
-  if (!(idx >= 0 && idx < nOutputs)) {
+  if (!(idx >= 0 && idx < outputMaps.length)) {
     console.error(`couldnt delete output from index, out of range "${idx}"`);
     return
-  }
-
-  // get map of output to controls
-  let ctrlsMap = Data.getOutputControls(node);
-
-  // get output from output key using its index
-  let outputIds = Object.keys(ctrlsMap);
-  const output = node.outputs.get(outputIds[idx]);
+  } 
 
   // check output exists
-  if(!output) {
+  if(!outputMaps[idx]) {
     console.error(`unexpected error: output at index "${idx}" not found`);
     return
   }
   
-  // remove output->control mapping (if exists)
-  let newMappings = Object.entries(Data.getOutputControls(node));
-  newMappings.splice(idx, 1);
+  // get output
+  let output = node.outputs.get(outputMaps[idx].outputKey);
 
   // create list of nodes that have a connection to the output to be updated
   // register each node with an input connected to the output being deleted
@@ -102,8 +94,10 @@ export function elementRemove(node: Rete.Node, editor: Rete.NodeEditor, idx: num
   // remove output from node
   node.removeOutput(output);
 
+  // remove output->control mapping (if exists)
+  outputMaps.splice(idx, 1);
+
   // update output mappings and node
-  Data.setOutputControls(node, Object.fromEntries(newMappings));
   node.update();
 
   editor.trigger('process');  // trigger editor change event
@@ -114,26 +108,20 @@ export function elementRemove(node: Rete.Node, editor: Rete.NodeEditor, idx: num
 
 
 export function elementUp(node: Rete.Node, editor: Rete.NodeEditor, idx: number) {
-
-  // get number of existing outputs
-  const nOutputs = node.outputs.size;
-  // get [output, control] pairs
-  let newMappings = Object.entries(Data.getOutputControls(node));
-
-  if(!( idx > 0 && idx < nOutputs )) {
+  let outputMaps = Data.getOutputMap(node);
+  if(!( idx > 0 && idx < outputMaps.length )) {
     editor.trigger("error", {message: `cant move output index up "${idx}"`});
     return;
   }
     
   // get selected element
-  const m = newMappings[idx];
+  const m = outputMaps[idx];
   // pop element out
-  newMappings.splice(idx, 1);
+  outputMaps.splice(idx, 1);
   // move "up" (up on screen, down in list index)
-  newMappings.splice(idx - 1, 0, m);
+  outputMaps.splice(idx - 1, 0, m);
 
   // update output mappings and node
-  Data.setOutputControls(node, Object.fromEntries(newMappings));
   node.update();
 
   editor.trigger('process');  // trigger editor change event
@@ -143,25 +131,20 @@ export function elementUp(node: Rete.Node, editor: Rete.NodeEditor, idx: number)
 }
 
 export function elementDown(node: Rete.Node, editor: Rete.NodeEditor, idx: number) {
-  // get number of existing outputs
-  const nOutputs = node.outputs.size;
-  // get [output, control] pairs
-  let newMappings = Object.entries(Data.getOutputControls(node));
-
-  if(!( idx >= 0 && (idx + 1) < nOutputs )) {
+  let outputMaps = Data.getOutputMap(node);
+  if(!( idx >= 0 && (idx + 1) < outputMaps.length )) {
     editor.trigger("error", {message: `cant move output index down "${idx}"`});
     return;
   } 
 
   // get next element
-  const m = newMappings[idx + 1];
+  const m = outputMaps[idx + 1];
   // remove next element
-  newMappings.splice(idx + 1, 1);
+  outputMaps.splice(idx + 1, 1);
   // insert behind - move "down" (down on screen, up in list index)
-  newMappings.splice(idx, 0, m);
+  outputMaps.splice(idx, 0, m);
 
   // update output mappings and node
-  Data.setOutputControls(node, Object.fromEntries(newMappings));
   node.update();
 
   editor.trigger('process');  // trigger editor change event
@@ -196,6 +179,7 @@ export class ComponentList extends ComponentBase {
   constructor() {
     super('List');
   }
+  
   _builder(node: Rete.Node, editor: Rete.NodeEditor) {
     // build node with list action to add and list socket
     let socket = MySocket.listSocket;
@@ -206,9 +190,12 @@ export class ComponentList extends ComponentBase {
       .addControl(selectControl);
       
     // add output for each specified in data passed to builder
-    let outputCtrls = Data.getOutputControls(node);
-    Object.entries(outputCtrls).forEach(([outputKey, ctrlKey]) => node.addOutput(new Rete.Output(outputKey, outputKey, socket)));
-    
+    let outputMap = Data.getOutputMap(node);
+    outputMap.forEach(o => {
+      if(o.outputKey) {
+        node.addOutput(new Rete.Output(o.outputKey, o.outputKey, socket))
+      }
+    });
   }
 }
 
@@ -223,7 +210,7 @@ Data.nodeConnectionFuns["List"] = {
 
     // get schema map from connected node and index to output
     let output = connection.output;
-    let schema = Data.getOutputSchemas(output.node)[output.key];
+    let schema = Data.getOutputMap(output.node).find(o => o.outputKey==output.key)?.schema;
     
     // retrieve socket name to schema map from connection schemas
     let socketSchemas = ENode.getSpecMap(schema, 

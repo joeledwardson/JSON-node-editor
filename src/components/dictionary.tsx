@@ -1,6 +1,7 @@
 import * as Rete from "rete";
 import * as MySocket from "../sockets/sockets";
 import * as Controls from  "../controls/controls";
+import { ReteReactControl as ReteControlBase } from "rete-react-render-plugin";
 import * as Data from "../data/attributes";
 import { ComponentBase } from './basic';
 import { JSONObject, JSONValue } from "../jsonschema";
@@ -12,6 +13,16 @@ import * as ReactRete from 'rete-react-render-plugin';
 import { getSelectedSocket, isInput } from "../helpers";
 import { ControlSelect } from "../controls/controls";
 
+// name control handler
+const getNameHandler: (oMap: Data.OutputMap) => Controls.DataHandler = (oMap: Data.OutputMap) => {
+  return (ctrl: ReteControlBase, emitter: Rete.NodeEditor, key: string, data: any) => {
+    ctrl.props.value = data;
+    oMap.nameValue = data;
+    emitter.trigger("process");
+    ctrl.update && ctrl.update();
+  }
+}
+
 
 /**
  * Dictionary actions for add/remove/move up/move down
@@ -19,31 +30,30 @@ import { ControlSelect } from "../controls/controls";
  */
 function dictAdd(node: Rete.Node, editor: Rete.NodeEditor, idx: number, typeSelectKey: string) {
   // run list action to add new output
-  let newOutputKey = List.elementAdd(node, editor, idx, typeSelectKey);
+  let newMap = List.elementAdd(node, editor, idx, typeSelectKey);
 
-  // get mapped control key
-  let newControlKey = Data.getOutputControls(node)[newOutputKey];
+  // create attribute name key
+  newMap.nameKey = `${newMap.outputKey} name`;
 
-  if(newControlKey) {
-    // add control with same key as output and blank value
-    node.addControl(new Controls.ControlText(newControlKey, editor, node, {
-      value: ""
-    }));
-  } 
+  // add control with same key as output and blank value
+  node.addControl(new Controls.ControlText(
+    newMap.nameKey, 
+    editor, 
+    node, 
+    {value: ""},
+    getNameHandler(newMap)
+  ));
+  
 }
 
 
 function dictRemove(node: Rete.Node, editor: Rete.NodeEditor, idx: number) {
-  // get map of output to controls
-  let ctrlsMap = Data.getOutputControls(node);
-  // get output ID list
-  let outputIds = Object.keys(ctrlsMap);
-  // get control ID 
-  let ctrlId = ctrlsMap[outputIds[idx]];
-  // get control instance
-  let ctrl = node.controls.get(ctrlId);
-  if( ctrl  ) {
-    node.removeControl(ctrl);  // remove control from node
+  let oMap = Data.getOutputMap(node)[idx];
+  if(oMap) {
+    let ctrl = node.controls.get(oMap.nameKey);
+    if( ctrl ) {
+      node.removeControl(ctrl);  // remove control from node
+    }
   }
 
   // run list action to remove output
@@ -87,14 +97,19 @@ export class ComponentDict extends ComponentBase {
       .addControl(selectControl);
       
     // add output for each specified in data passed to builder
-    let outputCtrls = Data.getOutputControls(node);
-    let ctrlData = Data.getControlsData(node);
-    Object.entries(outputCtrls).forEach(([outputKey, ctrlKey]) => {
-      node.addOutput(new Rete.Output(outputKey, outputKey, socket))
-        // add control using mapped control key
-        node.addControl(new Controls.ControlText(ctrlKey, editor, node, {
-          value: ctrlData[ctrlKey]
-        }));
+    let outputMap = Data.getOutputMap(node);
+    outputMap.forEach(o => {
+      if(o.outputKey) {
+        node.addOutput(new Rete.Output(o.outputKey, o.outputKey, socket));
+      }
+      if(o.nameKey) {
+        node.addControl(new Controls.ControlText(
+          o.nameKey, 
+          editor, 
+          node, {value: o.nameValue},
+          getNameHandler(o)
+        ));
+      }
     });
   }
 }
@@ -110,7 +125,7 @@ Data.nodeConnectionFuns["Dictionary"] = {
 
     // get schema map from connected node and index to output
     let output = connection.output;
-    let schema = Data.getOutputSchemas(output.node)[output.key];
+    let schema = Data.getOutputMap(output.node).find(o => o.outputKey==output.key)?.schema;
     
     // retrieve socket name to schema map from connection schemas
     let socketSchemas = ENode.getSpecMap(schema, 

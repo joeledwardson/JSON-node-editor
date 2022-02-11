@@ -3,30 +3,24 @@ import { getDataAttribute, setDataAttribute } from "./access";
 import { JSONObject } from '../jsonschema';
 
 export interface OutputMap {
-  controlKey?: string;
-  outputKey?: string;
-  isNulled?: boolean;
-  schema?: JSONObject;
+  nameKey?: string; // control key for additional property name
+  nameValue?: string; // control value for additional property name
+
+  dataKey?: string;  // control key for data 
+  dataValue?: any;  // control value for data
+  
+  selectKey?: any;  // control key for type select
+  selectValue?: string;  // control value for type select
+  
+  outputKey?: string; // key for output
+  nullable?: boolean; // true if output can be nulled
+  isNulled?: boolean;  // true if output nulled
+  schema?: JSONObject;  // schema read by connection
 }
 
-// export function getOutputMap(node: Rete.Node): {[key: string]: OutputMap}
-
-
-/** get mappings of node outputs to output controls */
-export function getOutputControls(node: Rete.Node): {[key: string]: string} {
-  return getDataAttribute<{[key: string]: string}>(node, "outputMappings");
+export function getOutputMap(node: Rete.Node): Array<OutputMap> {
+  return getDataAttribute<Array<OutputMap>>(node, "nodeMap", ()=>[]);
 }
-/** set mappings of node outputs to output controls */
-export function setOutputControls(node: Rete.Node, newMappings: {[key: string]: string}): void {
-  setDataAttribute<{[key: string]: string}>(node, "outputMappings", newMappings);
-}
-
-
-/** get mappings of node outputs to boolean "nulled" values */
-export function getOutputNulls(node: Rete.Node): {[key: string]: boolean} {
-  return getDataAttribute<{[key: string]: boolean}>(node, "outputNulls");
-}
-
 
 /** get controls data from node object */
 export function getControlsData(node: Rete.Node): {[key: string]: any} {
@@ -35,16 +29,6 @@ export function getControlsData(node: Rete.Node): {[key: string]: any} {
 /** set controls data from node object */
 export function setControlsData(node: Rete.Node, data: {[key: string]: any}) {
   setDataAttribute(node, 'controlsData', data);
-}
-
-
-/** get JSON schemas mapped to output names */
-export function getOutputSchemas(node: Rete.Node): {[key: string]: JSONObject} {
-  return getDataAttribute<{[key: string]: JSONObject}>(node, 'typeDefinitions')
-}
-/** set JSON schemas mapped to output names */
-export function setOutputSchemas(node: Rete.Node, newDefinitions: {[key: string]: JSONObject}): void {
-  setDataAttribute(node, 'typeDefinitions', newDefinitions);
 }
 
 

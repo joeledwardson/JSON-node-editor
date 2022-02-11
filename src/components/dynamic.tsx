@@ -1,5 +1,6 @@
 import * as Rete from 'rete';
 import * as MyControls from "../controls/controls";
+import { ReteReactControl as ReteControlBase } from "rete-react-render-plugin";
 import * as Display from '../display';
 import * as Data from "../data/attributes";
 import {  ComponentBase, TypeList } from "./basic";
@@ -9,8 +10,8 @@ import { ReteReactControl as ReteControl } from "rete-react-render-plugin";
 import { faTimes, faMouse } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "react-bootstrap";
 import { sockets } from "../sockets/sockets";
-import { getOutputControls, getOutputNulls, getOutputSchemas } from "../data/attributes";
 import { JSONObject, JSONValue, getObject, getJSONSocket } from '../jsonschema';
+import { getUnmappedControls } from '../elementary/display';
 
 
 /** add custom type to valid type list */
@@ -41,25 +42,25 @@ class DisplayDynamic extends ReactRete.Node {
       return;
     }
 
-    // get "null" value
-    let outputNulls = Data.getOutputNulls(this.props.node);
-    
+    let outputMap = Data.getOutputMap(this.props.node).find(o => o.outputKey == output.key);
+    if (!outputMap) {
+      return;
+    }
+
     // if not "null" then user is clicking to null, delete all connections
-    if(!(outputNulls[output.key])) {
+    if(!outputMap.isNulled) {
       output.connections.forEach(c => this.props.editor.removeConnection(c))
     }
 
     // invert "null" value
-    outputNulls[output.key] = !outputNulls[output.key];
+    outputMap.isNulled = !outputMap.isNulled;
     
     // if output has mapped control, disable it
-    let outputControls = Data.getOutputControls(this.props.node);
-    let controlName = outputControls[output.key];
-    if(controlName) {
-      let control = this.props.node.controls.get(controlName);
+    if(outputMap.dataKey) {
+      let control = this.props.node.controls.get(outputMap.dataKey);
       if(control && control instanceof ReteControl) {
         // set display disabled and update control
-        control.props.display_disabled = outputNulls[output.key];
+        control.props.display_disabled = outputMap.isNulled;
         control.update && control.update();
       }
     }
@@ -69,14 +70,10 @@ class DisplayDynamic extends ReactRete.Node {
     this.props.editor.view.updateConnections({node: this.props.node});
   }
 
-  getOutput(output: Rete.Output): JSX.Element {
-    let ctrlKey = getOutputControls(this.props.node)[output.key];
-    let ctrl = this.props.node.controls.get(ctrlKey);
-    let isNullable: boolean = output.key in getOutputNulls(this.props.node);
-    let isNull: boolean = getOutputNulls(this.props.node)[output.key] === true;
-    let btnIcon = isNull ? faMouse : faTimes;
-    
-    console.log(`control "${ctrl?.key}" is disabled: "${isNull}"`);
+  getOutput(outputMap: Data.OutputMap): JSX.Element {
+    let output = this.props.node.outputs.get(outputMap.outputKey);
+    let ctrl = this.props.node.controls.get(outputMap.dataKey);
+    let btnIcon = outputMap.isNulled ? faMouse : faTimes;
     
     let nullButton = <Button 
       variant="secondary" 
@@ -95,26 +92,27 @@ class DisplayDynamic extends ReactRete.Node {
 
     return <div className="output" key={output.key}>
       {controlElement}
-      {isNullable ? nullButton : <div></div>}
+      {outputMap.nullable ? nullButton : <div></div>}
       {titleElement}
-      {Display.getSocket(output, "output", this.props.bindSocket, {visibility: isNull ? "hidden" : "visible"})}
+      {Display.getSocket(output, "output", this.props.bindSocket, {visibility: outputMap.isNulled ? "hidden" : "visible"})}
     </div>
   }
 
   render() {
     const { node, bindSocket, bindControl } = this.props;
     const { outputs, controls, inputs, selected } = this.state;
-    let ctrlKeys = Object.values(getOutputControls(this.props.node));    
+    let statisControls = getUnmappedControls(node);
+
     return (
       <div className={`node ${selected}`}>
         {Display.getTitle(node.name)}
         {/* Outputs */}
         <div className="dynamic-outputs">
-          {outputs.map((output) =>  this.getOutput(output))}
+          {Data.getOutputMap(node).map(oMap => oMap.outputKey && this.getOutput(oMap))}
         </div>
         {/* Controls (check not mapped to output) */}
         <div className="controls-container" >
-        {controls.map((control) => !ctrlKeys.includes(control.key) && Display.getControl(control, bindControl))}
+        {statisControls.map((control) => Display.getControl(control, bindControl))}
         </div>        
         {/* Inputs */}
         {inputs.map((input) => Display.getInput(input, bindControl, bindSocket))}
@@ -127,11 +125,14 @@ class DisplayDynamic extends ReactRete.Node {
 /** helper function to get control mapped to dynamic output  */
 const getOutputControl = (node: Rete.Node, outputKey: string) => {
   // get control key mapped to output
-  let controlKey = getOutputControls(node)[outputKey];
+  let oMap = Data.getOutputMap(node).find(o => o.outputKey == outputKey);
+  if(!oMap) {
+    return null;
+  }
 
   // get control instance if exists, cast to control template type
   type PropsAny = MyControls.InputProps<any>;
-  return node.controls.get(controlKey) as MyControls.ControlTemplate<any, PropsAny>
+  return node.controls.get(oMap.dataKey) as MyControls.ControlTemplate<any, PropsAny>
 }
 
 
@@ -157,7 +158,7 @@ const connectionRemovedFunc: Data.ConnectionFunc = (connection: Rete.Connection,
   let control = getOutputControl(connection.output.node, connection.output.key);
   if(control) {
     let node = connection.output.node;
-    control.props.display_disabled = getOutputNulls(node)[connection.output.key];
+    control.props.display_disabled = Data.getOutputMap(node).find(o => o.outputKey == connection.output.key).isNulled;
     if(control.update) control.update();
   }
 }
@@ -187,51 +188,75 @@ export class ComponentDynamic extends ComponentBase {
 
   }
 
+
+
+  /** create control */
+  getControl(node: Rete.Node, oMap: Data.OutputMap, property: JSONObject, nulled: boolean, key: string, editor: Rete.NodeEditor) {
+
+    /** get control initial value
+     * try node data, then JSON default then user default */
+    const getValue = (oMap: Data.OutputMap, property: JSONObject, usr_default: any) => {
+      return oMap.dataValue ?? property["default"] ?? usr_default;
+    }
+
+    const getArgs = (usr_default: any) => ({
+      value: getValue(oMap, property, usr_default), 
+      display_disabled: nulled
+    });
+
+    const dataHandler: MyControls.DataHandler = (ctrl: ReteControlBase, emitter: Rete.NodeEditor, key: string, data: any) => {
+      ctrl.props.value = data;
+      oMap.dataValue = data;
+      emitter.trigger("process");
+      ctrl.update && ctrl.update();
+    }
+
+    // process type from property
+    let var_type = property["type"];
+    if( var_type === "string") { 
+      return new MyControls.ControlText(key, editor, node, getArgs(""), dataHandler);
+    } else if( var_type === "integer" || var_type === "number" ) {
+      return new MyControls.ControlNumber(key, editor, node, getArgs(0), dataHandler);
+    } else if( var_type === "boolean") {
+      return new MyControls.ControlBool(key, editor, node, getArgs(""), dataHandler);
+    } 
+    return null;
+  }
+
   /**
    * process a JSON schema "property" for a given definition, by setting node data and adding relevant control/output 
    */
-  process_property(node: Rete.Node, editor: Rete.NodeEditor, key: string, property: JSONObject, null_value: boolean): void {
-    let nodeData = Data.getControlsData(node);
+  process_property(node: Rete.Node, editor: Rete.NodeEditor, key: string, property: JSONObject, index: number, required: boolean): void {
+    let outputMaps = Data.getOutputMap(node);
+    let oMap: Data.OutputMap = outputMaps[index] ?? {};
     
     if(property["const"]) {
       // if JSON property is a "const" then set value in node data but dont create output or control
-      nodeData[key] = property["const"];
+      outputMaps.push({
+        dataKey: key,
+        dataValue: property["const"]
+      })
       return;
     } 
 
-    // get type from property
-    let var_type = property["type"];
-
-    // get control if valid based on variable type
-    const getControl = () => {
-
-      // get control value - try node data, then JSON default then user default
-      const getValue = (usr_default: any) => nodeData[key] ?? (property && property["default"]) ?? usr_default;
-
-      // get control args with value and display disabled (common to all controls)
-      const getArgs = (usr_default: any) => ({value: getValue(usr_default), display_disabled: null_value}); 
-
-      if( var_type === "string") { 
-        return new MyControls.ControlText(key, editor, node, getArgs(""));
-      } else if( var_type === "integer" || var_type === "number" ) {
-        return new MyControls.ControlNumber(key, editor, node, getArgs(0));
-      } else if( var_type === "boolean") {
-        return new MyControls.ControlBool(key, editor, node, getArgs(""));
-      } 
-      return null;
+    // get control args with value and display disabled (common to all controls)
+    let null_output = false;
+    if(!required) {
+      oMap.nullable = true;
+      // property not required - set to null if default is null or no default provided
+      // pydantic will not set a JSON "default" value if default "None" is provided, hence checking for default "undefined" 
+      null_output = property["default"] === null || property["default"] === undefined;
     }
-    let control = getControl();
+    
 
+    let control = this.getControl(node, oMap, property, null_output, key, editor);
     if(control) {
       // add control to node
       node.addControl(control);
 
       // set node data (in case value was pulled from JSON schema or default)
-      nodeData[key] = control.props.value;
-
-      // set output -> control key map
-      // TODO - update control keys so they don't match output keys to avoid confusion?
-      Data.getOutputControls(node)[key] = key;
+      oMap.dataKey = key;
+      oMap.dataValue = control.props.value;
     }
       
     // get title from property if exist, else just use property key
@@ -242,8 +267,9 @@ export class ComponentDynamic extends ComponentBase {
     let output = new Rete.Output(key, title, socket)
     node.addOutput(output);
 
-    // set type definition to be read by any child elements
-    getOutputSchemas(node)[key] = property;
+    oMap.outputKey = key;  // set mapped output
+    oMap.schema = property;  // set type definition to be read by any child elements 
+    outputMaps.push(oMap);
   }
 
 
@@ -256,23 +282,16 @@ export class ComponentDynamic extends ComponentBase {
     let required: string[] = spec["required"] as string[] ?? [];
     let properties = getObject(spec["properties"]);
     if(!properties) return;
-      
+    
+    Data.getOutputMap(node);
+
     // loop properties
-    Object.entries(properties).forEach(([k, v]) => {
+    Object.entries(properties).forEach(([k, v], i) => {
       let property = getObject(v);
       if(property) {
 
-        // by default dont null output
-        let null_output = false;
-        if( !required.includes(k) ) {
-          // property not required - set to null if default is null or no default provided
-          // pydantic will not set a JSON "default" value if default "None" is provided, hence checking for default "undefined" 
-          null_output = property["default"] === null || property["default"] === undefined;
-          Data.getOutputNulls(node)[k] = null_output;
-        }
-
         // pass JSON property to be processed with output null to show/hide control
-        this.process_property(node, editor, k, property, null_output);
+        this.process_property(node, editor, k, property, i, required.includes(k));
       }
     });
   }

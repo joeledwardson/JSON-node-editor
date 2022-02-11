@@ -50,12 +50,7 @@ export function socketUpdate(node: Rete.Node, emitter: Rete.NodeEditor, newSocke
  *  loop outputs and set JSON specification for each output  
  */
 export const setAllOutputSchemas = (node: Rete.Node, spec: JSONObject) => {
-  Data.setOutputSchemas(
-    node, 
-    Object.fromEntries(
-      Object.values(node.outputs).map(o => [o.key, spec])
-    )
-  );
+  Data.getOutputMap(node).forEach(o => o.schema=spec);
 }
 
 
@@ -75,7 +70,7 @@ export function selectControlChange(
   if(newName in socketSchemas) {
     setAllOutputSchemas(node, socketSchemas[newName])
   } else {
-    Data.setOutputSchemas(node, {});
+    setAllOutputSchemas(node, {});
   }
 
   // update type select control with new selected socket name
@@ -204,7 +199,7 @@ export function getSpecMap(
   */
 export function resetTypes(node: Rete.Node, selectControl: ReactRete.ReteReactControl, editor: Rete.NodeEditor) {
   // clear output type definitions
-  Data.setOutputSchemas(node, {});
+  Data.getOutputMap(node).forEach(o => o.schema=null);
 
   // reset select type options to defaults
   selectControl.props.options = typeLabels();
