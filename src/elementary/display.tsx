@@ -3,7 +3,7 @@ import * as Display from "../display";
 import * as ReactRete from 'rete-react-render-plugin';
 import * as Data from '../data/attributes';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faTrash, faChevronUp, faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "react-bootstrap";
 
 export type ActionName = "add" | "remove" | "moveUp" | "moveDown";
@@ -33,12 +33,12 @@ export function getElementaryOutput<T extends ReactRete.NodeProps>(
         <div className="output-item-arrows">
           <div>
             <button onClick={() => exAction("moveUp")}>
-              <i className="fas fa-chevron-up fa-xs"></i>
+              <FontAwesomeIcon icon={faChevronUp} size="xs" />
             </button>
           </div>
           <div>
             <button onClick={() => exAction("moveDown")} >
-              <i className="fas fa-chevron-down fa-xs"></i>
+              <FontAwesomeIcon icon={faChevronDown} size="xs" />
             </button>
           </div>
         </div>
