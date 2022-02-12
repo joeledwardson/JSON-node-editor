@@ -120,7 +120,7 @@ export class InputSelect extends React.Component<SelectProps> {
     this.props.options.forEach(opt => {optionMap[opt.value] = opt});
     return (
       <Select 
-        className={getControlClasses(this.props.className)}
+        className={this.props.className} // dont apply width constrains to selects
         value={optionMap[this.props.value]}
         onChange={(newValue: {value: string, label: string}) => this.props.valueChanger(newValue.value)}
         options={this.props.options}
@@ -182,7 +182,7 @@ export class InputButton extends React.Component<ButtonProps, {clickCount: numbe
   render() {
     return (
       <Button
-         className={getControlClasses(this.props.className)}
+         className={this.props.className}  // dont apply width constraint to buttons
          disabled={this.props.display_disabled}
          onClick={() => this.onClick()}
       >{this.props.buttonInner}</Button>
