@@ -59,6 +59,7 @@ export var nodeConnectionFuns: {[key: string]: ConnectionFuncs} = {};
 /** get general attributes */
 export interface GeneralAttributes {
   outputTracker?: number
+  componentSchema?: JSONObject
 }
 export function getGeneralAttributes(node: Rete.Node): GeneralAttributes {
   return getDataAttribute<any>(node, "generalAttributes") as GeneralAttributes;
