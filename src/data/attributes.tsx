@@ -3,6 +3,8 @@ import { getDataAttribute, setDataAttribute } from "./access";
 import { JSONObject } from '../jsonschema';
 
 export interface OutputMap {
+  key?: string; // schema key
+
   nameKey?: string; // control key for additional property name
   nameValue?: string; // control value for additional property name
 

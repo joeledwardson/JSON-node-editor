@@ -2,6 +2,7 @@ import * as Rete from "rete";
 import * as Data from './data/attributes';
 import { sockets, addSocket, anySocket } from "./sockets/sockets";
 import * as BasicComponents from "./components/basic";
+import {ComponentBase} from "./components/ComponentBase";
 import { ComponentDict } from "./components/dictionary";
 import { ComponentList } from "./components/list";
 import { ComponentDynamic, addType } from './components/dynamic';
@@ -9,6 +10,7 @@ import { ReteReactComponent as ReteComponent } from "rete-react-render-plugin";
 import { getJSONSocket, getJSONSocket2, isObject, JSONObject, JSONValue } from "./jsonschema";
 import './styles.css';
 import { DisplayBase } from "./display";
+import { getConnectedData } from "./helpers";
 
 
 export function init(schema: JSONObject | null, editor: Rete.NodeEditor, engine: Rete.Engine) {
@@ -35,7 +37,7 @@ export function init(schema: JSONObject | null, editor: Rete.NodeEditor, engine:
   }
 
   // add root component
-  class RootComponent extends BasicComponents.ComponentBase {
+  class RootComponent extends ComponentBase {
     data = {component: DisplayBase}
     constructor() {
       super('root');
@@ -48,6 +50,13 @@ export function init(schema: JSONObject | null, editor: Rete.NodeEditor, engine:
         outputKey: "data",
         schema: schema
       })
+    }
+    getData(node: Rete.Node, editor: Rete.NodeEditor) {
+      if(node.outputs.get("data").hasConnection()) {
+        return getConnectedData(node.outputs.get("data"), editor);
+      } else {
+        return null;
+      }
     }
   }
   components.push(new RootComponent());
@@ -113,4 +122,17 @@ export function init(schema: JSONObject | null, editor: Rete.NodeEditor, engine:
     )
   );
 
+}
+
+
+
+export function getJSONData(editor: Rete.NodeEditor): JSONObject | null {
+  let rootNode = editor.nodes.find(n => n.name=="root")
+  if(rootNode) {
+    let rootComponent = editor.components.get("root") as ComponentBase; 
+    if(rootComponent.getData) {
+      return rootComponent.getData(rootNode, editor);
+    }
+  }
+  return null;        
 }

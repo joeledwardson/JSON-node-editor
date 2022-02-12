@@ -3,14 +3,14 @@ import * as MySocket from "../sockets/sockets";
 import * as Controls from  "../controls/controls";
 import { ReteReactControl as ReteControlBase } from "rete-react-render-plugin";
 import * as Data from "../data/attributes";
-import { ComponentBase } from './basic';
+import { ComponentBase } from "./ComponentBase";
 import { JSONObject, JSONValue } from "../jsonschema";
 import * as List from './list';
 import * as ENode from '../elementary/elementary';
 import * as EDisplay from '../elementary/display';
 import * as Display from '../display';
 import * as ReactRete from 'rete-react-render-plugin';
-import { getSelectedSocket, isInput } from "../helpers";
+import { getConnectedData, getSelectedSocket, isInput } from "../helpers";
 import { ControlSelect } from "../controls/controls";
 
 // name control handler
@@ -111,6 +111,17 @@ export class ComponentDict extends ComponentBase {
         ));
       }
     });
+  }
+  getData(node: Rete.Node, editor: Rete.NodeEditor) {
+    return Object.fromEntries(
+      Data.getOutputMap(node).map(o => {
+        let output = node.outputs.get(o.outputKey);
+        return [
+          o.nameValue,
+          output.hasConnection() ? getConnectedData(output, editor) : null
+        ];
+      })
+    );
   }
 }
 

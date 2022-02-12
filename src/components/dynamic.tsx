@@ -3,7 +3,8 @@ import * as MyControls from "../controls/controls";
 import { ReteReactControl as ReteControlBase } from "rete-react-render-plugin";
 import * as Display from '../display';
 import * as Data from "../data/attributes";
-import {  ComponentBase, TypeList } from "./basic";
+import {  TypeList } from "./basic";
+import { ComponentBase } from "./ComponentBase";
 import * as ReactRete from 'rete-react-render-plugin';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { ReteReactControl as ReteControl } from "rete-react-render-plugin";
@@ -12,6 +13,7 @@ import { Button } from "react-bootstrap";
 import { sockets } from "../sockets/sockets";
 import { JSONObject, JSONValue, getObject, getJSONSocket } from '../jsonschema';
 import { getUnmappedControls } from '../elementary/display';
+import { getConnectedData } from '../helpers';
 
 
 /** add custom type to valid type list */
@@ -188,8 +190,6 @@ export class ComponentDynamic extends ComponentBase {
 
   }
 
-
-
   /** create control */
   getControl(node: Rete.Node, oMap: Data.OutputMap, property: JSONObject, nulled: boolean, key: string, editor: Rete.NodeEditor) {
 
@@ -233,11 +233,13 @@ export class ComponentDynamic extends ComponentBase {
     if(property["const"]) {
       // if JSON property is a "const" then set value in node data but dont create output or control
       outputMaps.push({
-        dataKey: key,
+        key: key,
         dataValue: property["const"]
       })
       return;
     } 
+
+    oMap.key = key;
 
     // get control args with value and display disabled (common to all controls)
     let null_output = false;
@@ -282,8 +284,6 @@ export class ComponentDynamic extends ComponentBase {
     let required: string[] = spec["required"] as string[] ?? [];
     let properties = getObject(spec["properties"]);
     if(!properties) return;
-    
-    Data.getOutputMap(node);
 
     // loop properties
     Object.entries(properties).forEach(([k, v], i) => {
@@ -295,6 +295,27 @@ export class ComponentDynamic extends ComponentBase {
       }
     });
   }
+
+  getData(node: Rete.Node, editor: Rete.NodeEditor) {
+    return Object.fromEntries(
+      Data.getOutputMap(node).map(o => {
+        let output = node.outputs.get(o.outputKey);
+        let data = null;
+        if(output && output.hasConnection()) {
+          // use connection data if provided
+          data = getConnectedData(output, editor);
+        } else if(!o.isNulled) {
+          // if not nulled try to retrieve control value
+          data = o.dataValue ?? null;
+        }
+        return [
+          o.key,
+          data
+        ];
+      })
+    );
+  }
+  
 }
 
 const _default = {

@@ -1,5 +1,6 @@
 import * as Sockets from "./sockets/sockets";
 import * as Rete from 'rete';
+import { ComponentBase } from "./components/ComponentBase";
 
 /** get socket from selected name, else "any" socket */
 export function getSelectedSocket(selectedSocket: string) {
@@ -17,4 +18,10 @@ export function updateViewConnections(nodes: Rete.Node[], editor: Rete.NodeEdito
     nodes.forEach(n => editor?.view.updateConnections({node: n})),
     10
   );
+}
+
+export function getConnectedData(output: Rete.Output, editor: Rete.NodeEditor): any {
+  let otherNode = output.connections[0].input.node;
+  let otherComponent = editor.components.get(otherNode.name) as ComponentBase;
+  return otherComponent.getData(otherNode, editor);
 }

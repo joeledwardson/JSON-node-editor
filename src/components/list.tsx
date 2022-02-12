@@ -5,9 +5,9 @@ import * as ENode from '../elementary/elementary';
 import * as EDisplay from '../elementary/display';
 import * as Display from '../display';
 import * as ReactRete from 'rete-react-render-plugin';
-import {  ComponentBase } from './basic';
+import { ComponentBase } from "./ComponentBase";
 import { JSONObject, JSONValue } from "../jsonschema";
-import { getSelectedSocket, isInput, updateViewConnections } from "../helpers";
+import { getConnectedData, getSelectedSocket, isInput, updateViewConnections } from "../helpers";
 import XLSXColumn from 'xlsx-column';
 import { ControlSelect } from "../controls/controls";
 import { anySocket } from "../sockets/sockets";
@@ -195,6 +195,13 @@ export class ComponentList extends ComponentBase {
       if(o.outputKey) {
         node.addOutput(new Rete.Output(o.outputKey, o.outputKey, socket))
       }
+    });
+  }
+
+  getData(node: Rete.Node, editor: Rete.NodeEditor) {
+    return Data.getOutputMap(node).map(o => {
+      let output = node.outputs.get(o.outputKey);
+      return output.hasConnection() ? getConnectedData(output, editor) : null;
     });
   }
 }

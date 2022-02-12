@@ -134,14 +134,11 @@ export class ControlSelect extends ControlTemplate<string, SelectProps> {
 }
 
 
-type BoolKey = '' | 'True' | 'False';
+type BoolKey = 'True' | 'False';
 type BoolProps = InputProps<BoolKey>;
 function getSelectProps(props: BoolProps): SelectProps {
   return {...props, options: [
-    {
-      value: '', 
-      label: ' '
-    }, {
+   {
       value: 'False', 
       label: 'False'
     }, {
