@@ -1,4 +1,4 @@
-@import "../node_modules/bootstrap/scss/bootstrap.scss";
+@import "../../node_modules/bootstrap/scss/bootstrap.scss";
 
 .bold-input {
     font-size: large;
@@ -13,7 +13,21 @@
 
 }
 
+.dynamic-outputs-container {
+    display: grid;
+    grid-template-columns: repeat(5, auto);
+    align-items: center;
+    justify-items: center;
+    .control {
+        padding: 0;
+    }
+}
+
 .dynamic-outputs {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+
     .control {
         @extend .me-1;
         @extend .ms-1;
