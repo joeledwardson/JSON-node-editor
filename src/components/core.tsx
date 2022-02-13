@@ -3,18 +3,8 @@ import * as MySocket  from "../sockets/sockets";
 import * as Controls from  "../controls/controls";
 import { getControlsData, getOutputMap } from "../data/attributes";
 import * as Display from "../display";
-import { ComponentBase } from "./ComponentBase";
+import { BaseComponent } from "./base";
 
-
-/** list of available types */
-export let TypeList: Array<string> = [
-  "Text",
-  "Number",
-  "Boolean",
-  "Dictionary",
-  "List",
-  "None"
-]
 
 /** get control initial value from data, or use provided initial value */
 function getInitial(node: Rete.Node, key: string, defaultVal: any): any {
@@ -22,17 +12,17 @@ function getInitial(node: Rete.Node, key: string, defaultVal: any): any {
 }
 
 /**  Number component */ 
-export class ComponentNum extends ComponentBase {
+export class NumberComponent extends BaseComponent {
   data = {component: Display.DisplayBase}
   KEY = "Number Input"
   constructor() {
     super("Number");
   }
 
-  async _builder(node: Rete.Node, editor: Rete.NodeEditor) {
+  async internalBuilder(node: Rete.Node, editor: Rete.NodeEditor) {
     node
       .addInput(new Rete.Input("parent", "Parent", MySocket.numberSocket))
-      .addControl(new Controls.ControlNumber(this.KEY, editor, node, {
+      .addControl(new Controls.NumberControl(this.KEY, editor, node, {
         value: getInitial(node, this.KEY, 0)
       }))
   }
@@ -44,17 +34,17 @@ export class ComponentNum extends ComponentBase {
 
 
 /** Text Component */
-export class ComponentText extends ComponentBase {
+export class TextComponent extends BaseComponent {
   data = {component: Display.DisplayBase}
   KEY = "Text Input"
   constructor() {
     super("Text");
   }
 
-  async _builder(node: Rete.Node, editor: Rete.NodeEditor) {
+  async internalBuilder(node: Rete.Node, editor: Rete.NodeEditor) {
     node
       .addInput(new Rete.Input("parent", "Parent", MySocket.stringSocket))
-      .addControl(new Controls.ControlText(this.KEY, editor, node, {
+      .addControl(new Controls.TextControl(this.KEY, editor, node, {
         value: getInitial(node, this.KEY, "")
       }))
   }
@@ -66,17 +56,17 @@ export class ComponentText extends ComponentBase {
 
 
 /** Boolean Component */
-export class ComponentBool extends ComponentBase {
+export class BoolComponent extends BaseComponent {
   data = {component: Display.DisplayBase}
   KEY = "Boolean Input"
   constructor() {
     super("Boolean");
   }
 
-  async _builder(node: Rete.Node, editor: Rete.NodeEditor) {
+  async internalBuilder(node: Rete.Node, editor: Rete.NodeEditor) {
     node
       .addInput(new Rete.Input("parent", "Parent", MySocket.boolSocket))
-      .addControl(new Controls.ControlBool(this.KEY, editor, node, {
+      .addControl(new Controls.BoolControl(this.KEY, editor, node, {
         value: getInitial(node, this.KEY, 'False') // blank is option for nothing selection
       }));
   }
@@ -89,13 +79,13 @@ export class ComponentBool extends ComponentBase {
 
 
 /** Null Component */
-export class ComponentNull extends ComponentBase {
+export class NullComponent extends BaseComponent {
   data = {component: Display.DisplayBase}
   constructor() {
     super("Null");
   }
 
-  async _builder(node: Rete.Node, editor: Rete.NodeEditor): Promise<void> {
+  async internalBuilder(node: Rete.Node, editor: Rete.NodeEditor): Promise<void> {
     node.addInput(new Rete.Input("parent", "Parent", MySocket.nullSocket));
   }
 

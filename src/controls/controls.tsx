@@ -63,7 +63,7 @@ export abstract class ControlTemplate<T, P extends InputProps<T>> extends ReteCo
 
 /** input element only accepting numbers, when editing calls `props.valueChanger()` with the number in input */
 type NumberProps = InputProps<number>
-export class InputNumber extends React.Component<NumberProps> {
+export class NumberInput extends React.Component<NumberProps> {
   render() {
     return (
       <input 
@@ -76,14 +76,14 @@ export class InputNumber extends React.Component<NumberProps> {
     );
   }
 }
-export class ControlNumber extends ControlTemplate<number, NumberProps> {
-  component = InputNumber
+export class NumberControl extends ControlTemplate<number, NumberProps> {
+  component = NumberInput
 }
 
 
 /** autosizing textarea element, when editing calls `props.valueChanger()` with text in textarea element  */
 type TextProps = InputProps<string>
-export class InputText extends React.Component<TextProps> {
+export class TextInput extends React.Component<TextProps> {
   render() {
     return (
       <TextareaAutosize
@@ -98,8 +98,8 @@ export class InputText extends React.Component<TextProps> {
     );
   }
 }
-export class ControlText extends ControlTemplate<string, TextProps> {
-  component = InputText
+export class TextControl extends ControlTemplate<string, TextProps> {
+  component = TextInput
 }
 
 
@@ -114,7 +114,7 @@ export type OptionLabel = {
 export interface SelectProps extends InputProps<string> {
   options: Array<OptionLabel>
 }
-export class InputSelect extends React.Component<SelectProps> {
+export class SelectInput extends React.Component<SelectProps> {
   render() {
     var optionMap: {[key: string]: OptionLabel} = {};
     this.props.options.forEach(opt => {optionMap[opt.value] = opt});
@@ -129,8 +129,8 @@ export class InputSelect extends React.Component<SelectProps> {
     )
   }
 }
-export class ControlSelect extends ControlTemplate<string, SelectProps> {
-  component = InputSelect
+export class SelectControl extends ControlTemplate<string, SelectProps> {
+  component = SelectInput
 }
 
 
@@ -147,8 +147,8 @@ function getSelectProps(props: BoolProps): SelectProps {
     }
   ]}
 }
-export class ControlBool extends ControlTemplate<string, SelectProps> {
-  component = InputSelect
+export class BoolControl extends ControlTemplate<string, SelectProps> {
+  component = SelectInput
   constructor(key: string,  emitter: NodeEditor, node: Node, componentProps: BoolProps, dataHandler: DataHandler=ctrlValProcess) {
     super(key, emitter, node, getSelectProps(componentProps), dataHandler);
   }
@@ -190,7 +190,7 @@ export class InputButton extends React.Component<ButtonProps, {clickCount: numbe
   }
 }
 // rete control class for holding a button object
-export class ControlButton extends ControlTemplate<number, ButtonProps> {
+export class ButtonControl extends ControlTemplate<number, ButtonProps> {
   component = InputButton
 }
 
@@ -198,10 +198,10 @@ export class ControlButton extends ControlTemplate<number, ButtonProps> {
 
 const _default = {
   ControlBase: ReteControlBase,
-  ControlNumber,
-  ControlText,
-  ControlBool,
-  ControlSelect,
-  ControlButton,
+  NumberControl,
+  TextControl,
+  BoolControl,
+  SelectControl,
+  ButtonControl,
 };
 export default _default;

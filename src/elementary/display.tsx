@@ -25,7 +25,7 @@ export function getElementaryOutput<T extends ReactRete.NodeProps>(
 ): JSX.Element {
   let oMap = Data.getOutputMap(props.node)[index];
   let output = props.node.outputs.get(oMap.outputKey);
-  let control = props.node.controls.get(oMap.nameKey);
+  let control = props.node.controls.get(oMap.nameControl);
   const exAction = (name: ActionName) => actions[name](props.node, props.editor, index); 
   return <div className="output" key={output.key}>
     <div className="output-title hidden-node-item">
@@ -60,7 +60,7 @@ export function getElementaryOutput<T extends ReactRete.NodeProps>(
 export function getUnmappedControls(node: Rete.Node): Rete.Control[] {  
   let outputMaps = Data.getOutputMap(node);
   return Array.from(node.controls.values()) 
-  .filter(ctrl => !outputMaps.find(o => o.dataKey == ctrl.key || o.nameKey == ctrl.key));
+  .filter(ctrl => !outputMaps.find(o => o.dataControl == ctrl.key || o.nameControl == ctrl.key));
 }
 
 

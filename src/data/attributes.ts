@@ -1,23 +1,27 @@
 import * as Rete from 'rete';
 import { getDataAttribute, setDataAttribute } from "./access";
-import { JSONObject } from '../jsonschema';
+import { JSONObject, JSONValue } from '../jsonschema';
 
 export interface OutputMap {
-  key?: string; // schema key
+  hide?: boolean; // dont display anything
 
-  nameKey?: string; // control key for additional property name
-  nameValue?: string; // control value for additional property name
+  nameControl?: string; // control key for property name
+  nameValue?: string; // value of property name (used as key for getting JSON data)
+  nameDisplay?: string; // formatted version of property name (e.g. "a_test" would be displayed as "A Test")
+  nameFixed?: boolean; // name can be edited
 
-  dataKey?: string;  // control key for data 
+  dataControl?: string;  // control key for data 
   dataValue?: any;  // control value for data
   
-  selectKey?: any;  // control key for type select
+  selectControl?: any;  // control key for type select
   selectValue?: string;  // control value for type select
   
   outputKey?: string; // key for output
+  outputSchema?: JSONObject;  // schema read from output connection
+
+
   nullable?: boolean; // true if output can be nulled
   isNulled?: boolean;  // true if output nulled
-  schema?: JSONObject;  // schema read by connection
 }
 
 export function getOutputMap(node: Rete.Node): Array<OutputMap> {
@@ -59,7 +63,7 @@ export var nodeConnectionFuns: {[key: string]: ConnectionFuncs} = {};
 /** get general attributes */
 export interface GeneralAttributes {
   outputTracker?: number
-  componentSchema?: JSONObject
+  componentSchema?: JSONValue
 }
 export function getGeneralAttributes(node: Rete.Node): GeneralAttributes {
   return getDataAttribute<any>(node, "generalAttributes") as GeneralAttributes;

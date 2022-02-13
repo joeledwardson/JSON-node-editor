@@ -1,54 +1,59 @@
 import * as Rete from "rete";
 import * as Data from './data/attributes';
 import { sockets, addSocket, anySocket } from "./sockets/sockets";
-import * as BasicComponents from "./components/basic";
-import {ComponentBase} from "./components/ComponentBase";
-import { ComponentDict } from "./components/dictionary";
-import { ComponentList } from "./components/list";
-import { ComponentDynamic, addType } from './components/dynamic';
+import * as BasicComponents from "./components/core";
+import {BaseComponent, componentsList} from "./components/base";
+// import { ComponentDict } from "./components/dictionary";
+import { ListComponent } from "./components/list";
+// import { ComponentDynamic, addType } from './components/dynamic';
 import { ReteReactComponent as ReteComponent } from "rete-react-render-plugin";
-import { getJSONSocket, getJSONSocket2, isObject, JSONObject, JSONValue } from "./jsonschema";
+import { getJSONSocket, isObject, JSONObject, JSONValue } from "./jsonschema";
 import './styles.css';
 import { DisplayBase } from "./display";
 import { getConnectedData } from "./helpers";
+import { DynamicComponent, ObjectComponent } from "./components/object";
+
+
+const addType = (newType: string) => componentsList.push(newType);
 
 
 export function init(schema: JSONObject | null, editor: Rete.NodeEditor, engine: Rete.Engine) {
   
   // create stock components
   var components: Array<ReteComponent> = [
-    new BasicComponents.ComponentNum(), 
-    new BasicComponents.ComponentText(),
-    new BasicComponents.ComponentBool(),
-    new BasicComponents.ComponentNull(),
-    new ComponentList(),
-    new ComponentDict(),
+    new BasicComponents.NumberComponent(), 
+    new BasicComponents.TextComponent(),
+    new BasicComponents.BoolComponent(),
+    new BasicComponents.NullComponent(),
+    new ListComponent(),
+    new ObjectComponent()
+    // new ComponentDict(),
   ];
 
   if(schema) {
     // add to socket and type lists for each schema definition
+    // n.b. this must be done before comopnent creation so that they dont try to access each others sockets before creation!
     Object.keys(schema).forEach(key => {
       addSocket(key);
-      addType(key);
     });
 
     // create dynamic components for each schema definition
-    Object.entries(schema).forEach(([key, spec]) => components.push(new ComponentDynamic(key, spec)));    
+    Object.entries(schema).forEach(([key, spec]) => components.push(new DynamicComponent(key, spec)));
   }
 
   // add root component
-  class RootComponent extends ComponentBase {
+  class RootComponent extends BaseComponent {
     data = {component: DisplayBase}
     constructor() {
       super('root');
     }
-    _builder(node: Rete.Node, editor: Rete.NodeEditor) {
+    internalBuilder(node: Rete.Node, editor: Rete.NodeEditor) {
       let socket = getJSONSocket(schema);
       node.addOutput(new Rete.Output("data", "Data", socket));
       // set type definition to be read by any child elements
       Data.getOutputMap(node).push({
         outputKey: "data",
-        schema: schema
+        outputSchema: schema
       })
     }
     getData(node: Rete.Node, editor: Rete.NodeEditor) {
@@ -129,7 +134,7 @@ export function init(schema: JSONObject | null, editor: Rete.NodeEditor, engine:
 export function getJSONData(editor: Rete.NodeEditor): JSONObject | null {
   let rootNode = editor.nodes.find(n => n.name=="root")
   if(rootNode) {
-    let rootComponent = editor.components.get("root") as ComponentBase; 
+    let rootComponent = editor.components.get("root") as BaseComponent; 
     if(rootComponent.getData) {
       return rootComponent.getData(rootNode, editor);
     }

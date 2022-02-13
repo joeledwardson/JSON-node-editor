@@ -60,19 +60,29 @@ export function multiSocket(typs: string[], key?: string, colour?: string): Sock
   let socketName: string = key ?? getTypeString(typs);
   const socket = sockets.get(socketName)?.socket;
 
-  if (!socket) {
-    for (const t of typs) {
-      // take the first valid socket to use as the colour
-      if (colour) break;
-      colour = sockets.get(t)?.colour;
+  // loop types and check a valid socket exists
+  let compatible: Array<SocketHolder> = [];
+  for(const t of typs) {
+    let s = sockets.get(t);
+    if(s) {
+      compatible.push(s);
+    } else {
+      throw new Error(`cannot create multisocket, socket "${t}" does not exist!`);
     }
+  }
+
+  if (!socket) {
+    if(!colour) {
+      for (const s of compatible) {
+        // take the first valid socket to use as the colour
+        colour = s.colour;
+        break;
+      }
+    }
+
+    // generate new socket - if still no colour, one will be generated
     const newSocket = addSocket(socketName, colour).socket;
-    typs.forEach(t => {
-      let s = sockets.get(t)?.socket;
-      s && newSocket.combineWith(s);
-      if (!s)
-        throw new Error(`multi-socket type "${t}" not recognised`);
-    });
+    compatible.forEach(s => newSocket.combineWith(s.socket));
     return newSocket;
   } else {
     return socket;
@@ -82,6 +92,7 @@ export function multiSocket(typs: string[], key?: string, colour?: string): Sock
 var anyHolder = addSocket("Any");
 var listHolder = addSocket("List");
 var dictHolder = addSocket("Dictionary");
+var objHolder = addSocket("Object");
 
 export var numberSocket: Socket = addSocket("Number").socket;
 export var stringSocket: Socket = addSocket("Text").socket;
@@ -89,11 +100,13 @@ export var boolSocket: Socket = addSocket("Boolean").socket;
 export var nullSocket: Socket = addSocket("None").socket;
 export var listSocket: Socket = listHolder.socket;
 export var dictSocket: Socket = dictHolder.socket;
+export var objectSocket: Socket = objHolder.socket;
 export var anySocket = anyHolder.socket;
 
 export var dictColour: string = dictHolder.colour;
 export var listColour: string = listHolder.colour;
 export var anyColour: string = anyHolder.colour;
+export var objColour: string = objHolder.colour;
 
 
 // export default {

@@ -2,11 +2,11 @@ import * as Rete from "rete";
 import * as MySocket from "../sockets/sockets";
 import * as Controls from  "../controls/controls";
 import * as Data from "../data/attributes";
-import { TypeList } from '../components/basic';
 import * as ReactRete from 'rete-react-render-plugin';
 import { getJSONSocket, getObject, isObject, JSONObject, JSONValue } from "../jsonschema";
 import { getSelectedSocket } from '../helpers';
 import { ActionProcess, ActionName } from "./display";
+import { componentsList } from "../components/base";
 
 
 /** 
@@ -16,7 +16,7 @@ export function typeLabels(): Array<Controls.OptionLabel> {
   return [{
     label: "",
     value: ""
-  }].concat(TypeList.map(v => ({
+  }].concat(componentsList.map(v => ({
     label: v,
     value: v
   })));
@@ -50,7 +50,7 @@ export function socketUpdate(node: Rete.Node, emitter: Rete.NodeEditor, newSocke
  *  loop outputs and set JSON specification for each output  
  */
 export const setAllOutputSchemas = (node: Rete.Node, spec: JSONObject) => {
-  Data.getOutputMap(node).forEach(o => o.schema=spec);
+  Data.getOutputMap(node).forEach(o => o.outputSchema=spec);
 }
 
 
@@ -92,7 +92,7 @@ export function selectControlChange(
  * Build type selection control
  * on change, gets selected socket from type selection control (if data passed on creation else "any" socket) 
  * */
-export function buildSelectControl(node: Rete.Node, editor: Rete.NodeEditor, selectTypeKey: string): Controls.ControlSelect {
+export function buildSelectControl(node: Rete.Node, editor: Rete.NodeEditor, selectTypeKey: string): Controls.SelectControl {
   // get controls data
   let ctrlData = Data.getControlsData(node);
   
@@ -100,7 +100,7 @@ export function buildSelectControl(node: Rete.Node, editor: Rete.NodeEditor, sel
   let socket = getSelectedSocket(ctrlData[selectTypeKey]);
 
   // create select control using type labels as selections and selected type socket name as initial value
-  return new Controls.ControlSelect(selectTypeKey, editor, node, {
+  return new Controls.SelectControl(selectTypeKey, editor, node, {
     value: socket.name, 
     options: typeLabels(), 
   }, (ctrl: ReactRete.ReteReactControl, emitter: Rete.NodeEditor, key: string, data: any) => {
@@ -112,10 +112,10 @@ export function buildSelectControl(node: Rete.Node, editor: Rete.NodeEditor, sel
 /**
  * Build add element button
  */
-export function buildAddButton(node: Rete.Node, editor: Rete.NodeEditor, addAction: ActionProcess): Controls.ControlButton {
+export function buildAddButton(node: Rete.Node, editor: Rete.NodeEditor, addAction: ActionProcess): Controls.ButtonControl {
   // button to add output to end of output list
   let addButtonAction = () => addAction(node, editor, node.outputs.size); 
-  return new Controls.ControlButton("Add Item", editor, node, {
+  return new Controls.ButtonControl("Add Item", editor, node, {
     value: 0, // value is press count
     buttonInner: "Add Item +", 
   }, addButtonAction);
@@ -199,7 +199,7 @@ export function getSpecMap(
   */
 export function resetTypes(node: Rete.Node, selectControl: ReactRete.ReteReactControl, editor: Rete.NodeEditor) {
   // clear output type definitions
-  Data.getOutputMap(node).forEach(o => o.schema=null);
+  Data.getOutputMap(node).forEach(o => o.outputSchema=null);
 
   // reset select type options to defaults
   selectControl.props.options = typeLabels();

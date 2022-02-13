@@ -5,11 +5,11 @@ import * as ENode from '../elementary/elementary';
 import * as EDisplay from '../elementary/display';
 import * as Display from '../display';
 import * as ReactRete from 'rete-react-render-plugin';
-import { ComponentBase } from "./ComponentBase";
+import { BaseComponent } from "./base";
 import { JSONObject, JSONValue } from "../jsonschema";
 import { getConnectedData, getSelectedSocket, isInput, updateViewConnections } from "../helpers";
 import XLSXColumn from 'xlsx-column';
-import { ControlSelect } from "../controls/controls";
+import { SelectControl } from "../controls/controls";
 import { anySocket } from "../sockets/sockets";
 
 
@@ -109,7 +109,7 @@ export function elementRemove(node: Rete.Node, editor: Rete.NodeEditor, idx: num
 
 export function elementUp(node: Rete.Node, editor: Rete.NodeEditor, idx: number) {
   let outputMaps = Data.getOutputMap(node);
-  if(!( idx > 0 && idx < outputMaps.length )) {
+  if(!(idx > 0 && idx < outputMaps.length && !outputMaps[idx-1].nameFixed)) {
     editor.trigger("error", {message: `cant move output index up "${idx}"`});
     return;
   }
@@ -132,7 +132,7 @@ export function elementUp(node: Rete.Node, editor: Rete.NodeEditor, idx: number)
 
 export function elementDown(node: Rete.Node, editor: Rete.NodeEditor, idx: number) {
   let outputMaps = Data.getOutputMap(node);
-  if(!( idx >= 0 && (idx + 1) < outputMaps.length )) {
+  if(!(idx >= 0 && (idx + 1) < outputMaps.length)) {
     editor.trigger("error", {message: `cant move output index down "${idx}"`});
     return;
   } 
@@ -174,13 +174,13 @@ class DisplayList extends ReactRete.Node {
 }
 
 
-export class ComponentList extends ComponentBase {
+export class ListComponent extends BaseComponent {
   data = {component: DisplayList}
   constructor() {
     super('List');
   }
   
-  _builder(node: Rete.Node, editor: Rete.NodeEditor) {
+  internalBuilder(node: Rete.Node, editor: Rete.NodeEditor) {
     // build node with list action to add and list socket
     let socket = MySocket.listSocket;
     let selectControl = ENode.buildSelectControl(node, editor, LIST_SELECT_KEY);
@@ -217,7 +217,7 @@ Data.nodeConnectionFuns["List"] = {
 
     // get schema map from connected node and index to output
     let output = connection.output;
-    let schema = Data.getOutputMap(output.node).find(o => o.outputKey==output.key)?.schema;
+    let schema = Data.getOutputMap(output.node).find(o => o.outputKey==output.key)?.outputSchema;
     
     // retrieve socket name to schema map from connection schemas
     let socketSchemas = ENode.getSpecMap(schema, 
@@ -232,7 +232,7 @@ Data.nodeConnectionFuns["List"] = {
     );
     Data.setSocketSchemas(node, socketSchemas);  // set socket name => schemas map for type selection
     let socketKeys = Object.keys(socketSchemas);  // get socket names from schema map keys   
-    let selectControl = node.controls.get(LIST_SELECT_KEY) as ControlSelect;   // get select control
+    let selectControl = node.controls.get(LIST_SELECT_KEY) as SelectControl;   // get select control
     
     if(selectControl) {
       // set type select to each of the socket names
@@ -247,7 +247,7 @@ Data.nodeConnectionFuns["List"] = {
     if(validateConnection(connection, isInput)) {
       // on connection remove, reset control type selection to default list
       let node = connection.input.node;
-      let selectControl = node.controls.get(LIST_SELECT_KEY) as ControlSelect;
+      let selectControl = node.controls.get(LIST_SELECT_KEY) as SelectControl;
       if(selectControl) {
         ENode.resetTypes(node, selectControl, editor);
       }
