@@ -133,6 +133,7 @@ class ObjectDisplay extends ReactRete.Node {
     // update node and connections
     this.props.node.update();
     this.props.editor.view.updateConnections({node: this.props.node});
+    this.props.editor.trigger('process');
   }
 
   getOutput<T extends ReactRete.NodeProps>(
@@ -356,13 +357,19 @@ export class ObjectComponent extends BaseComponent {
   }
 
   getData(node: Rete.Node, editor: Rete.NodeEditor) {
+    const getValue = (oMap: Data.OutputMap, output: Rete.Output) => {
+      if(output.hasConnection()) {
+        return getConnectedData(output, editor);
+      } else {
+        if(oMap.isNulled) return null;
+        else if(oMap.dataValue !== undefined) return oMap.dataValue;
+        else return null;
+      }
+    }
     return Object.fromEntries(
       Data.getOutputMap(node).map(o => {
         let output = node.outputs.get(o.outputKey);
-        return [
-          o.nameValue,
-          output.hasConnection() ? getConnectedData(output, editor) : null
-        ];
+        return [o.nameValue, getValue(o, output)];
       })
     );
   }
