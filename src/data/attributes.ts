@@ -19,9 +19,10 @@ export interface OutputMap {
   outputKey?: string; // key for output
   outputSchema?: JSONObject;  // schema read from output connection
 
-
   nullable?: boolean; // true if output can be nulled
   isNulled?: boolean;  // true if output nulled
+
+  canMove?: boolean;
 }
 
 export function getOutputMap(node: Rete.Node): Array<OutputMap> {
