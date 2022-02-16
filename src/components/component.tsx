@@ -2,9 +2,8 @@ import * as Rete from "rete";
 import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
 import * as Sockets from "../sockets/sockets";
 import * as Controls from "../controls/controls";
-import { ReteReactControl as ReteControlBase } from "rete-react-render-plugin";
+import { ReteReactControl as ReteControlBase, ReteReactComponent as ReteComponent } from "rete-react-render-plugin"; } from "rete-react-render-plugin";
 import * as Data from "../data/attributes";
-import { BaseComponent } from "./base";
 import { getJSONSocket, getObject, JSONObject, JSONValue } from "../jsonschema";
 import { ReteReactControl as ReteControl } from "rete-react-render-plugin";
 import * as Display from "../display";
@@ -497,19 +496,24 @@ const getNameHandler = (oMap: Data.DataMap) => _getControlHandler(
 );
 
 
-export class MyComponent extends BaseComponent {
+/** list of available types */
+export let componentsList: Array<string> = [];
+
+
+export class MyComponent extends ReteComponent {
   data = {component: DynamicDisplay}
   schema: JSONObject;
   socket: Rete.Socket;
   constructor(name: string, schema: JSONObject, socket: Rete.Socket) {
     super(name);
+    componentsList.push(name);
     this.schema = schema;
     this.socket = socket;
   }
   builder(node: Rete.Node): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       if (this.editor) {
-        this.internalBuilder(node);
+        this.internalBuilder(node, this.editor);
         resolve();
       } else {
         reject(`this.editor is not available`);
@@ -517,7 +521,7 @@ export class MyComponent extends BaseComponent {
     });
   }
   worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void { }
-  internalBuilder(node: Rete.Node): void {
+  internalBuilder(node: Rete.Node, editor: Rete.NodeEditor): void {
     node.addInput(new Rete.Input("parent", "Parent", this.socket));
     let outputMaps = Data.getOutputMap(node);
     let typ = this.schema.type as string;
@@ -538,6 +542,8 @@ export class MyComponent extends BaseComponent {
 
        }
        createMapItems(node, firstMap, this.editor);
+    } else if(typ === "array") {
+            
     }
   }
 

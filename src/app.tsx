@@ -1,17 +1,11 @@
 import * as Rete from "rete";
 import * as Data from './data/attributes';
 import { sockets, addSocket, anySocket, stringSocket } from "./sockets/sockets";
-import * as BasicComponents from "./components/core";
-import {BaseComponent, componentsList} from "./components/base";
-// import { ComponentDict } from "./components/dictionary";
-import { ListComponent } from "./components/list";
-// import { ComponentDynamic, addType } from './components/dynamic';
 import { ReteReactComponent as ReteComponent } from "rete-react-render-plugin";
 import { getJSONSocket, isObject, JSONObject, JSONValue } from "./jsonschema";
 import './styles.css';
 import { DisplayBase } from "./display";
 import { getConnectedData } from "./helpers";
-import { DynamicComponent, ObjectComponent } from "./components/object";
 import { MyComponent } from './components/component';
 
 
