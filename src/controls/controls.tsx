@@ -107,11 +107,11 @@ export class TextControl extends ControlTemplate<string, TextProps> {
 /** select input where the options are passed in the constructor - on select change calls `props.valueChanger()` with key of option selected */
 /** value & label pairs displayed in select options */
 export type OptionLabel = {
-  label: string, 
-  value: string
+  label: any, 
+  value: any
 }
 /** select element props also include options to display */
-export interface SelectProps extends InputProps<string> {
+export interface SelectProps extends InputProps<any> {
   options: Array<OptionLabel>
 }
 export class SelectInput extends React.Component<SelectProps> {
@@ -122,7 +122,7 @@ export class SelectInput extends React.Component<SelectProps> {
       <Select 
         className={this.props.className} // dont apply width constrains to selects
         value={optionMap[this.props.value]}
-        onChange={(newValue: {value: string, label: string}) => this.props.valueChanger(newValue.value)}
+        onChange={(newValue: {value: any, label: any}) => this.props.valueChanger(newValue.value)}
         options={this.props.options}
         isDisabled={this.props.display_disabled}
       />
@@ -134,15 +134,14 @@ export class SelectControl extends ControlTemplate<string, SelectProps> {
 }
 
 
-type BoolKey = 'True' | 'False';
-type BoolProps = InputProps<BoolKey>;
+type BoolProps = InputProps<boolean>;
 function getSelectProps(props: BoolProps): SelectProps {
   return {...props, options: [
    {
-      value: 'False', 
+      value: false, 
       label: 'False'
     }, {
-      value: 'True', 
+      value: true, 
       label: 'True'
     }
   ]}
@@ -185,6 +184,7 @@ export class InputButton extends React.Component<ButtonProps, {clickCount: numbe
          className={this.props.className}  // dont apply width constraint to buttons
          disabled={this.props.display_disabled}
          onClick={() => this.onClick()}
+         size="sm"
       >{this.props.buttonInner}</Button>
     );
   }

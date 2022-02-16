@@ -12,6 +12,8 @@ export interface CoreMap {
 
 export interface ElementaryMap extends CoreMap {
   canMove?: boolean;  // dynamic output that can move up and down
+  nameFixed?: boolean; // use fixed name
+  nameDisplay?: string; // fixed name
   outputKey?: string; // key for output
   outputSchema?: JSONObject;  // schema read from output connection
   selectControl?: any;  // control key for type select
@@ -19,23 +21,23 @@ export interface ElementaryMap extends CoreMap {
 }
 
 export interface ObjectMap extends ElementaryMap {
-  nameFixed?: boolean; // name can be edited
   nameValue?: string; // value of property name (used as key for getting JSON data)
-  
-  // ** fixed parameters
   nullable?: boolean; // true if output can be nulled
-  isNulled?: boolean;  // true if output nulled
+  isNulled?: boolean;  
 
   // ** dynamic (non-fixed) parameters
   nameControl?: string; // control key for property name
-  nameDisplay?: string; // formatted version of property name (e.g. "a_test" would be displayed as "A Test")
 }
+
 export interface DataMap extends ObjectMap {};
 
 
 
 export function getOutputMap(node: Rete.Node): Array<DataMap> {
   return getDataAttribute<Array<DataMap>>(node, "nodeMap", ()=>[]);
+}
+export function setOutputMap(node: Rete.Node, outputMaps: Array<DataMap>): void {
+  return setDataAttribute(node, "nodeMap", outputMaps);
 }
 
 /** get controls data from node object */

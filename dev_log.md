@@ -86,3 +86,20 @@ Notes:
 Future
 
 - support components defined as `anyOf` or `oneOf`
+
+## 16/02/22
+
+So how to resolve `const`?
+
+If a property is a const then it shouldnt really have a socket as it will always be constant
+
+The only problem with this is if you have named references with const? This shouldnt be a problem if named references take priority over getting socket name from the schema definition
+
+Still outstanding
+
+- [x] Copy data from objects across
+- [ ] make type selection work to create data entry controls
+- [ ] Allow named components
+- [ ] schema update on connection
+- [ ] lists with named tuples
+
