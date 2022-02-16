@@ -221,7 +221,7 @@ class ObjectDisplay extends ReactRete.Node {
 
 
 // name control handler
-const getNameHandler: (oMap: Data.OutputMap) => Controls.DataHandler = (oMap: Data.OutputMap) => {
+const getNameHandler: (oMap: Data.ObjectMap) => Controls.DataHandler = (oMap: Data.ObjectMap) => {
   return (ctrl: ReteControlBase, emitter: Rete.NodeEditor, key: string, data: any) => {
     ctrl.props.value = data;
     oMap.nameValue = data; // set stored value
@@ -240,11 +240,11 @@ export class ObjectComponent extends BaseComponent {
 
 
   /** create control */
-  getControl(node: Rete.Node, oMap: Data.OutputMap, property: JSONObject, key: string, editor: Rete.NodeEditor) {
+  getControl(node: Rete.Node, oMap: Data.ObjectMap, property: JSONObject, key: string, editor: Rete.NodeEditor) {
 
     /** get control initial value
      * try node data, then JSON default then user default */
-    const getValue = (oMap: Data.OutputMap, property: JSONObject, usr_default: any) => {
+    const getValue = (oMap: Data.ObjectMap, property: JSONObject, usr_default: any) => {
       return oMap.dataValue ?? property["default"] ?? usr_default;
     }
 
@@ -277,7 +277,7 @@ export class ObjectComponent extends BaseComponent {
    */
   process_property(node: Rete.Node, editor: Rete.NodeEditor, key: string, property: JSONObject, index: number, required: boolean): void {
     let outputMaps = Data.getOutputMap(node);
-    let oMap: Data.OutputMap = outputMaps[index] ?? {};
+    let oMap: Data.ObjectMap = outputMaps[index] ?? {};
     oMap.nameValue = key;
     oMap.nameFixed = true;
 
@@ -357,7 +357,7 @@ export class ObjectComponent extends BaseComponent {
   }
 
   getData(node: Rete.Node, editor: Rete.NodeEditor) {
-    const getValue = (oMap: Data.OutputMap, output: Rete.Output) => {
+    const getValue = (oMap: Data.ObjectMap, output: Rete.Output) => {
       if(output.hasConnection()) {
         return getConnectedData(output, editor);
       } else {
@@ -383,7 +383,7 @@ export class DynamicComponent extends ObjectComponent {
     this.schema = schema;
   }
   internalBuilder(node: Rete.Node, editor: Rete.NodeEditor) {
-    Data.getGeneralAttributes(node).componentSchema = this.schema;
+    Data.getGeneralAttributes(node).componentSchema = getObject(this.schema) ?? {};
     super.internalBuilder(node, editor);
   }
 }

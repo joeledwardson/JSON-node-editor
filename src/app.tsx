@@ -1,6 +1,6 @@
 import * as Rete from "rete";
 import * as Data from './data/attributes';
-import { sockets, addSocket, anySocket } from "./sockets/sockets";
+import { sockets, addSocket, anySocket, stringSocket } from "./sockets/sockets";
 import * as BasicComponents from "./components/core";
 import {BaseComponent, componentsList} from "./components/base";
 // import { ComponentDict } from "./components/dictionary";
@@ -12,6 +12,7 @@ import './styles.css';
 import { DisplayBase } from "./display";
 import { getConnectedData } from "./helpers";
 import { DynamicComponent, ObjectComponent } from "./components/object";
+import { MyComponent } from './components/component';
 
 
 const addType = (newType: string) => componentsList.push(newType);
@@ -65,6 +66,7 @@ export function init(schema: JSONObject | null, editor: Rete.NodeEditor, engine:
     }
   }
   components.push(new RootComponent());
+  components.push(new MyComponent("My String", {type: "string"}, stringSocket));
 
   // combine each socket with the "any" socket
   sockets.forEach(s => anySocket.combineWith(s.socket));

@@ -5,52 +5,17 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch webpack",
+            "name": "dev",
             "request": "launch",
             "runtimeArgs": [
                 "run",
-                "webpack-serve"
+                "dev"
             ],
             "runtimeExecutable": "npm",
             "skipFiles": [
                 "<node_internals>/**"
             ],
             "type": "pwa-node"
-        },
-        {
-            "name": "Launch Schema Script",
-            "program": "${workspaceFolder}/scripts/schema-test.js",
-            "request": "launch",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "type": "pwa-node"
-        },
-        {
-            "name": "Launch Test Script",
-            "program": "${workspaceFolder}/scripts/ts-test.ts",
-            "request": "launch",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "type": "pwa-node",
-            "preLaunchTask": "tsc: build - tsconfig.json",
-            "outFiles": ["${workspaceFolder}/out/**/*.js"]
-        },
-        {
-            "name": "Launch Chrome against localhost",
-            "type": "pwa-chrome",
-            "request": "launch",
-            "url": "http://localhost:9000",
-            "webRoot": "${workspaceFolder}"
-        },
-        {
-            "name": "Chrome Viewer",
-            "type": "pwa-chrome",
-            "request": "launch",
-            "url": "http://localhost:9000",
-            "webRoot": "${workspaceRoot}",
-            "preLaunchTask": "start"
-        },
+        }
     ]
 }

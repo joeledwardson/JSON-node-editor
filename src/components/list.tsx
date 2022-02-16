@@ -21,7 +21,7 @@ import { anySocket } from "../sockets/sockets";
  * - {output: control} key mappings from `getOutputControls()` function is used to track order of outputs but the `control` values are effectively ignored 
  * - getGeneralAttributes().outputTracker is used to track the total number of outputs added over time to create new names
 */
-export function elementAdd(node: Rete.Node, editor: Rete.NodeEditor, idx: number, typeSelectKey: string): Data.OutputMap {
+export function elementAdd(node: Rete.Node, editor: Rete.NodeEditor, idx: number, typeSelectKey: string): Data.ObjectMap {
   // get selected type from type selection control
   const selectedType = Data.getControlsData(node)[typeSelectKey];
   let socket = getSelectedSocket(selectedType);

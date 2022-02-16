@@ -68,11 +68,21 @@ So... the steps are:
 Ok... what about?
 
 1. Resolve external schemas
-
 2. enter custom key to denote defs, e.g. for each `#def` could add a key `defIdentifier` to indicate it is a named definition - looks like `json-schema-ref-parser` retains custom keys
-
 3. resolve schema refs
-
    1. when having type selection in Object/Array nodes can use the selection name/socket as `defIdentifier` but use the `type` for control selection
 
-      
+Plan
+
+- Make generic component whose composition is entirely defined by schema - will create stock components for each type e.g. `{type: string}` and named components
+
+Notes:
+
+- can remove `outputTracker` from list in future and just use output map (**nope**)
+- could split output map into different interfaces that combine together for basic components / list / object
+
+
+
+Future
+
+- support components defined as `anyOf` or `oneOf`
