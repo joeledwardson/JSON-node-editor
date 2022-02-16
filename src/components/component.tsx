@@ -85,10 +85,13 @@ function setElementaryMap(oMap: Data.ElementaryMap, coreName: string, canMove: b
   oMap.canMove = canMove;
   oMap.nameFixed = nameFixed;
   oMap.outputKey = `${coreName} output`;
+  if(oMap.schema) {
+    
+  }
 }
 
 
-function setFixedObjectMap(oMap: Data.DataMap, key: string, property: JSONObject, required: JSONValue[]) {
+function setFixedObjectMap(oMap: Data.DataMap, key: string, required: JSONValue[]) {
   oMap.nameValue = key;
   // get control args with value and display disabled (common to all controls)
   oMap.isNulled = false;
@@ -98,10 +101,10 @@ function setFixedObjectMap(oMap: Data.DataMap, key: string, property: JSONObject
     oMap.nullable = true;
     // property not required - set to null if default is null or no default provided
     // pydantic will not set a JSON "default" value if default "None" is provided, hence checking for default "undefined" 
-    oMap.isNulled = property["default"] === null || property["default"] === undefined;
+    oMap.isNulled = (oMap.schema && oMap.schema["default"] === null) || (oMap.schema && oMap.schema["default"] === undefined);
   }
 
-  let title = property["title"] ? String(property["title"]) : key;
+  let title = (oMap.schema && oMap.schema["title"]) ? String(oMap.schema["title"]) : key;
   oMap.nameDisplay = title;   
 }
 
@@ -601,7 +604,7 @@ export class MyComponent extends BaseComponent {
         }
         setCoreMap(oMap, coreName, objProperty);
         setElementaryMap(oMap, coreName, false, true);
-        setFixedObjectMap(oMap, key, objProperty, required);
+        setFixedObjectMap(oMap, key, required);
         newMaps.push(oMap);
       });
 

@@ -104,8 +104,8 @@ export var objectSocket: Socket = objHolder.socket;
 export var anySocket = anyHolder.socket;
 
 export var listColour: string = listHolder.colour;
-export var anyColour: string = anyHolder.colour;
 export var objColour: string = objHolder.colour;
+export var anyColour: string = anyHolder.colour;
 
 
 // export default {

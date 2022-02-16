@@ -39,6 +39,9 @@ export function getJSONSocket(property: JSONValue, getInner: boolean = true): Re
   if(property["const"]) {
     return null;
   }
+  if(typeof property["refIdentifier"] === "string") {
+    return Sockets.sockets.get(property["refIdentifier"])?.socket;
+  }
 
 
   // read JSON schema definitions
