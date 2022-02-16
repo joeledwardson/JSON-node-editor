@@ -1,14 +1,11 @@
 import * as Rete from "rete";
-import { WorkerInputs, WorkerOutputs, NodeData } from "rete/types/core/data";
 import * as Sockets from "../sockets/sockets";
 import * as Controls from "../controls/controls";
-import { ReteReactControl as ReteControlBase, ReteReactComponent as ReteComponent } from "rete-react-render-plugin"; } from "rete-react-render-plugin";
+import { ReteReactControl} from "rete-react-render-plugin";
 import * as Data from "../data/attributes";
-import { getJSONSocket, getObject, JSONObject, JSONValue } from "../jsonschema";
-import { ReteReactControl as ReteControl } from "rete-react-render-plugin";
-import * as Display from "../display";
+import { getJSONSocket, getObject, JSONObject } from "../jsonschema";
+import * as Display from "./display";
 import * as ReactRete from "rete-react-render-plugin";
-import { getConnectedData, getSelectedSocket, isInput, updateViewConnections } from "../helpers";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChevronDown,
@@ -20,10 +17,27 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import XLSXColumn from 'xlsx-column';
 import { Button } from "react-bootstrap";
+import { BaseComponent, getConnectedData } from "./base";
+
+/** update view connections after waiting */
+export function updateViewConnections(nodes: Rete.Node[], editor: Rete.NodeEditor) {
+  setTimeout(() => 
+    nodes.forEach(n => editor?.view.updateConnections({node: n})),
+    10
+  );
+}
 
 
+function getNextOutputIndex(node: Rete.Node): number {
+  let attrs = Data.getGeneralAttributes(node);
+  if(attrs.outputTracker === undefined) {
+    attrs.outputTracker = 0;
+  }
+  attrs.outputTracker += 1;
+  return attrs.outputTracker;
+}
 function getNextCoreName(node: Rete.Node) {
-  let nextIndex = Data.getNextOutputIndex(node);
+  let nextIndex = getNextOutputIndex(node);
   return 'Item ' + new XLSXColumn(nextIndex).toString();
 }
 
@@ -53,10 +67,7 @@ function setCoreMap(oMap: Data.CoreMap, coreName: string, property: JSONObject) 
 
 function setElementaryMap(oMap: Data.ElementaryMap, property: JSONObject, coreName: string, canMove: boolean) {
   oMap.canMove = canMove;
-  let typ = property.type;
-  if(typeof typ === "string" && !(typ === "null")) {
-    oMap.outputKey = `${coreName} output`;
-  }
+  oMap.outputKey = `${coreName} output`;
 }
 
 
@@ -168,7 +179,10 @@ function createMapItems(node: Rete.Node, oMap: Data.DataMap, editor: Rete.NodeEd
 
   let outputKey = oMap.outputKey;
   if(outputKey && !node.outputs.get(outputKey)) {
-    node.addOutput(new Rete.Output(oMap.outputKey, oMap.outputKey, Sockets.anySocket));
+    let socket = getJSONSocket(oMap.schema);
+    if(socket) {
+      node.addOutput(new Rete.Output(oMap.outputKey, oMap.outputKey, Sockets.anySocket));
+    }
   }
 }
 
@@ -257,7 +271,7 @@ export function elementRemove(node: Rete.Node, editor: Rete.NodeEditor, idx: num
 
 export function elementUp(node: Rete.Node, editor: Rete.NodeEditor, idx: number) {
   let outputMaps = Data.getOutputMap(node);
-  if(!(idx > 0 && idx < outputMaps.length && !outputMaps[idx-1].canMove)) {
+  if(!(idx > 0 && idx < outputMaps.length && outputMaps[idx-1].canMove)) {
     editor.trigger("error", {message: `cant move output index up "${idx}"`});
     return;
   }
@@ -318,7 +332,7 @@ class DynamicDisplay extends ReactRete.Node {
     // if output has mapped control, disable it
     if(oMap.dataControl) {
       let control = this.props.node.controls.get(oMap.dataControl);
-      if(control && control instanceof ReteControl) {
+      if(control && control instanceof ReteReactControl) {
         // set display disabled and update control
         control.props.display_disabled = oMap.isNulled;
         control.update && control.update();
@@ -467,7 +481,7 @@ class DynamicDisplay extends ReactRete.Node {
  * @returns function to create control handler
  */
 function _getControlHandler(oMap: Data.DataMap, setData: (oMap: Data.DataMap, value: any) => void): Controls.DataHandler {
-  return (ctrl: ReteControlBase, emitter: Rete.NodeEditor, key: string, data: any) => {
+  return (ctrl: ReteReactControl, emitter: Rete.NodeEditor, key: string, data: any) => {
     ctrl.props.value = data;
     setData(oMap, data);
     emitter.trigger("process");
@@ -500,7 +514,8 @@ const getNameHandler = (oMap: Data.DataMap) => _getControlHandler(
 export let componentsList: Array<string> = [];
 
 
-export class MyComponent extends ReteComponent {
+export class MyComponent extends BaseComponent {
+  hasParent = true
   data = {component: DynamicDisplay}
   schema: JSONObject;
   socket: Rete.Socket;
@@ -510,21 +525,13 @@ export class MyComponent extends ReteComponent {
     this.schema = schema;
     this.socket = socket;
   }
-  builder(node: Rete.Node): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-      if (this.editor) {
-        this.internalBuilder(node, this.editor);
-        resolve();
-      } else {
-        reject(`this.editor is not available`);
-      }
-    });
-  }
-  worker(node: NodeData, inputs: WorkerInputs, outputs: WorkerOutputs, ...args: unknown[]): void { }
   internalBuilder(node: Rete.Node, editor: Rete.NodeEditor): void {
     node.addInput(new Rete.Input("parent", "Parent", this.socket));
+    let attrs = Data.getGeneralAttributes(node);
+    attrs.componentSchema = this.schema;
     let outputMaps = Data.getOutputMap(node);
     let typ = this.schema.type as string;
+
 
     // check type is basic
     if(["null", "boolean", "number", "integer", "string"].includes(typ)) {
@@ -542,8 +549,23 @@ export class MyComponent extends ReteComponent {
 
        }
        createMapItems(node, firstMap, this.editor);
-    } else if(typ === "array") {
-            
+    } else if(typ === "array" || typ === "object") {
+      if(typ === "array") {
+        attrs.attributeSchema = getObject(this.schema.items) ?? {};
+      } else {
+        attrs.attributeSchema = getObject(this.schema.additionalProperties) ?? {};
+      }
+
+      node.addControl(new Controls.ButtonControl(
+        "add-button",
+        editor,
+        node,
+        {
+          value: 0, // value is press count
+          buttonInner: "Add Item +"
+        },
+        () => elementAdd(node, editor, Data.getOutputMap(node).length)
+      ));
     }
   }
 

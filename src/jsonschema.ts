@@ -29,10 +29,17 @@ export const getObject: (v: JSONValue) => JSONObject | null = (v: JSONValue) => 
  * @param property JSON Schema type definition
  * @returns Socket
  */
-export function getJSONSocket(property: JSONObject | null | undefined): Rete.Socket {
+export function getJSONSocket(property: JSONValue, getInner: boolean = true): Rete.Socket | null {
   if( property === null || property === undefined ) {
     return anySocket;
   }
+  if (!(typeof(property) === "object" && !Array.isArray(property))) {
+    return anySocket;
+  }
+  if(property["const"]) {
+    return null;
+  }
+
 
   // read JSON schema definitions
   let varType = property["type"] ? String(property["type"]) : "";
@@ -76,11 +83,9 @@ export function getJSONSocket(property: JSONObject | null | undefined): Rete.Soc
       } else if(typeof varItems === "object" && !Array.isArray(varItems)) {
         
         // inner definition has its own definitions - call function recursively
-        return multiSocket(
-          ["List"], 
-          `List[${getJSONSocket(varItems).name}]`, 
-          Sockets.listColour
-        );
+        let innerSocket = getJSONSocket(varItems, false);
+        let name = `List[${innerSocket?.name ?? ""}]`;
+        return multiSocket(["List"], name, Sockets.listColour);
 
       } else {
         throw new Error('unknown format of array items');
@@ -96,11 +101,9 @@ export function getJSONSocket(property: JSONObject | null | undefined): Rete.Soc
     if(ap !== null && typeof ap === "object" && !Array.isArray(ap)) {
 
       // additionalProperties defines the type of values for dictionary keys
-      return multiSocket(
-        ["Object"], 
-        `Object[${getJSONSocket(ap).name}]`, 
-        Sockets.objColour
-      );
+      let innerSocket = getJSONSocket(ap, false);
+      let name = `Object[${innerSocket?.name ?? ""}]`;
+      return multiSocket(["Object"], name, Sockets.objColour);
     
     } else {
 
@@ -114,7 +117,7 @@ export function getJSONSocket(property: JSONObject | null | undefined): Rete.Soc
     if( typeof anyOf === "object" && Array.isArray(anyOf)) {
 
       // loop each type definition and create array of sockets
-      let innerSockets = anyOf.map(t => getJSONSocket(t as JSONObject));
+      let innerSockets = anyOf.map(t => getJSONSocket(t as JSONObject)).filter(s => s instanceof Rete.Socket);
       
       // concatenate socket names together
       let socketName = getTypeString(innerSockets.map(s => s.name));

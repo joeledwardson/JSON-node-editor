@@ -79,11 +79,3 @@ export interface GeneralAttributes {
 export function getGeneralAttributes(node: Rete.Node): GeneralAttributes {
   return getDataAttribute<any>(node, "generalAttributes") as GeneralAttributes;
 }
-export function getNextOutputIndex(node: Rete.Node): number {
-  let attrs = getGeneralAttributes(node);
-  if(attrs.outputTracker === undefined) {
-    attrs.outputTracker = 0;
-  }
-  attrs.outputTracker += 1;
-  return attrs.outputTracker;
-}

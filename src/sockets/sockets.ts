@@ -91,19 +91,18 @@ export function multiSocket(typs: string[], key?: string, colour?: string): Sock
 
 var anyHolder = addSocket("Any");
 var listHolder = addSocket("List");
-var dictHolder = addSocket("Dictionary");
 var objHolder = addSocket("Object");
+
 
 export var numberSocket: Socket = addSocket("Number").socket;
 export var stringSocket: Socket = addSocket("Text").socket;
 export var boolSocket: Socket = addSocket("Boolean").socket;
-export var nullSocket: Socket = addSocket("None").socket;
+export var nullSocket: Socket = addSocket("Null").socket;
+
 export var listSocket: Socket = listHolder.socket;
-export var dictSocket: Socket = dictHolder.socket;
 export var objectSocket: Socket = objHolder.socket;
 export var anySocket = anyHolder.socket;
 
-export var dictColour: string = dictHolder.colour;
 export var listColour: string = listHolder.colour;
 export var anyColour: string = anyHolder.colour;
 export var objColour: string = objHolder.colour;

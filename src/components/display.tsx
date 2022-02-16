@@ -1,7 +1,7 @@
 import * as Rete from "rete";
 import * as ReactRete from 'rete-react-render-plugin';
 import { bindSocket, bindControl } from "rete-react-render-plugin";
-import { sockets } from "./sockets/sockets";
+import { sockets } from "../sockets/sockets";
 import { CSSProperties } from "react";
 
 

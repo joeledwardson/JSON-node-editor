@@ -1,40 +1,38 @@
 import * as Rete from "rete";
 import * as Data from './data/attributes';
-import { sockets, addSocket, anySocket, stringSocket } from "./sockets/sockets";
+import * as Sockets from "./sockets/sockets";
 import { ReteReactComponent as ReteComponent } from "rete-react-render-plugin";
 import { getJSONSocket, isObject, JSONObject, JSONValue } from "./jsonschema";
 import './styles.css';
-import { DisplayBase } from "./display";
-import { getConnectedData } from "./helpers";
+import { DisplayBase } from "./components/display";
 import { MyComponent } from './components/component';
+import { BaseComponent, getConnectedData } from "./components/base";
 
 
-const addType = (newType: string) => componentsList.push(newType);
+// const addType = (newType: string) => componentsList.push(newType);
 
 
 export function init(schema: JSONObject | null, editor: Rete.NodeEditor, engine: Rete.Engine) {
   
   // create stock components
   var components: Array<ReteComponent> = [
-    new BasicComponents.NumberComponent(), 
-    new BasicComponents.TextComponent(),
-    new BasicComponents.BoolComponent(),
-    new BasicComponents.NullComponent(),
-    new ListComponent(),
-    new ObjectComponent()
-    // new ComponentDict(),
+    new MyComponent("Text", {type: "string"}, Sockets.stringSocket),
+    new MyComponent("Number", {type: "number"}, Sockets.numberSocket),
+    new MyComponent("Boolean", {type: "boolean"}, Sockets.boolSocket),
+    new MyComponent("List", {type: "array"}, Sockets.listSocket),
+    new MyComponent("Object", {type: "object"}, Sockets.objectSocket)
   ];
 
-  if(schema) {
-    // add to socket and type lists for each schema definition
-    // n.b. this must be done before comopnent creation so that they dont try to access each others sockets before creation!
-    Object.keys(schema).forEach(key => {
-      addSocket(key);
-    });
+  // if(schema) {
+  //   // add to socket and type lists for each schema definition
+  //   // n.b. this must be done before comopnent creation so that they dont try to access each others sockets before creation!
+  //   Object.keys(schema).forEach(key => {
+  //     addSocket(key);
+  //   });
 
-    // create dynamic components for each schema definition
-    Object.entries(schema).forEach(([key, spec]) => components.push(new DynamicComponent(key, spec)));
-  }
+  //   // create dynamic components for each schema definition
+  //   Object.entries(schema).forEach(([key, spec]) => components.push(new DynamicComponent(key, spec)));
+  // }
 
   // add root component
   class RootComponent extends BaseComponent {
@@ -44,7 +42,9 @@ export function init(schema: JSONObject | null, editor: Rete.NodeEditor, engine:
     }
     internalBuilder(node: Rete.Node, editor: Rete.NodeEditor) {
       let socket = getJSONSocket(schema);
-      node.addOutput(new Rete.Output("data", "Data", socket));
+      if(socket) {
+        node.addOutput(new Rete.Output("data", "Data", socket));
+      }
       // set type definition to be read by any child elements
       Data.getOutputMap(node).push({
         outputKey: "data",
@@ -60,10 +60,9 @@ export function init(schema: JSONObject | null, editor: Rete.NodeEditor, engine:
     }
   }
   components.push(new RootComponent());
-  components.push(new MyComponent("My String", {type: "string"}, stringSocket));
 
   // combine each socket with the "any" socket
-  sockets.forEach(s => anySocket.combineWith(s.socket));
+  Sockets.sockets.forEach(s => Sockets.anySocket.combineWith(s.socket));
 
   // register each component to engine and editor
   components.forEach((c) => {
@@ -127,7 +126,7 @@ export function init(schema: JSONObject | null, editor: Rete.NodeEditor, engine:
 
 
 
-export function getJSONData(editor: Rete.NodeEditor): JSONObject | null {
+export function getJSONData(editor: Rete.NodeEditor): JSONValue {
   let rootNode = editor.nodes.find(n => n.name=="root")
   if(rootNode) {
     let rootComponent = editor.components.get("root") as BaseComponent; 
