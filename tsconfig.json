@@ -8,13 +8,15 @@
     ],
     "outDir": "./dist/",
     "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
     "noImplicitAny": true, // dont allow implicit "any" types inferred
-    "module": "esnext", // ES6 means compiled imports modules stay as the modern format (i.e. import {a} from 'b')  https://www.typescriptlang.org/tsconfig#module
+    "module": "commonjs", // ES6 means compiled imports modules stay as the modern format (i.e. import {a} from 'b')  https://www.typescriptlang.org/tsconfig#module
     "target": "es5", // ES5 means arrow functions () => void etc are compiled
     "jsx": "react-jsx", // compile react code (e.g. <div>hello</div>) to js code (e.g. react.createElement(div, 'hello')) 
     "allowJs": true,
     "moduleResolution": "node",
-    "sourceMap": true
+    "sourceMap": true,
+    "strict": true
   },
   "ts-node": {
     "compilerOptions": {

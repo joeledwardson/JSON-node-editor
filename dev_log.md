@@ -108,3 +108,18 @@ If I have designed the builder well enough, should just be able to override sche
 
 - If I use this method, will need to wipe node of existing controls/outputs which shouldnt be a problem
 
+## 17/02/22
+
+Wondering about resolving refs myself, but it gets very complicated with multiple schemas.
+
+A better way to handle would be to require all schemas to be combined when using the tool
+
+At this point, I'm thinking
+
+- Objects and arrays will have type selection at their outputs when connecting to other objects
+- If so, then wont need sockets that combine other sockets as the type selection will be handled at the output?
+- Socket will just become a lookup from the type or custom node identifier? Ok, I can leave socket generation for now and focus on type selection...
+- Will also have to think about on dropping/adding a connection, how to not fuck with the existing outputs?
+- Hmm, if a type is an `anyOf` there is still an exception case where one `#def` might point to another `#def` which is an anof, meaning any checks for `anyOf` at the point of declaration might get missed
+  - Basically, if `#defs` are allowed where they can be an anyof it just makes things a bit more complex in the node creation
+- Instead, when creating sockets for named attributes, can scan for anyof to combine with

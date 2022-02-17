@@ -15,6 +15,7 @@
   "types": "./types/app.d.ts",
   "main": "./dist/app.js",
   "dependencies": {
+    "ajv": "^8.10.0",
     "xlsx-column": "^2.2.1"
   },
   "scripts": {

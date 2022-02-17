@@ -65,11 +65,14 @@ export abstract class ControlTemplate<T, P extends InputProps<T>> extends ReteCo
 type NumberProps = InputProps<number>
 export class NumberInput extends React.Component<NumberProps> {
   render() {
+    let vc = this.props.valueChanger;
     return (
       <input 
         type="number"
         value={this.props.value}
-        onChange={(e: React.FormEvent<HTMLInputElement>) => this.props.valueChanger(Number(e.currentTarget.value))}
+        onChange={(e: React.FormEvent<HTMLInputElement>) => {
+          if(vc) vc(Number(e.currentTarget.value))
+        }}
         className={getControlClasses(this.props.className)}
         disabled={this.props.display_disabled ? true : undefined}
       />
@@ -85,15 +88,15 @@ export class NumberControl extends ControlTemplate<number, NumberProps> {
 type TextProps = InputProps<string>
 export class TextInput extends React.Component<TextProps> {
   render() {
+    let vc = this.props.valueChanger;
     return (
       <TextareaAutosize
         className={getControlClasses(this.props.className)}
         value={this.props.value}
         disabled={this.props.display_disabled}
         rows={1}
-        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => this.props.valueChanger(e.currentTarget.value)}
+        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => vc && vc(e.currentTarget.value)}
         autoFocus
-        style={null}
       />
     );
   }
@@ -118,11 +121,18 @@ export class SelectInput extends React.Component<SelectProps> {
   render() {
     var optionMap: {[key: string]: OptionLabel} = {};
     this.props.options.forEach(opt => {optionMap[opt.value] = opt});
+    let vc = this.props.valueChanger;
     return (
-      <Select 
+      <Select
+        isMulti={false}
         className={this.props.className} // dont apply width constrains to selects
         value={optionMap[this.props.value]}
-        onChange={(newValue: {value: any, label: any}) => this.props.valueChanger(newValue.value)}
+        onChange={(newValue: {value: any, label: any} | null) => {
+          if(vc) {
+            if(newValue) vc(newValue.value)
+            else vc(null)
+          }
+        }}
         options={this.props.options}
         isDisabled={this.props.display_disabled}
       />
@@ -175,7 +185,9 @@ export class InputButton extends React.Component<ButtonProps, {clickCount: numbe
     this.setState((state) => ({
       clickCount: state.clickCount + 1
     }));
-    this.props.valueChanger(this.state.clickCount);
+    if(this.props.valueChanger) {
+      this.props.valueChanger(this.state.clickCount);
+    }
   }
   
   render() {

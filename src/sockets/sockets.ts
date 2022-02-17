@@ -90,22 +90,22 @@ export function multiSocket(typs: string[], key?: string, colour?: string): Sock
 }
 
 var anyHolder = addSocket("Any");
-var listHolder = addSocket("List");
-var objHolder = addSocket("Object");
+// var listHolder = addSocket("List");
+// var objHolder = addSocket("Object");
 
 
-export var numberSocket: Socket = addSocket("Number").socket;
-export var stringSocket: Socket = addSocket("Text").socket;
-export var boolSocket: Socket = addSocket("Boolean").socket;
-export var nullSocket: Socket = addSocket("Null").socket;
+// export var numberSocket: Socket = addSocket("Number").socket;
+// export var stringSocket: Socket = addSocket("Text").socket;
+// export var boolSocket: Socket = addSocket("Boolean").socket;
+// export var nullSocket: Socket = addSocket("Null").socket;
 
-export var listSocket: Socket = listHolder.socket;
-export var objectSocket: Socket = objHolder.socket;
+// export var listSocket: Socket = listHolder.socket;
+// export var objectSocket: Socket = objHolder.socket;
 export var anySocket = anyHolder.socket;
 
-export var listColour: string = listHolder.colour;
-export var objColour: string = objHolder.colour;
-export var anyColour: string = anyHolder.colour;
+// export var listColour: string = listHolder.colour;
+// export var objColour: string = objHolder.colour;
+// export var anyColour: string = anyHolder.colour;
 
 
 // export default {

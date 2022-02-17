@@ -3,7 +3,7 @@ import * as Sockets from "../sockets/sockets";
 import * as Controls from "../controls/controls";
 import { ReteReactControl} from "rete-react-render-plugin";
 import * as Data from "../data/attributes";
-import { getJSONSocket, getObject, JSONObject, JSONValue } from "../jsonschema";
+import { anySchema, CustomSchema} from "../jsonschema";
 import * as Display from "./display";
 import * as ReactRete from "rete-react-render-plugin";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -18,6 +18,8 @@ import {
 import XLSXColumn from 'xlsx-column';
 import { Button } from "react-bootstrap";
 import { BaseComponent, getConnectedData } from "./base";
+import { SomeJSONSchema } from "ajv/dist/types/json-schema";
+import { SomeJTDSchemaType } from "ajv/dist/core";
 
 /** update view connections after waiting */
 export function updateViewConnections(nodes: Rete.Node[], editor: Rete.NodeEditor) {
@@ -50,71 +52,177 @@ function getNextCoreName(node: Rete.Node): string {
  *    - data control key set
  *    - data value copied from existing node data if valid, otherwise from property default or 0/blank string/false
  */
-function setCoreMap(oMap: Data.CoreMap, coreName: string, property: JSONObject) {
-  oMap.reactKey = coreName;
-  oMap.schema = property;
-  oMap.hide = false;
-  let typ = property.type;
-  let controlName = `${coreName} input`;
+function setCoreMap(oMap: Data.CoreMap, coreName: string, property: SomeJSONSchema | null) {
+  
+  let hide = false;
+  let dataValue: any = oMap.dataValue;
+  let dataControl: string | null = null;
 
-  if(typ === "integer" || typ === "number") {
-    if(isNaN(oMap.dataValue)) {
-      oMap.dataValue = property.default ?? 0;
+  if(property !== null) {
+    let typ = property.type;
+    let controlName = `${coreName} input`;
+    if(typ === "integer" || typ === "number") {
+      if(isNaN(dataValue)) {
+        dataValue = property.default ?? 0;
+      }
+      dataControl = controlName;
+    } else if(typ === "string") {
+      if(!(typeof dataValue === "string")) {
+        dataValue = property.default ?? "";
+      }
+      dataControl = controlName;
+    } else if(typ === "boolean") {
+      if(!(typeof dataValue === "boolean")) {
+        dataValue = property.default ?? "False";
+      }
+      dataControl = controlName;
+    } else if(typ === "null") {
+      dataValue = null;
+    } else if(property.const !== undefined) {
+      dataValue = property.const;
+      hide = true;
+    } else {
+      dataValue = null;
     }
-    oMap.dataControl = controlName;
-  } else if(typ === "string") {
-    if(!(typeof oMap.dataValue === "string")) {
-      oMap.dataValue = property.default ?? "";
-    }
-    oMap.dataControl = controlName;
-  } else if(typ === "boolean") {
-    if(!(typeof oMap.dataValue === "boolean")) {
-      oMap.dataValue = property.default ?? "False";
-    }
-    oMap.dataControl = controlName;
-  } else if(typ === "null") {
-    oMap.dataValue = null;
-  } else if(property.const !== undefined) {
-    oMap.dataValue = property.const;
-    oMap.hide = true;
   } else {
-    oMap.dataControl = null;
-    oMap.dataValue = null;
+    dataValue = null;
   }
+
+  oMap.reactKey = coreName;
+  oMap.hide = hide;
+  oMap.dataControl = dataControl;
+  oMap.dataValue = dataValue;
+  oMap.schema = property;
 }
 
+type JSONBaseTypes = "null" | "boolean" | "object" | "array" | "number" | "integer" | "string";
+const JSONTypeMap: {[key in JSONBaseTypes]: string} = {
+  "null": "None",
+  "boolean": "Boolean",
+  "object": "Object",
+  "array": "List",
+  "number": "Number",
+  "integer": "Number",
+  "string": "Text"
+}
 
 /** set elementary attributes of mapped output */
-function setElementaryMap(oMap: Data.ElementaryMap, coreName: string, canMove: boolean, nameFixed: boolean) {
+function setElementaryMap(
+  oMap: Data.ElementaryMap, 
+  property: SomeJSONSchema | null, 
+  coreName: string, 
+  canMove: boolean, 
+  nameFixed: boolean
+) {
+
+
+  let schemaMap: {[key in string]: SomeJSONSchema} = {}
+  const addToMap = (schema: SomeJSONSchema) => { 
+    let custom: CustomSchema = schema as CustomSchema;
+    // check for named schema
+    if(custom.customNodeIdentifier) {
+      schemaMap[custom.customNodeIdentifier] = schema;
+    }
+    // otherwise check if type is valid
+    else if(typeof schema.type === "string" && schema.type in JSONTypeMap) {
+      schemaMap[schema.type] = schema;
+    }
+
+    if(typeof schema.anyOf === "object" && Array.isArray(schema.anyOf)) {
+      schema.anyOf.forEach(s => addToMap(s));
+    }
+    if(typeof schema.oneOf === "object" && Array.isArray(schema.oneOf)) {
+      schema.oneOf.forEach(s => addToMap(s));
+    }
+  }
+  if(property) {
+    addToMap(property);
+  }
+
+  let schema: SomeJSONSchema | null = oMap.schema ?? null;
+  let selectValue: string | null = oMap.selectValue ?? null;
+
+  if(selectValue && selectValue in schemaMap) {
+    // leave select value unchanged
+    schema = schemaMap[selectValue];
+  } else {
+    // clear selected in case list empty
+    selectValue = null;
+    schema = null;
+
+    // take first in list
+    for(const key in schemaMap) {
+      selectValue = key;
+      schema = schemaMap[key];
+      break;
+    }
+  }
+
+  let selectControl: string | null = null;
+  if(Object.keys(schemaMap).length >= 1) {
+    selectControl = `${coreName} type`;
+  }
+
   oMap.canMove = canMove;
   oMap.nameFixed = nameFixed;
   oMap.outputKey = `${coreName} output`;
-  oMap.schemaMap = {};
+  oMap.schemaMap = schemaMap;
+  oMap.selectValue = selectValue;
+  oMap.selectControl = selectControl;
+  setCoreMap(oMap, coreName, schema);
 }
 
 
-function setFixedObjectMap(oMap: Data.DataMap, key: string, required: JSONValue[]) {
-  oMap.nameValue = key;
-  // get control args with value and display disabled (common to all controls)
-  oMap.isNulled = false;
-  oMap.nullable = false;
+function setFixedObjectMap(
+  oMap: Data.DataMap, 
+  key: string, 
+  required: string[], 
+  property: SomeJSONSchema,
+  coreName: string
+  ) {
+  let nullable = false;
+  let isNulled = false;
 
-  if(!required.includes(key)) {
-    oMap.nullable = true;
-    // property not required - set to null if default is null or no default provided
-    // pydantic will not set a JSON "default" value if default "None" is provided, hence checking for default "undefined" 
-    oMap.isNulled = (oMap.schema && oMap.schema["default"] === null) || (oMap.schema && oMap.schema["default"] === undefined);
+  if(!required.includes(key) || (property && property.nullable === true)) {
+    // property not in required or "nullable" as per schema
+    nullable = true;
+    
+    if(oMap.isNulled === undefined) {
+      // only set value if it doesnt already exist in map data
+      
+      if(property["default"] === null) {
+        // nulled if schema default is null 
+        isNulled = true;
+      }
+      else if(property["default"] === undefined) {
+        // pydantic will not set a JSON "default" value if default "None" is provided, hence checking for default "undefined" 
+        isNulled = true;
+
+      } else {
+        isNulled = false;
+      }
+    } else {
+      // use existing value
+      isNulled = oMap.isNulled;
+    }
   }
-
-  let title = (oMap.schema && oMap.schema["title"]) ? String(oMap.schema["title"]) : key;
-  oMap.nameDisplay = title;   
+  let title = (property["title"]) ? String(property["title"]) : key;
+  oMap.nameValue = key;
+  oMap.nameControl = null;
+  oMap.nullable = nullable;
+  oMap.isNulled = isNulled;
+  oMap.nameDisplay = title;
+  setElementaryMap(oMap, property, coreName, false, true);
 }
 
 
-function setDynamicObjectMap(oMap: Data.DataMap, coreName: string) {
-  oMap.nullable = false;
+function setDynamicObjectMap(oMap: Data.DataMap, coreName: string, property: SomeJSONSchema | null) {
   oMap.nameValue = oMap.nameValue ?? "";
   oMap.nameControl = `${coreName} name`;
+  oMap.nullable = false;
+  oMap.isNulled = false;
+  oMap.nameDisplay = null;
+  setElementaryMap(oMap, property, coreName, true, false);
 }
 
 
@@ -172,7 +280,7 @@ function createMapItems(node: Rete.Node, oMap: Data.DataMap, editor: Rete.NodeEd
       nameKey, 
       editor, 
       node, 
-      {value: oMap.nameValue},
+      {value: oMap.nameValue || ""},
       getNameHandler(oMap)
     ));
   }
@@ -180,7 +288,7 @@ function createMapItems(node: Rete.Node, oMap: Data.DataMap, editor: Rete.NodeEd
   // if value control is specified but doesnt exist then create
   let valueKey = oMap.dataControl;
   if(valueKey && !node.controls.get(valueKey)) {
-    let typ = oMap.schema.type;
+    let typ = oMap.schema?.type;
     if(typeof typ === "string") {
       let control = getControl(
         typ,
@@ -198,29 +306,39 @@ function createMapItems(node: Rete.Node, oMap: Data.DataMap, editor: Rete.NodeEd
   }
 
   let outputKey = oMap.outputKey;
-  if(outputKey && !node.outputs.get(outputKey)) {
-    let socket = getJSONSocket(oMap.schema);
+  let socketName = oMap.selectValue;
+  if(outputKey && socketName && !node.outputs.get(outputKey)) {
+    let socket = Sockets.sockets.get(socketName)?.socket;
     if(socket) {
-      node.addOutput(new Rete.Output(oMap.outputKey, oMap.outputKey, Sockets.anySocket));
+      node.addOutput(new Rete.Output(outputKey, outputKey, socket));
     }
   }
 }
 
 
 function removeMapItems(node: Rete.Node, oMap: Data.DataMap, editor: Rete.NodeEditor) {
-  let control = node.controls.get(oMap.nameControl);
-  if(oMap.nameControl && control) {
-    node.removeControl(control);
+  let control: Rete.Control | undefined = undefined;
+  if(oMap.nameControl) { 
+    control = node.controls.get(oMap.nameControl);
+    if(control) {
+      node.removeControl(control);
+    }
   }
-  control = node.controls.get(oMap.dataControl);
-  if(oMap.dataControl && control) {
-    node.removeControl(control);
+
+  if(oMap.dataControl) {
+    control = node.controls.get(oMap.dataControl);
+    if(oMap.dataControl && control) {
+      node.removeControl(control);
+    }
   }
-  let output = node.outputs.get(oMap.outputKey);;
-  if(oMap.outputKey && output) {
-    // remove connections from view
-    output.connections.map(c => editor.removeConnection(c));
-    node.removeOutput(output);
+
+  if(oMap.outputKey) {
+    let output = node.outputs.get(oMap.outputKey);;
+    if(output) {
+      // remove connections from view
+      output.connections.map(c => editor.removeConnection(c));
+      node.removeOutput(output);
+    }
   }
 }
 
@@ -242,10 +360,11 @@ export function elementAdd(node: Rete.Node, editor: Rete.NodeEditor, idx: number
   const coreName = getNextCoreName(node);
   let attrs = Data.getGeneralAttributes(node);
   let newMap: Data.ElementaryMap = {};
-  setCoreMap(newMap, coreName, attrs.attributeSchema);
-  setElementaryMap(newMap, coreName, true, false);
-  if(attrs.componentSchema.type === "object") {
-    setDynamicObjectMap(newMap, coreName);
+  
+  if(attrs.componentSchema?.type === "object") {
+    setDynamicObjectMap(newMap, coreName, attrs?.attributeSchema || null);
+  } else {
+    setElementaryMap(newMap, attrs?.attributeSchema || null, coreName, true, false);
   }
 
   // index in output list for new output follows output pressed
@@ -332,7 +451,10 @@ class DynamicDisplay extends ReactRete.Node {
   nullButtonClick(oMap: Data.ObjectMap): void {
 
     // ignore click if output has a connection
-    let output = this.props.node.outputs.get(oMap.outputKey);
+    let output: Rete.Output | null = null
+    if(oMap.outputKey) {
+      output = this.props.node.outputs.get(oMap.outputKey) ?? null;
+    }
     
     if(output && output.hasConnection()) {
       return;
@@ -392,6 +514,8 @@ class DynamicDisplay extends ReactRete.Node {
       return <></>;
     }
     
+    let control: Rete.Control | null = null;
+
     // get name element
     let nameElement: JSX.Element = <div></div>;
     if(oMap.nameFixed) {
@@ -399,9 +523,11 @@ class DynamicDisplay extends ReactRete.Node {
       nameElement = <span className="me-1 ms-1">{oMap.nameDisplay}</span>
     } else {
       // name element editable - display control
-      let nameControl = this.props.node.controls.get(oMap.nameControl);
-      if(nameControl) {
-        nameElement = Display.getControl(nameControl, this.props.bindControl);
+      if(oMap.nameControl) {
+        control = this.props.node.controls.get(oMap.nameControl) ?? null;
+        if(control) {
+          nameElement = Display.getControl(control, this.props.bindControl);
+        }
       }
     }
     
@@ -426,9 +552,9 @@ class DynamicDisplay extends ReactRete.Node {
     // get data editing control
     let dataElement = <div></div>
     if(oMap.dataControl) {
-      let dataControl = this.props.node.controls.get(oMap.dataControl);  
-      if(dataControl) {
-        dataElement = Display.getControl(dataControl, this.props.bindControl);
+      control = this.props.node.controls.get(oMap.dataControl) ?? null;  
+      if(control) {
+        dataElement = Display.getControl(control, this.props.bindControl);
       }
     }
 
@@ -535,19 +661,23 @@ export let componentsList: Array<string> = [];
 export class MyComponent extends BaseComponent {
   hasParent = true
   data = {component: DynamicDisplay}
-  schema: JSONObject;
-  socket: Rete.Socket;
-  constructor(name: string, schema: JSONObject, socket: Rete.Socket) {
+  schema: SomeJSONSchema;
+  socket: Rete.Socket | null;
+  constructor(name: string, schema: SomeJSONSchema, socket: Rete.Socket | null) {
     super(name);
     componentsList.push(name);
     this.schema = schema;
     this.socket = socket;
   }
+  addParent(node: Rete.Node): void {
+    if(this.socket) {
+      node.addInput(new Rete.Input("parent", "Parent", this.socket));  // add parent node
+    }
+  }
   internalBuilder(node: Rete.Node, editor: Rete.NodeEditor): void {
-    node.addInput(new Rete.Input("parent", "Parent", this.socket));  // add parent node
-
+    this.addParent(node);
     let attrs = Data.getGeneralAttributes(node);
-    let schema = attrs.componentSchema ?? this.schema;  // use schema from node data, otherwise component schema
+    let schema: SomeJSONSchema = attrs.componentSchema ?? this.schema;  // use schema from node data, otherwise component schema
     attrs.componentSchema = schema;  // set schema in node data
     attrs.outputTracker = 0;  // reset output tracker so created elements start from 0
     let typ = schema.type as string;
@@ -570,57 +700,58 @@ export class MyComponent extends BaseComponent {
 
     } else if(typ === "array") {
       addButton = true;
-      attrs.attributeSchema = getObject(schema["items"]) ?? {};
+      let attrSchema: SomeJSONSchema =  anySchema;
+      if(typeof schema["items"] === "object" && !Array.isArray(schema["items"])) {
+        attrSchema = schema["items"];
+      }
 
       outputMaps.forEach(o => {
         let coreName = getNextCoreName(node);
-        setCoreMap(o, coreName, attrs.attributeSchema);
-        setElementaryMap(o, coreName, true, false);
+        setElementaryMap(o, attrSchema, coreName, true, false);
         newMaps.push(o);
-      })
+      });
+      attrs.attributeSchema = attrSchema;
 
     } if(typ === "object") {
     
-      attrs.attributeSchema = getObject(schema["additionalProperties"]) ?? {};
+      let attrSchema = anySchema;
+      if(schema.additionalProperties) {
+        attrSchema = schema.additionalProperties;
+      }
 
       // loop properties
-      let properties = getObject(schema["properties"]);
-      Object.entries(properties).forEach(([key, property], index) => {
-        let coreName = getNextCoreName(node);
-        let oMap: Data.ObjectMap = {}
+      if(schema.properties) {
+        Object.entries(schema.properties).forEach(([key, property], index) => {
+          let coreName = getNextCoreName(node);
+          let oMap: Data.ObjectMap = {}
 
-        // check if matching entry exists
-        let mapIndex = outputMaps.findIndex(m => m.nameValue == key);
-        if(mapIndex >= 0) {
-          oMap = outputMaps[mapIndex];  // copy to map object
-          outputMaps.splice(mapIndex, 1);  // splice from exisitng list
-        }
-
-        // get property as an object or empty object
-        let objProperty = getObject(property) ?? {} as JSONObject;
-        
-        // get list of required properties or empty array
-        let required: JSONValue[] = [];
-        if(schema["required"] && Array.isArray(schema["required"])) {
-          required = schema["required"];
-        }
-        setCoreMap(oMap, coreName, objProperty);
-        setElementaryMap(oMap, coreName, false, true);
-        setFixedObjectMap(oMap, key, required);
-        newMaps.push(oMap);
-      });
+          // check if matching entry exists
+          let mapIndex = outputMaps.findIndex(m => m.nameValue == key);
+          if(mapIndex >= 0) {
+            oMap = outputMaps[mapIndex];  // copy to map object
+            outputMaps.splice(mapIndex, 1);  // splice from exisitng list
+          }
+          
+          // get list of required properties or empty array
+          let required: string[] = [];
+          if(schema["required"] && Array.isArray(schema["required"])) {
+            required = schema["required"];
+          }
+          setFixedObjectMap(oMap, key, required, (property as SomeJSONSchema) ?? null, coreName);
+          newMaps.push(oMap);
+        });
+      }
 
       if(schema["additionalProperties"] !== false) {
         // if additional properties are allowed, loop remaining data and add as dynamic outputs
         addButton = true;
         outputMaps.forEach(o => {
           let coreName = getNextCoreName(node);  // get new core name
-          setCoreMap(o, coreName, attrs.attributeSchema);  // update with new name using existing schema
-          setElementaryMap(o, coreName, true, true);  // set as moveable output
-          setDynamicObjectMap(o, coreName);
+          setDynamicObjectMap(o, coreName, attrSchema);
           newMaps.push(o);
         });
       }
+      attrs.attributeSchema = attrSchema;
     }
 
     if(addButton) {
@@ -649,7 +780,7 @@ export class MyComponent extends BaseComponent {
      * otherwise return stored data value
      */
     const getValue = (oMap: Data.DataMap) => {
-      let output = node.outputs.get(oMap.outputKey);
+      let output = oMap.outputKey ? node.outputs.get(oMap.outputKey) : null;
       if (output && output.hasConnection()) {
         return getConnectedData(output, editor);
       } else {
