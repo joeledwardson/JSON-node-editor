@@ -84,7 +84,6 @@ export function init(schema: JSONObject | null, editor: Rete.NodeEditor, engine:
     engine.register(c);
   });
 
-
   editor.on(
     ["connectioncreated"],
     async (connection: Rete.Connection) => {

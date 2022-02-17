@@ -102,4 +102,9 @@ Still outstanding
 - [ ] Allow named components
 - [ ] schema update on connection
 - [ ] lists with named tuples
+- [ ] How to resolve custom names in definitions? I.e. schemas can have any name `#/$defs/` or `#/definitions/`, so need to be able to recognise that?
+
+If I have designed the builder well enough, should just be able to override schema changes in component data and run the builder again:
+
+- If I use this method, will need to wipe node of existing controls/outputs which shouldnt be a problem
 

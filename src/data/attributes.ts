@@ -15,6 +15,7 @@ export interface ElementaryMap extends CoreMap {
   nameFixed?: boolean; // use fixed name
   nameDisplay?: string; // fixed name
   outputKey?: string; // key for output
+  schemaMap?: {[key: string]: JSONObject} // type selection map of socket name => schema
   outputSchema?: JSONObject;  // schema read from output connection
   selectControl?: any;  // control key for type select
   selectValue?: string;  // control value for type select
@@ -22,11 +23,9 @@ export interface ElementaryMap extends CoreMap {
 
 export interface ObjectMap extends ElementaryMap {
   nameValue?: string; // value of property name (used as key for getting JSON data)
+  nameControl?: string; // control key for property name (dynamic only)
   nullable?: boolean; // true if output can be nulled
-  isNulled?: boolean;  
-
-  // ** dynamic (non-fixed) parameters
-  nameControl?: string; // control key for property name
+  isNulled?: boolean;  // nullable only
 }
 
 export interface DataMap extends ObjectMap {};

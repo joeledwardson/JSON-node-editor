@@ -53,6 +53,7 @@ function getNextCoreName(node: Rete.Node): string {
 function setCoreMap(oMap: Data.CoreMap, coreName: string, property: JSONObject) {
   oMap.reactKey = coreName;
   oMap.schema = property;
+  oMap.hide = false;
   let typ = property.type;
   let controlName = `${coreName} input`;
 
@@ -76,6 +77,9 @@ function setCoreMap(oMap: Data.CoreMap, coreName: string, property: JSONObject) 
   } else if(property.const !== undefined) {
     oMap.dataValue = property.const;
     oMap.hide = true;
+  } else {
+    oMap.dataControl = null;
+    oMap.dataValue = null;
   }
 }
 
@@ -85,9 +89,7 @@ function setElementaryMap(oMap: Data.ElementaryMap, coreName: string, canMove: b
   oMap.canMove = canMove;
   oMap.nameFixed = nameFixed;
   oMap.outputKey = `${coreName} output`;
-  if(oMap.schema) {
-    
-  }
+  oMap.schemaMap = {};
 }
 
 
