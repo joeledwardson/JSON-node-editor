@@ -123,3 +123,31 @@ At this point, I'm thinking
 - Hmm, if a type is an `anyOf` there is still an exception case where one `#def` might point to another `#def` which is an anof, meaning any checks for `anyOf` at the point of declaration might get missed
   - Basically, if `#defs` are allowed where they can be an anyof it just makes things a bit more complex in the node creation
 - Instead, when creating sockets for named attributes, can scan for anyof to combine with
+- need to create sockes dynamically based off name lookup
+
+- [ ] Should set schema be enfored? 
+- [ ] builder to remove old components
+- [ ] Ok, because of circular references will now have to resolve refs myself
+
+
+
+New problem, cannot print circular referenced JSONified types to string, `JSON.stringify` throws an error:
+
+- need to resolve this, otherwise cannot store stringified JSON data output from editor
+
+
+
+Now adding to my list is to make select controls change the selected type
+
+- [ ] type selection control
+  - [ ] change data control based on selected type - will need to find a way of validating current control against new selected type
+  - [ ] re-validate entered data stored (even if dont have a control - e.g. for object )
+  - [ ] change output socket - need to detect if current output socket is the right type
+- [ ] Allow named components from `$ref`
+  - [ ] need to build my own `$ref` parser
+- [ ] schema update on connection
+  - [ ] change node schema and re-run builder
+  - [ ] rather than removing all mapped outputs - clear any unused entries in existing map and re-run object creation so it replaces any controls/outputs
+- [ ] lists with named tuples
+- [ ] How to resolve custom names in definitions? I.e. schemas can have any name `#/$defs/` or `#/definitions/`, so need to be able to recognise that?
+  - [ ] Can just have a parameter on input where to lookup custom definition locations - any others will still (hopefully) be resolved, but wont appear as named nodes

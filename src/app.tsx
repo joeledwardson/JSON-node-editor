@@ -1,6 +1,7 @@
 import * as Rete from "rete";
 import * as Data from "./data/attributes";
 import * as Sockets from "./sockets/sockets";
+import * as Schema from './jsonschema';
 import { ReteReactComponent as ReteComponent } from "rete-react-render-plugin";
 import { JSONValue } from "./jsonschema";
 import "./styles.css";
@@ -16,38 +17,21 @@ export function init(
   editor: Rete.NodeEditor,
   engine: Rete.Engine
 ) {
-  const stringSchema: SomeJSONSchema = { type: "string" };
-  // const nullSchema: SomeJSONSchema = {type: ""}
-  const numberSchema: SomeJSONSchema = { type: "number" };
-  const objectSchema: SomeJSONSchema = { type: "object", required: [] };
-  const intSchema: SomeJSONSchema = { type: "integer" };
-  const boolSchema: SomeJSONSchema = { type: "boolean" };
-  const arraySchema: SomeJSONSchema = { type: "array", items: { anyOf: [] } };
-  arraySchema.items.anyOf = [
-    { type: "null" },
-    numberSchema,
-    objectSchema,
-    intSchema,
-    boolSchema,
-    arraySchema,
-  ];
-
   const sampleSchema: SomeJSONSchema = {
     type: "object",
     properties: {
       firstName: {type: "number"},
     },
     required: [],
-    additionalProperties: false,
   };
 
   // create stock components
   var components: Array<ReteComponent> = [
-    new MyComponent("Text", stringSchema, Sockets.addSocket("Text").socket),
-    new MyComponent("Number", numberSchema, Sockets.addSocket("Number").socket),
-    new MyComponent("Boolean", boolSchema, Sockets.addSocket("Boolean").socket),
-    new MyComponent("List", arraySchema, Sockets.addSocket("List").socket),
-    new MyComponent("Object", sampleSchema, Sockets.addSocket("Object").socket),
+    new MyComponent("Text", Schema.stringSchema, Sockets.addSocket("Text").socket),
+    new MyComponent("Number", Schema.numberSchema, Sockets.addSocket("Number").socket),
+    new MyComponent("Boolean", Schema.boolSchema, Sockets.addSocket("Boolean").socket),
+    new MyComponent("List", Schema.arraySchema, Sockets.addSocket("List").socket),
+    new MyComponent("Object", Schema.objectSchema, Sockets.addSocket("Object").socket),
   ];
 
   // if(schema) {
@@ -72,15 +56,6 @@ export function init(
         },
         required: ["data"],
         additionalProperties: false,
-      }
-      Data.getGeneralAttributes(node).componentSchema = {
-        type: "object",
-        properties: {
-          foo: {type: "integer"},
-          bar: {type: "string", nullable: true}
-        },
-        required: ["foo"],
-        additionalProperties: false
       }
       super.internalBuilder(node, editor);
     }

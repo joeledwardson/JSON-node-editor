@@ -1,47 +1,70 @@
-import { SomeJSONSchema } from 'ajv/dist/types/json-schema';
-import * as Rete from 'rete';
-import * as Sockets from './sockets/sockets';
-import { multiSocket, sockets, anySocket, getTypeString } from './sockets/sockets';
+import { SomeJSONSchema } from "ajv/dist/types/json-schema";
+import * as Rete from "rete";
+import * as Sockets from "./sockets/sockets";
+import {
+  multiSocket,
+  sockets,
+  anySocket,
+  getTypeString,
+} from "./sockets/sockets";
 
-export const nullSchema: SomeJSONSchema = {type: "null", nullable: true}
-export const numberSchema: SomeJSONSchema = {type: "number"}
-export const objectSchema: SomeJSONSchema = {type: "object", required: []}
-export const intSchema: SomeJSONSchema = {type: "integer"}
-export const boolSchema: SomeJSONSchema = {type: "boolean"}
-export const arraySchema: SomeJSONSchema = {type: "array", items: {anyOf: []}};
+export type CustomSchema = SomeJSONSchema & {
+  customNodeIdentifier?: string;
+  attributesNotDefined?: true;  // denotes for object/array that attribute schemas are not yet defined
+};
 
-arraySchema.items.anyOf = [nullSchema, numberSchema, objectSchema, intSchema, boolSchema, arraySchema];
-objectSchema.additionalProperties = {anyOf: arraySchema.items.anyOf}
+export const stringSchema: SomeJSONSchema = { type: "string" };
+export const nullSchema: SomeJSONSchema = { type: "null", nullable: true };
+export const numberSchema: SomeJSONSchema = { type: "number" };
+export const objectSchema: CustomSchema = {
+  type: "object",
+  required: [],
+  attributesNotDefined: true,
+};
+export const intSchema: SomeJSONSchema = { type: "integer" };
+export const boolSchema: SomeJSONSchema = { type: "boolean" };
+export const arraySchema: CustomSchema = {
+  type: "array",
+  items: { anyOf: [] },
+  attributesNotDefined: true,
+};
 
-export const anySchema: SomeJSONSchema = arraySchema.items;
+export const anySchema: SomeJSONSchema = {
+  anyOf: [
+    stringSchema,
+    numberSchema,
+    intSchema,
+    objectSchema,
+    arraySchema,
+    boolSchema,
+    nullSchema,
+  ],
+};
 
-export type JSONObject = { [key: string]: JSONValue }; 
+export type JSONObject = { [key: string]: JSONValue };
 export type JSONValue =
-| Partial<{ [key: string]: JSONValue }>
-| JSONValue[]
-| string
-| number
-| boolean
-| null;
-export const isObject = (v: JSONValue) => Boolean(v && typeof v === "object" && !Array.isArray(v));
-export const getObject: (v: JSONValue) => JSONObject | null = (v: JSONValue) => isObject(v) ? v as JSONObject : null;
-
-
-export type CustomSchema = SomeJSONSchema & {customNodeIdentifier?: "pls"}
-
+  | Partial<{ [key: string]: JSONValue }>
+  | JSONValue[]
+  | string
+  | number
+  | boolean
+  | null;
+export const isObject = (v: JSONValue) =>
+  Boolean(v && typeof v === "object" && !Array.isArray(v));
+export const getObject: (v: JSONValue) => JSONObject | null = (v: JSONValue) =>
+  isObject(v) ? (v as JSONObject) : null;
 
 /**
  * extract a reference name from JSON schema after the last "/"
  * e.g. get_ref_name("/schemas/hello") = "hello"
  */
- export function get_ref_name(ref_str: string): string | null {
+export function get_ref_name(ref_str: string): string | null {
   return /.*\/(?<name>.*)$/.exec(ref_str)?.groups?.name ?? null;
 }
 
-
 // /**
 //  * Get socket from JSON schema definition
-//  * 
+//  *
 //  * @param property JSON Schema type definition
 //  * @returns Socket
 //  */
@@ -81,7 +104,7 @@ export type CustomSchema = SomeJSONSchema & {customNodeIdentifier?: "pls"}
 //   } else if( varType === "array" ) {
 
 //     // type is array, parse inner type from "items" key (if given)
-    
+
 //     if(property.items) {
 
 //       // "items" key in JSON Schema passed to indicate inner type
@@ -114,12 +137,12 @@ export type CustomSchema = SomeJSONSchema & {customNodeIdentifier?: "pls"}
 //       let innerSocket = getJSONSocket(ap, false);
 //       let name = `Object[${innerSocket?.name ?? ""}]`;
 //       return multiSocket(["Object"], name, Sockets.objColour);
-    
+
 //     } else {
 
 //       // if additionalProperties not passed assume "any" for inner values
 //       return Sockets.objectSocket;
-    
+
 //     }
 //   } else if( property.anyOf || property.oneOf ) {
 
@@ -128,10 +151,10 @@ export type CustomSchema = SomeJSONSchema & {customNodeIdentifier?: "pls"}
 
 //       // loop each type definition and create array of sockets
 //       let innerSockets = anyOf.map(t => getJSONSocket(t as JSONObject)).filter(s => s instanceof Rete.Socket);
-      
+
 //       // concatenate socket names together
 //       let socketName = getTypeString(innerSockets.map(s => s.name));
-      
+
 //       // get socket based on its name from existing list
 //       let socket = sockets.get(socketName)?.socket;
 //       if(!socket) {
@@ -149,7 +172,7 @@ export type CustomSchema = SomeJSONSchema & {customNodeIdentifier?: "pls"}
 //     } else {
 //       throw new Error(`expected "anyOf" of property to be an array`);
 //     }
-//   } 
-    
+//   }
+
 //   return anySocket;
 // }

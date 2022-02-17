@@ -96,7 +96,7 @@ function setCoreMap(oMap: Data.CoreMap, coreName: string, property: SomeJSONSche
 }
 
 type JSONBaseTypes = "null" | "boolean" | "object" | "array" | "number" | "integer" | "string";
-const JSONTypeMap: {[key in JSONBaseTypes]: string} = {
+const JSONTypeMap: {[key: string]: string} = {
   "null": "None",
   "boolean": "Boolean",
   "object": "Object",
@@ -125,7 +125,8 @@ function setElementaryMap(
     }
     // otherwise check if type is valid
     else if(typeof schema.type === "string" && schema.type in JSONTypeMap) {
-      schemaMap[schema.type] = schema;
+      let name = JSONTypeMap[schema.type];
+      schemaMap[name] = schema;
     }
 
     if(typeof schema.anyOf === "object" && Array.isArray(schema.anyOf)) {
@@ -305,6 +306,24 @@ function createMapItems(node: Rete.Node, oMap: Data.DataMap, editor: Rete.NodeEd
     }
   }
 
+  // create type selection control
+  let selectKey = oMap.selectControl;
+  if(oMap.schemaMap &&  selectKey && !node.controls.get(selectKey)) {
+    let options: Controls.OptionLabel[] = Object.keys(oMap.schemaMap).map(k => {
+      return {label: k, value: k}
+    });
+    let control = new Controls.SelectControl(
+      selectKey,
+      editor,
+      node,
+      {
+        value: oMap.selectValue,
+        options: options
+      }
+    );
+    node.addControl(control);
+  }
+
   let outputKey = oMap.outputKey;
   let socketName = oMap.selectValue;
   if(outputKey && socketName && !node.outputs.get(outputKey)) {
@@ -338,6 +357,13 @@ function removeMapItems(node: Rete.Node, oMap: Data.DataMap, editor: Rete.NodeEd
       // remove connections from view
       output.connections.map(c => editor.removeConnection(c));
       node.removeOutput(output);
+    }
+  }
+
+  if(oMap.selectControl) {
+    control = node.controls.get(oMap.selectControl);
+    if(control) {
+      node.removeControl(control);
     }
   }
 }
@@ -661,9 +687,9 @@ export let componentsList: Array<string> = [];
 export class MyComponent extends BaseComponent {
   hasParent = true
   data = {component: DynamicDisplay}
-  schema: SomeJSONSchema;
+  schema: CustomSchema;
   socket: Rete.Socket | null;
-  constructor(name: string, schema: SomeJSONSchema, socket: Rete.Socket | null) {
+  constructor(name: string, schema: CustomSchema, socket: Rete.Socket | null) {
     super(name);
     componentsList.push(name);
     this.schema = schema;
@@ -677,7 +703,7 @@ export class MyComponent extends BaseComponent {
   internalBuilder(node: Rete.Node, editor: Rete.NodeEditor): void {
     this.addParent(node);
     let attrs = Data.getGeneralAttributes(node);
-    let schema: SomeJSONSchema = attrs.componentSchema ?? this.schema;  // use schema from node data, otherwise component schema
+    let schema: CustomSchema = attrs.componentSchema ?? this.schema;  // use schema from node data, otherwise component schema
     attrs.componentSchema = schema;  // set schema in node data
     attrs.outputTracker = 0;  // reset output tracker so created elements start from 0
     let typ = schema.type as string;
@@ -701,7 +727,7 @@ export class MyComponent extends BaseComponent {
     } else if(typ === "array") {
       addButton = true;
       let attrSchema: SomeJSONSchema =  anySchema;
-      if(typeof schema["items"] === "object" && !Array.isArray(schema["items"])) {
+      if(schema.attributesNotDefined !== true) {
         attrSchema = schema["items"];
       }
 
@@ -715,7 +741,7 @@ export class MyComponent extends BaseComponent {
     } if(typ === "object") {
     
       let attrSchema = anySchema;
-      if(schema.additionalProperties) {
+      if(schema.attributesNotDefined !== true) {
         attrSchema = schema.additionalProperties;
       }
 
