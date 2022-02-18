@@ -45,6 +45,11 @@ function getNextCoreName(node: Rete.Node): string {
   return 'Item ' + new XLSXColumn(nextIndex).toString();
 }
 
+const getDataKey = (coreName: string) => `${coreName} input`;
+const getOutputKey = (coreName: string) => `${coreName} output`;
+const getTypeKey = (coreName: string) => `${coreName} type`;
+const getNamekey = (coreName: string) => `${coreName} name`;
+
 /** set core attributes of mapped output
  * - reactKey set to core name
  * - schema set to property
@@ -52,30 +57,29 @@ function getNextCoreName(node: Rete.Node): string {
  *    - data control key set
  *    - data value copied from existing node data if valid, otherwise from property default or 0/blank string/false
  */
-function setCoreMap(oMap: Data.CoreMap, coreName: string, property: SomeJSONSchema | null) {
+function setCoreMap(oMap: Data.DataMap, coreName: string, property: SomeJSONSchema | null) {
   
   let hide = false;
   let dataValue: any = oMap.dataValue;
-  let dataControl: string | null = null;
+  let hasControl = false;
 
   if(property !== null) {
     let typ = property.type;
-    let controlName = `${coreName} input`;
     if(typ === "integer" || typ === "number") {
       if(isNaN(dataValue)) {
         dataValue = property.default ?? 0;
       }
-      dataControl = controlName;
+      hasControl = true;
     } else if(typ === "string") {
       if(!(typeof dataValue === "string")) {
         dataValue = property.default ?? "";
       }
-      dataControl = controlName;
+      hasControl = true;
     } else if(typ === "boolean") {
       if(!(typeof dataValue === "boolean")) {
         dataValue = property.default ?? "False";
       }
-      dataControl = controlName;
+      hasControl = true;
     } else if(typ === "null") {
       dataValue = null;
     } else if(property.const !== undefined) {
@@ -90,9 +94,18 @@ function setCoreMap(oMap: Data.CoreMap, coreName: string, property: SomeJSONSche
 
   oMap.reactKey = coreName;
   oMap.hide = hide;
-  oMap.dataControl = dataControl;
+  oMap.hasDataControl = hasControl;
+  oMap.dataKey = getDataKey(coreName);
   oMap.dataValue = dataValue;
   oMap.schema = property;
+
+  // disable additional functions
+  oMap.canMove = false;
+  oMap.hasFixedName = false;
+  oMap.hasOutput = false;
+  oMap.hasSelectControl = false;
+  oMap.hasNameControl = false;
+  oMap.isNullable = false;
 }
 
 type JSONBaseTypes = "null" | "boolean" | "object" | "array" | "number" | "integer" | "string";
@@ -110,11 +123,11 @@ const JSONTypeMap: {[key: string]: string} = {
 function setElementaryMap(
   oMap: Data.ElementaryMap, 
   property: SomeJSONSchema | null, 
-  coreName: string, 
-  canMove: boolean, 
-  nameFixed: boolean
+  coreName: string,
+  nameDisplay: string | null = null, 
+  canMove: boolean = true, 
+  hasFixedName: boolean = false,
 ) {
-
 
   let schemaMap: {[key in string]: SomeJSONSchema} = {}
   const addToMap = (schema: SomeJSONSchema) => { 
@@ -159,18 +172,16 @@ function setElementaryMap(
     }
   }
 
-  let selectControl: string | null = null;
-  if(Object.keys(schemaMap).length >= 1) {
-    selectControl = `${coreName} type`;
-  }
-
-  oMap.canMove = canMove;
-  oMap.nameFixed = nameFixed;
-  oMap.outputKey = `${coreName} output`;
-  oMap.schemaMap = schemaMap;
-  oMap.selectValue = selectValue;
-  oMap.selectControl = selectControl;
   setCoreMap(oMap, coreName, schema);
+  oMap.canMove = canMove;
+  oMap.hasFixedName = hasFixedName;
+  oMap.nameDisplay = nameDisplay;
+  oMap.hasOutput = true;
+  oMap.outputKey = getOutputKey(coreName);
+  oMap.schemaMap = schemaMap;
+  oMap.hasSelectControl = true;
+  oMap.selectValue = selectValue;
+  oMap.selectKey = getTypeKey(coreName);
 }
 
 
@@ -208,63 +219,23 @@ function setFixedObjectMap(
     }
   }
   let title = (property["title"]) ? String(property["title"]) : key;
+  
+  setElementaryMap(oMap, property, coreName, title, false, true);
+  oMap.hasNameControl = false;
+  oMap.nameKey = getNamekey(coreName);
   oMap.nameValue = key;
-  oMap.nameControl = null;
-  oMap.nullable = nullable;
+  oMap.isNullable = nullable;
   oMap.isNulled = isNulled;
-  oMap.nameDisplay = title;
-  setElementaryMap(oMap, property, coreName, false, true);
 }
 
 
 function setDynamicObjectMap(oMap: Data.DataMap, coreName: string, property: SomeJSONSchema | null) {
+  setElementaryMap(oMap, property, coreName, null, true, false);
+  oMap.hasNameControl = true;
+  oMap.nameKey = `${coreName} name`;
   oMap.nameValue = oMap.nameValue ?? "";
-  oMap.nameControl = `${coreName} name`;
-  oMap.nullable = false;
+  oMap.isNullable = false;
   oMap.isNulled = false;
-  oMap.nameDisplay = null;
-  setElementaryMap(oMap, property, coreName, true, false);
-}
-
-
-
- /** create control */
-function getControl(
-  var_type: string, 
-  node: Rete.Node,
-  editor: Rete.NodeEditor,
-  dataHandler: Controls.DataHandler, 
-  key: string,
-  value: any,
-  disabled: boolean
-  ) {
-
-  if( var_type === "string") { 
-    return new Controls.TextControl(
-      key, 
-      editor, 
-      node, 
-      {value: value, display_disabled: disabled}, 
-      dataHandler
-    );
-  } else if( var_type === "integer" || var_type === "number" ) {
-    return new Controls.NumberControl(        
-      key, 
-      editor, 
-      node, 
-      {value: value, display_disabled: disabled}, 
-      dataHandler
-    );
-  } else if( var_type === "boolean") {
-    return new Controls.BoolControl(
-      key, 
-      editor, 
-      node, 
-      {value: value, display_disabled: disabled}, 
-      dataHandler
-    );
-  } 
-  return null;
 }
 
 
@@ -273,63 +244,145 @@ function createMapItems(node: Rete.Node, oMap: Data.DataMap, editor: Rete.NodeEd
     return;
   }
 
-  // if name control specified but doesnt exist then create
-  let nameKey = oMap.nameControl;
-  if(nameKey && !node.controls.get(nameKey)) {
-    // add control with same key as output and blank value
-    node.addControl(new Controls.TextControl(
-      nameKey, 
-      editor, 
-      node, 
-      {value: oMap.nameValue || ""},
-      getNameHandler(oMap)
-    ));
-  }
-  
-  // if value control is specified but doesnt exist then create
-  let valueKey = oMap.dataControl;
-  if(valueKey && !node.controls.get(valueKey)) {
-    let typ = oMap.schema?.type;
-    if(typeof typ === "string") {
-      let control = getControl(
-        typ,
-        node,
-        editor,
-        getValueHandler(oMap),
-        valueKey,
-        oMap.dataValue,
-        oMap.isNulled ?? false
-      );
+  // remove control if not required
+  const removeControl = (required: boolean | undefined, key: string | undefined | null) => {
+    if(!required && key) {
+      let control = node.controls.get(key);
       if(control) {
-        node.addControl(control);
+        node.removeControl(control);
       }
     }
   }
 
-  // create type selection control
-  let selectKey = oMap.selectControl;
-  if(oMap.schemaMap &&  selectKey && !node.controls.get(selectKey)) {
+  // remove name control if not needed
+  removeControl(oMap.hasNameControl, oMap.nameKey);
+  if(oMap.hasNameControl && oMap.nameKey) {
+    // name control required
+    if(!node.controls.get(oMap.nameKey)) {
+      // add control with same key as output and blank value
+      node.addControl(new Controls.TextControl(
+        oMap.nameKey, 
+        editor, 
+        node, 
+        {value: oMap.nameValue || ""},
+        getNameHandler(oMap)
+      ));
+    }
+  }
+  
+  // remove data control if exists
+  removeControl(oMap.hasDataControl, oMap.dataKey);
+  if(oMap.hasDataControl && oMap.dataKey) {
+    let newControl = true;  // assume we need a new value control  
+    let control = node.controls.get(oMap.dataKey);  // get existing control instance
+    let typ: string | null = null;
+    if(oMap.schema && oMap.schema?.type && typeof oMap.schema?.type === "string") {
+      typ = oMap.schema?.type;
+    }
+    if(control) {
+      if(
+        (typ === "string" && control instanceof Controls.TextControl) ||
+        ((typ === "number" || typ === "integer") && control instanceof Controls.NumberControl) ||
+        (typ === "boolean" && control instanceof Controls.BoolControl)
+      ) {
+        newControl = false;
+        // all good
+      }
+      else {
+        // if control does not match specified type then remove it
+        node.removeControl(control);
+        if(node.update) node.update();
+        oMap.dataValue = null;
+      }
+    }
+
+    if(newControl) {
+      // create new value control if required
+      if(typ === "string") {
+        node.addControl(new Controls.TextControl(
+          oMap.dataKey,
+          editor,
+          node,
+          {value: oMap.dataValue, display_disabled: oMap.isNulled},
+          getValueHandler(oMap)
+        ));
+      } else if(typ === "number" || typ === "integer") {
+        node.addControl(new Controls.NumberControl(
+          oMap.dataKey,
+          editor,
+          node,
+          {value: oMap.dataValue, display_disabled: oMap.isNulled},
+          getValueHandler(oMap)
+        ));
+      } else if(typ === "boolean") {
+        node.addControl(new Controls.BoolControl(
+          oMap.dataKey,
+          editor,
+          node,
+          {value: oMap.dataValue, display_disabled: oMap.isNulled},
+          getValueHandler(oMap)
+        ));
+      }
+    }
+  }
+
+  // remove select control if not required
+  removeControl(oMap.hasSelectControl, oMap.selectKey);
+  if(oMap.schemaMap &&  oMap.selectKey && !node.controls.get(oMap.selectKey)) {
     let options: Controls.OptionLabel[] = Object.keys(oMap.schemaMap).map(k => {
       return {label: k, value: k}
     });
     let control = new Controls.SelectControl(
-      selectKey,
+      oMap.selectKey,
       editor,
       node,
       {
         value: oMap.selectValue,
         options: options
+      },
+      (ctrl : ReteReactControl, editor: Rete.NodeEditor, key: string, data: any) => {
+        ctrl.props.value = data;
+        oMap.selectValue = data;
+        if(oMap.schemaMap && data in oMap.schemaMap) {
+          oMap.schema = oMap.schemaMap[data];
+        } else {
+          oMap.schema = null;
+        }
+        createMapItems(node, oMap, editor);
+        editor.trigger("process");
+        if(ctrl.update) {
+          ctrl.update();
+        }
+        if(node.update) {
+          node.update();
+        }
       }
     );
     node.addControl(control);
   }
 
-  let outputKey = oMap.outputKey;
-  let socketName = oMap.selectValue;
-  if(outputKey && socketName && !node.outputs.get(outputKey)) {
-    let socket = Sockets.sockets.get(socketName)?.socket;
-    if(socket) {
-      node.addOutput(new Rete.Output(outputKey, outputKey, socket));
+  // remove output if unrequired
+  if(!oMap.hasOutput && oMap.outputKey) {
+    let output = node.outputs.get(oMap.outputKey);
+    if(output) {
+      output.connections.forEach(c => editor.removeConnection(c));
+      node.removeOutput(output);
+    }
+  }
+
+  let oKey = oMap.outputKey;
+  let selVal = oMap.selectValue;
+  if(oMap.hasOutput && oKey && selVal) {
+    let output = node.outputs.get(oKey);
+    let socket = Sockets.sockets.get(selVal)?.socket;
+    let createOutput = true;
+    if(output && output.socket != socket) {
+      node.removeOutput(output);
+    } else if(output && socket && output.socket === socket) {
+      createOutput = false;
+    }
+    if(createOutput && socket) {
+      node.addOutput(new Rete.Output(oKey, oKey, socket));
     }
   }
 }
@@ -337,16 +390,16 @@ function createMapItems(node: Rete.Node, oMap: Data.DataMap, editor: Rete.NodeEd
 
 function removeMapItems(node: Rete.Node, oMap: Data.DataMap, editor: Rete.NodeEditor) {
   let control: Rete.Control | undefined = undefined;
-  if(oMap.nameControl) { 
-    control = node.controls.get(oMap.nameControl);
+  if(oMap.nameKey) { 
+    control = node.controls.get(oMap.nameKey);
     if(control) {
       node.removeControl(control);
     }
   }
 
-  if(oMap.dataControl) {
-    control = node.controls.get(oMap.dataControl);
-    if(oMap.dataControl && control) {
+  if(oMap.dataKey) {
+    control = node.controls.get(oMap.dataKey);
+    if(oMap.dataKey && control) {
       node.removeControl(control);
     }
   }
@@ -360,8 +413,8 @@ function removeMapItems(node: Rete.Node, oMap: Data.DataMap, editor: Rete.NodeEd
     }
   }
 
-  if(oMap.selectControl) {
-    control = node.controls.get(oMap.selectControl);
+  if(oMap.selectKey) {
+    control = node.controls.get(oMap.selectKey);
     if(control) {
       node.removeControl(control);
     }
@@ -390,7 +443,7 @@ export function elementAdd(node: Rete.Node, editor: Rete.NodeEditor, idx: number
   if(attrs.componentSchema?.type === "object") {
     setDynamicObjectMap(newMap, coreName, attrs?.attributeSchema || null);
   } else {
-    setElementaryMap(newMap, attrs?.attributeSchema || null, coreName, true, false);
+    setElementaryMap(newMap, attrs?.attributeSchema || null, coreName);
   }
 
   // index in output list for new output follows output pressed
@@ -497,8 +550,8 @@ class DynamicDisplay extends ReactRete.Node {
     oMap.isNulled = !oMap.isNulled;
     
     // if output has mapped control, disable it
-    if(oMap.dataControl) {
-      let control = this.props.node.controls.get(oMap.dataControl);
+    if(oMap.dataKey) {
+      let control = this.props.node.controls.get(oMap.dataKey);
       if(control && control instanceof ReteReactControl) {
         // set display disabled and update control
         control.props.display_disabled = oMap.isNulled;
@@ -544,26 +597,23 @@ class DynamicDisplay extends ReactRete.Node {
 
     // get name element
     let nameElement: JSX.Element = <div></div>;
-    if(oMap.nameFixed) {
+    if(oMap.hasFixedName) {
       // name element fixed - use static name, non editable
       nameElement = <span className="me-1 ms-1">{oMap.nameDisplay}</span>
-    } else {
+    } else if (oMap.hasNameControl && oMap.nameKey) {
       // name element editable - display control
-      if(oMap.nameControl) {
-        control = this.props.node.controls.get(oMap.nameControl) ?? null;
-        if(control) {
-          nameElement = Display.getControl(control, this.props.bindControl);
-        }
+      control = this.props.node.controls.get(oMap.nameKey) ?? null;
+      if(control) {
+        nameElement = Display.getControl(control, this.props.bindControl);
       }
     }
-    
 
     // create positional / nullable element
     let dynamicElement: JSX.Element = <div></div>;
     if(oMap.canMove) {
       // get up/down buttons
       dynamicElement = this.getPositionalButtons(index);
-    } else if(oMap.nullable) {
+    } else if(oMap.isNullable) {
       // if item is nullable, display null/un-null button
       let btnIcon = oMap.isNulled ? faMouse : faTimes;
       dynamicElement = <Button 
@@ -574,20 +624,12 @@ class DynamicDisplay extends ReactRete.Node {
         <FontAwesomeIcon icon={btnIcon} />
       </Button>
     }
-    
-    // get data editing control
-    let dataElement = <div></div>
-    if(oMap.dataControl) {
-      control = this.props.node.controls.get(oMap.dataControl) ?? null;  
-      if(control) {
-        dataElement = Display.getControl(control, this.props.bindControl);
-      }
-    }
 
     // get output socket
     let socketElement = <div></div>;
-    if(oMap.outputKey) {
-      let output = this.props.node.outputs.get(oMap.outputKey);
+    let output: Rete.Output | null = null;
+    if(oMap.hasOutput && oMap.outputKey) {
+      output = this.props.node.outputs.get(oMap.outputKey) ?? null;
       if(output) {
         socketElement = Display.getSocket(output, "output", this.props.bindSocket, {
           visibility: oMap.isNulled ? "hidden" : "visible" // dont display if output nulled
@@ -595,12 +637,28 @@ class DynamicDisplay extends ReactRete.Node {
       } 
     }
 
+    
+    // get data editing control
+    let dataElement = <div></div>
+    if(oMap.hasDataControl && oMap.dataKey) {
+      control = this.props.node.controls.get(oMap.dataKey) ?? null;
+      if(control instanceof ReteReactControl && typeof control.props === "object" && !Array.isArray(control.props)) {
+        (control.props as Controls.InputProps<any>).display_disabled = !!output && output.hasConnection();
+      }  
+      if(control) {
+        // encapsulate in div with key as type so that if control typ changes, react will re-render
+        dataElement = <div key={oMap?.schema?.type}>
+          {Display.getControl(control, this.props.bindControl)}
+        </div>
+      }
+    }
+
     // get type select control
     let selectElement = <div></div>
-    if(oMap.selectControl) {
-      let selectControl = this.props.node.controls.get(oMap.selectControl); 
+    if(oMap.hasSelectControl && oMap.selectKey) {
+      let selectControl = this.props.node.controls.get(oMap.selectKey); 
       if(selectControl) {
-        selectElement = Display.getControl(selectControl, this.props.bindControl);
+        selectElement = Display.getControl(selectControl, this.props.bindControl)
       }
     }
 
@@ -626,7 +684,7 @@ class DynamicDisplay extends ReactRete.Node {
       this.props.node.controls.values()
     ).filter(
       ctrl => !outputMaps.find(
-        o => [o.dataControl, o.nameControl, o.selectControl].includes(ctrl.key)
+        o => [o.dataKey, o.nameKey, o.selectKey].includes(ctrl.key)
       )
     ).map(
       c => Display.getControl(c, this.props.bindControl)
@@ -658,6 +716,7 @@ function _getControlHandler(oMap: Data.DataMap, setData: (oMap: Data.DataMap, va
     ctrl.update && ctrl.update();
   }
 } 
+
 
 /**
  * get handler for value control
@@ -733,7 +792,7 @@ export class MyComponent extends BaseComponent {
 
       outputMaps.forEach(o => {
         let coreName = getNextCoreName(node);
-        setElementaryMap(o, attrSchema, coreName, true, false);
+        setElementaryMap(o, attrSchema, coreName);
         newMaps.push(o);
       });
       attrs.attributeSchema = attrSchema;
@@ -741,7 +800,7 @@ export class MyComponent extends BaseComponent {
     } if(typ === "object") {
     
       let attrSchema = anySchema;
-      if(schema.attributesNotDefined !== true) {
+      if(schema.attributesNotDefined !== true && schema.additionalProperties !== undefined) {
         attrSchema = schema.additionalProperties;
       }
 

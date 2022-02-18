@@ -5,25 +5,29 @@ import { SomeJSONSchema } from 'ajv/dist/types/json-schema';
 export interface CoreMap {
   reactKey?: string; // key to use in react indexing
   hide?: boolean; // dont display anything
-  dataControl?: string | null;  // control key for data 
+  hasDataControl?: boolean;
+  dataKey?: string;  // control key for data 
   dataValue?: any;  // control value for data
   schema?: SomeJSONSchema | null; // JSON schema for entry
 }
 
 export interface ElementaryMap extends CoreMap {
   canMove?: boolean;  // dynamic output that can move up and down
-  nameFixed?: boolean; // use fixed name
+  hasFixedName?: boolean;
   nameDisplay?: string | null; // fixed name
+  hasOutput?: boolean;
   outputKey?: string; // key for output
   schemaMap?: {[key: string]: SomeJSONSchema} // type selection map of socket name => schema
-  selectControl?: any;  // control key for type select
+  hasSelectControl?: boolean; 
+  selectKey?: string;  // control key for type select
   selectValue?: string | null;  // control value for type select
 }
 
 export interface ObjectMap extends ElementaryMap {
+  hasNameControl?: boolean;
+  nameKey?: string | null; // control key for property name (dynamic only)
   nameValue?: string; // value of property name (used as key for getting JSON data)
-  nameControl?: string | null; // control key for property name (dynamic only)
-  nullable?: boolean; // true if output can be nulled
+  isNullable?: boolean; // true if output can be nulled
   isNulled?: boolean;  // nullable only
 }
 

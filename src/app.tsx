@@ -31,7 +31,7 @@ export function init(
     new MyComponent("Number", Schema.numberSchema, Sockets.addSocket("Number").socket),
     new MyComponent("Boolean", Schema.boolSchema, Sockets.addSocket("Boolean").socket),
     new MyComponent("List", Schema.arraySchema, Sockets.addSocket("List").socket),
-    new MyComponent("Object", Schema.objectSchema, Sockets.addSocket("Object").socket),
+    new MyComponent("Object", sampleSchema, Sockets.addSocket("Object").socket),
   ];
 
   // if(schema) {

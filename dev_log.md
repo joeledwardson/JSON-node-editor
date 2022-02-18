@@ -151,3 +151,35 @@ Now adding to my list is to make select controls change the selected type
 - [ ] lists with named tuples
 - [ ] How to resolve custom names in definitions? I.e. schemas can have any name `#/$defs/` or `#/definitions/`, so need to be able to recognise that?
   - [ ] Can just have a parameter on input where to lookup custom definition locations - any others will still (hopefully) be resolved, but wont appear as named nodes
+
+## 18/02/22
+
+So for custom nodes, need to identify a few rules 
+
+- Custom nodes locations must be specified, default paths are `/$defs` or `/definitions/`
+- Custom nodes must have a singular type (not array of types) defined as `array` `object` `number` `integer` `bool` (or enum later)
+- Custom nodes must not be `anyOf` or `oneOf`
+
+Just thinking about map items creation and re-creation:
+
+- if a `valueKey` is changed to null then the map creator will not create it 
+- However if this is an indication of the value control being destroyed then it will persist
+- A way to solve this is to use a bool flag instead that denotes whether the control is active - if false and the string is valid then destroy
+- The only possible changes are between types of objects and arrays 
+- [x] type selection control
+  - [x] change data control based on selected type - will need to find a way of validating current control against new selected type
+  - [x] re-validate entered data stored (even if dont have a control - e.g. for object )
+  - [x] change output socket - need to detect if current output socket is the right type
+  - [ ] disable value control on connection - need to write the connection created / removed functions
+- [ ] initial non-required item is showing mouse but control is not disabled
+  - [ ] Will need to combine checks for output connections and isNulled to disable value control (should also be checking for `isNullable` when looking at `isnulled`)
+- [ ] Allow named components from `$ref`
+  - [ ] need to build my own `$ref` parser - or not, https://www.npmjs.com/package/json-pointer exists!
+- [ ] schema update on connection
+  - [ ] change node schema and re-run builder
+  - [ ] rather than removing all mapped outputs - clear any unused entries in existing map and re-run object creation so it replaces any controls/outputs
+  - [x] build function should remove unused parts (name/output etc)
+- [ ] lists with named tuples
+- [ ] How to resolve custom names in definitions? I.e. schemas can have any name `#/$defs/` or `#/definitions/`, so need to be able to recognise that?
+  - [ ] Can just have a parameter on input where to lookup custom definition locations - any others will still (hopefully) be resolved, but wont appear as named nodes
+- [ ] enums
