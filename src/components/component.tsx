@@ -549,16 +549,7 @@ class DynamicDisplay extends ReactRete.Node {
     // invert "null" value
     oMap.isNulled = !oMap.isNulled;
     
-    // if output has mapped control, disable it
-    if(oMap.dataKey) {
-      let control = this.props.node.controls.get(oMap.dataKey);
-      if(control && control instanceof ReteReactControl) {
-        // set display disabled and update control
-        control.props.display_disabled = oMap.isNulled;
-        control.update && control.update();
-      }
-    }
-
+    
     // update node and connections
     this.props.node.update();
     this.props.editor.view.updateConnections({node: this.props.node});
@@ -631,6 +622,7 @@ class DynamicDisplay extends ReactRete.Node {
     if(oMap.hasOutput && oMap.outputKey) {
       output = this.props.node.outputs.get(oMap.outputKey) ?? null;
       if(output) {
+        console.log(`nulled: ${oMap.isNulled}`);
         socketElement = Display.getSocket(output, "output", this.props.bindSocket, {
           visibility: oMap.isNulled ? "hidden" : "visible" // dont display if output nulled
         });
@@ -642,14 +634,25 @@ class DynamicDisplay extends ReactRete.Node {
     let dataElement = <div></div>
     if(oMap.hasDataControl && oMap.dataKey) {
       control = this.props.node.controls.get(oMap.dataKey) ?? null;
-      if(control instanceof ReteReactControl && typeof control.props === "object" && !Array.isArray(control.props)) {
-        (control.props as Controls.InputProps<any>).display_disabled = !!output && output.hasConnection();
-      }  
-      if(control) {
+      if(control && control instanceof ReteReactControl && typeof control.props === "object" && !Array.isArray(control.props)) {
+        
+        // set display disabled prop if output connected or nulled
+        let _control = control as Controls.ControlTemplate<any, Controls.InputProps<any>>
+        let disabled = false;
+        if(output && output.hasConnection() || oMap.isNulled) {
+          disabled = true;
+        }
+        _control.props.display_disabled = disabled;
+
         // encapsulate in div with key as type so that if control typ changes, react will re-render
         dataElement = <div key={oMap?.schema?.type}>
           {Display.getControl(control, this.props.bindControl)}
         </div>
+
+        // re-render control - react will NOT re-render above on display_disabled change as it is not defined in Rete.Control props
+        if(_control.update) {
+          _control.update();
+        }
       }
     }
 
