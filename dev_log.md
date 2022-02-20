@@ -170,9 +170,9 @@ Just thinking about map items creation and re-creation:
   - [x] change data control based on selected type - will need to find a way of validating current control against new selected type
   - [x] re-validate entered data stored (even if dont have a control - e.g. for object )
   - [x] change output socket - need to detect if current output socket is the right type
-  - [ ] disable value control on connection - need to write the connection created / removed functions
-- [ ] initial non-required item is showing mouse but control is not disabled
-  - [ ] Will need to combine checks for output connections and isNulled to disable value control (should also be checking for `isNullable` when looking at `isnulled`)
+  - [x] disable value control on connection - need to write the connection created / removed functions
+- [x] initial non-required item is showing mouse but control is not disabled
+  - [x] Will need to combine checks for output connections and isNulled to disable value control (should also be checking for `isNullable` when looking at `isnulled`)
 - [ ] Allow named components from `$ref`
   - [ ] need to build my own `$ref` parser - or not, https://www.npmjs.com/package/json-pointer exists!
 - [ ] schema update on connection
