@@ -765,7 +765,11 @@ export class MyComponent extends BaseComponent {
   internalBuilder(node: Rete.Node, editor: Rete.NodeEditor): void {
     this.addParent(node);
     let attrs = Data.getGeneralAttributes(node);
-    let schema: CustomSchema = attrs.componentSchema ?? this.schema;  // use schema from node data, otherwise component schema
+    
+    // use component schema (on node connected this can be updated)
+    let schema: CustomSchema = this.schema;  
+    let connected = node.getConnections().find(c => c.input.node === node) !== undefined;
+    
     attrs.componentSchema = schema;  // set schema in node data
     attrs.outputTracker = 0;  // reset output tracker so created elements start from 0
     let typ = schema.type as string;

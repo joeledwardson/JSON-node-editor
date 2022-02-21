@@ -183,3 +183,56 @@ Just thinking about map items creation and re-creation:
 - [ ] How to resolve custom names in definitions? I.e. schemas can have any name `#/$defs/` or `#/definitions/`, so need to be able to recognise that?
   - [ ] Can just have a parameter on input where to lookup custom definition locations - any others will still (hopefully) be resolved, but wont appear as named nodes
 - [ ] enums
+
+## 21/02/22
+
+How to resolve `#ref`?
+
+Should not resolve circular references or it will break converting to JSON
+
+However, need to keep track of schema somewhere (not in node data) as it is JSONified....
+
+instead can just resolve refs using `json-schema-ref-parser` and the use `refs.get()` to resolve them and and when I need to
+
+So, if the schema contains refs then will need to resolve them at runtime
+
+What about circular?
+
+```json
+{
+  $id: "https://example.com/schemas/customer",
+  type: "object",
+  properties: {
+    first_name: { $ref: "#/$defs/name" },
+    last_name: { $ref: "#/$defs/name" },
+    objs: { $ref: "#/$defs/hello" },
+  },
+  required: ["first_name", "last_name", "shipping_address", "billing_address"],
+  $defs: {
+    name: { $ref: "#/$defs/pls" },
+    pls: { type: "string" },
+    hello: {
+      type: "object",
+      additionalProperties: {
+        anyOf: [
+          { $ref: "#/$defs/hello" },
+          { type: "string" },
+          { $ref: "#/$defs/hello" },
+        ],
+      },
+    },
+  },
+};
+```
+
+So solution is to...
+
+- not resolve any refs at runtime
+- loop through refs specified at the start to create named components
+  - named components given custom identifiers
+- At different stages refs will need to be resolved, on fail (return undefined) must abort:
+  - Component builder (root schema at build time)
+  - looping each property within an object/list
+  - elementary output  type selection
+
+Whilst it would be easier to resolve references at the start, if they are circular this will break the whole flow - so they must be resolved on an ad-hoc basis to enable JSONifying

@@ -1,36 +1,97 @@
 import * as Rete from "rete";
 import * as Data from "./data/attributes";
 import * as Sockets from "./sockets/sockets";
-import * as Schema from './jsonschema';
+import * as Schema from "./jsonschema";
 import { ReteReactComponent as ReteComponent } from "rete-react-render-plugin";
 import { JSONValue } from "./jsonschema";
 import "./styles.css";
-import { DisplayBase } from "./components/display";
+import { DisplayBase, getOutput } from "./components/display";
 import { MyComponent } from "./components/component";
 import { BaseComponent, getConnectedData } from "./components/base";
 import { SomeJSONSchema } from "ajv/dist/types/json-schema";
+import { JsonStringPointer, JsonPointer } from "json-ptr";
 
 // const addType = (newType: string) => componentsList.push(newType);
+
+function getDefinitions(
+  schema: SomeJSONSchema,
+  locations: JsonStringPointer[]
+): Map<string, SomeJSONSchema> {
+  let namedDefs: Map<string, SomeJSONSchema> = new Map();
+  locations.forEach((loc) => {
+    let defs = JsonPointer.get(schema, loc);
+    if (defs && typeof defs === "object" && !Array.isArray(defs)) {
+      Object.entries(defs).forEach(([k, v]) => {
+        let obj = Schema.getObject(v);
+        if (obj && typeof obj["type"] === "string") {
+          if (
+            [
+              "string",
+              "number",
+              "integer",
+              "boolean",
+              "array",
+              "object",
+            ].includes(obj["type"])
+          ) {
+            if(typeof obj["title"] === "string" && !namedDefs.has(obj["title"])) {
+              namedDefs.set(obj["title"], obj as SomeJSONSchema);
+              obj["namedIdentifier"] = obj["title"];
+            } else if(!namedDefs.has(k)) {
+              namedDefs.set(k, obj as SomeJSONSchema);
+              obj["namedIdentifier"] = k;
+            }
+            
+            
+          }
+        }
+      });
+    }
+  });
+  return namedDefs;
+}
 
 export function init(
   schema: SomeJSONSchema | null,
   editor: Rete.NodeEditor,
-  engine: Rete.Engine
+  engine: Rete.Engine,
+  namedLocations: JsonStringPointer[] = ["#/definitions", "#/$defs"]
 ) {
+  let namedDefs: Map<string, SomeJSONSchema> = new Map();
+  if (schema) {
+    namedDefs = getDefinitions(schema, namedLocations);
+  }
+
   const sampleSchema: SomeJSONSchema = {
     type: "object",
     properties: {
-      firstName: {type: "number"},
+      firstName: { type: "number" },
     },
     required: [],
   };
 
   // create stock components
   var components: Array<ReteComponent> = [
-    new MyComponent("Text", Schema.stringSchema, Sockets.addSocket("Text").socket),
-    new MyComponent("Number", Schema.numberSchema, Sockets.addSocket("Number").socket),
-    new MyComponent("Boolean", Schema.boolSchema, Sockets.addSocket("Boolean").socket),
-    new MyComponent("List", Schema.arraySchema, Sockets.addSocket("List").socket),
+    new MyComponent(
+      "Text",
+      Schema.stringSchema,
+      Sockets.addSocket("Text").socket
+    ),
+    new MyComponent(
+      "Number",
+      Schema.numberSchema,
+      Sockets.addSocket("Number").socket
+    ),
+    new MyComponent(
+      "Boolean",
+      Schema.boolSchema,
+      Sockets.addSocket("Boolean").socket
+    ),
+    new MyComponent(
+      "List",
+      Schema.arraySchema,
+      Sockets.addSocket("List").socket
+    ),
     new MyComponent("Object", sampleSchema, Sockets.addSocket("Object").socket),
   ];
 
@@ -52,11 +113,11 @@ export function init(
       Data.getGeneralAttributes(node).componentSchema = {
         type: "object",
         properties: {
-          data: this.schema as any
+          data: this.schema as any,
         },
         required: ["data"],
         additionalProperties: false,
-      }
+      };
       super.internalBuilder(node, editor);
     }
     getData(node: Rete.Node, editor: Rete.NodeEditor) {
@@ -76,13 +137,11 @@ export function init(
 
   editor.on(["connectioncreated"], async (connection: Rete.Connection) => {
     // await engine.abort();
-
     // // run connection created processor on output node if function is defined
     // let oFuncs = Data.nodeConnectionFuns[connection.output.node.name];
     // if (oFuncs && oFuncs.created) {
     //   oFuncs.created(connection, editor, false);
     // }
-
     // // run connection created processor on input node if function is defined
     // let iFuncs = Data.nodeConnectionFuns[connection.input.node.name];
     // if (iFuncs && iFuncs.created) {
@@ -92,13 +151,11 @@ export function init(
 
   editor.on(["connectionremoved"], async (connection: Rete.Connection) => {
     // await engine.abort();
-
     // // run connection removed processor on output node if function is defined
     // let oFuncs = Data.nodeConnectionFuns[connection.output.node.name];
     // if (oFuncs && oFuncs.removed) {
     //   oFuncs.removed(connection, editor, false);
     // }
-
     // // run connection created processor on input node if function is defined
     // let iFuncs = Data.nodeConnectionFuns[connection.input.node.name];
     // if (iFuncs && iFuncs.removed) {
