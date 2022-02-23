@@ -1,449 +1,36 @@
 import * as Rete from "rete";
 import * as Controls from "../controls/controls";
 import * as Data from "../data/attributes";
-import * as Display from "./display";
-import * as ReactRete from "rete-react-render-plugin";
 import * as MapInt from './mapInterface';
-import { ReteReactControl } from "rete-react-render-plugin";
+import * as Pos from './positional';
 import { anySchema, CustomSchema } from "../jsonschema";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faChevronDown,
-  faChevronUp,
-  faMouse,
-  faPlus,
-  faTimes,
-  faTrash,
-} from "@fortawesome/free-solid-svg-icons";
-import XLSXColumn from "xlsx-column";
-import { Button } from "react-bootstrap";
 import { BaseComponent, getConnectedData } from "./base";
 import { SomeJSONSchema } from "ajv/dist/types/json-schema";
-import { SomeJTDSchemaType } from "ajv/dist/core";
-
-/** update view connections after waiting */
-export function updateViewConnections(
-  nodes: Rete.Node[],
-  editor: Rete.NodeEditor
-) {
-  setTimeout(() => {
-    nodes.forEach((n) => editor?.view.updateConnections({ node: n }));
-    editor.trigger("process");
-  }, 10);
-}
-
-/** increment mapped output tracker in node attributes and return */
-function getNextOutputIndex(node: Rete.Node): number {
-  let attrs = Data.getGeneralAttributes(node);
-  if (attrs.outputTracker === undefined) {
-    attrs.outputTracker = 0;
-  }
-  attrs.outputTracker += 1;
-  return attrs.outputTracker;
-}
-
-/** convert mapped output index to excel string (e.g. 1 => 'A', 2 => 'B') */
-function getNextCoreName(node: Rete.Node): string {
-  let nextIndex = getNextOutputIndex(node);
-  return "Item " + new XLSXColumn(nextIndex).toString();
-}
+import { DynamicDisplay } from "./displayDynamic";
 
 
-function _complete(node: Rete.Node, editor: Rete.NodeEditor) {
-  node.update(); // update output mappings and node
-  updateViewConnections([node], editor); // for each affected node update its connections
-}
-
-/**
- * List Actions for add/remove/move up/move down
- * (Lists are not displayed with controls with outputs (unlike dicts which are))
- * - {output: control} key mappings from `getOutputControls()` function is used to track order of outputs but the `control` values are effectively ignored
- * - getGeneralAttributes().outputTracker is used to track the total number of outputs added over time to create new names
- */
-export function elementAdd(
-  node: Rete.Node,
-  editor: Rete.NodeEditor,
-  idx: number
-): Data.DataMap {
-  // get selected type from type selection control
-  const coreName = getNextCoreName(node);
-  let attrs = Data.getGeneralAttributes(node);
-  let newMap: Data.ElementaryMap = {};
-
-  if (attrs.componentSchema?.type === "object") {
-    MapInt.setDynamicObjectMap(newMap, coreName, attrs?.attributeSchema || null);
-  } else {
-    MapInt.setElementaryMap(newMap, attrs?.attributeSchema || null, coreName);
-  }
-
-  // index in output list for new output follows output pressed
-  let outputMaps = Data.getOutputMap(node);
-  const newIndex: number = idx + 1;
-  outputMaps.splice(newIndex, 0, newMap);
-
-  // create elements
-  MapInt.createMapItems(node, newMap, editor);
-
-  _complete(node, editor);
-
-  // return new output map
-  return newMap;
-}
-
-export function elementRemove(
-  node: Rete.Node,
-  editor: Rete.NodeEditor,
-  idx: number
-) {
-  let outputMaps = Data.getOutputMap(node);
-
-  // check index in range
-  if (!(idx >= 0 && idx < outputMaps.length)) {
-    console.error(`couldnt delete output from index, out of range "${idx}"`);
-    return;
-  }
-
-  // check output exists
-  if (!outputMaps[idx]) {
-    console.error(`unexpected error: output at index "${idx}" not found`);
-    return;
-  }
-
-  // remove map elements
-  MapInt.removeMapItems(node, outputMaps[idx], editor);
-
-  // remove output map
-  outputMaps.splice(idx, 1);
-
-  _complete(node, editor);
-}
-
-export function elementUp(
-  node: Rete.Node,
-  editor: Rete.NodeEditor,
-  idx: number
-) {
-  let outputMaps = Data.getOutputMap(node);
-  if (!(idx > 0 && idx < outputMaps.length && outputMaps[idx - 1].canMove)) {
-    editor.trigger("error", { message: `cant move output index up "${idx}"` });
-    return;
-  }
-
-  // get selected element
-  const m = outputMaps[idx];
-  // pop element out
-  outputMaps.splice(idx, 1);
-  // move "up" (up on screen, down in list index)
-  outputMaps.splice(idx - 1, 0, m);
-
-  _complete(node, editor);
-}
-
-export function elementDown(
-  node: Rete.Node,
-  editor: Rete.NodeEditor,
-  idx: number
-) {
-  let outputMaps = Data.getOutputMap(node);
-  if (!(idx >= 0 && idx + 1 < outputMaps.length)) {
-    editor.trigger("error", {
-      message: `cant move output index down "${idx}"`,
-    });
-    return;
-  }
-
-  // get next element
-  const m = outputMaps[idx + 1];
-  // remove next element
-  outputMaps.splice(idx + 1, 1);
-  // insert behind - move "down" (down on screen, up in list index)
-  outputMaps.splice(idx, 0, m);
-
-  _complete(node, editor);
-}
-
-class DynamicDisplay extends ReactRete.Node {
-  /** process object member null button click -  */
-  nullButtonClick(oMap: Data.ObjectMap): void {
-    // ignore click if output has a connection
-    let output: Rete.Output | null = null;
-    if (oMap.outputKey) {
-      output = this.props.node.outputs.get(oMap.outputKey) ?? null;
-    }
-
-    if (output && output.hasConnection()) {
-      return;
-    }
-
-    // if not "null" then user is clicking to null, delete all connections
-    if (!oMap.isNulled) {
-      if (output) {
-        output.connections.forEach((c) =>
-          this.props.editor.removeConnection(c)
-        );
-      }
-    }
-
-    // invert "null" value
-    oMap.isNulled = !oMap.isNulled;
-
-    // update node and connections
-    this.props.node.update();
-    this.props.editor.view.updateConnections({ node: this.props.node });
-    this.props.editor.trigger("process");
-  }
-
-  getPositionalButtons(index: number): JSX.Element {
-    return (
-      <div className="output-item-controls">
-        <div className="output-item-arrows">
-          <div>
-            <button
-              onClick={() =>
-                elementUp(this.props.node, this.props.editor, index)
-              }
-            >
-              <FontAwesomeIcon icon={faChevronUp} size="xs" />
-            </button>
-          </div>
-          <div>
-            <button
-              onClick={() =>
-                elementDown(this.props.node, this.props.editor, index)
-              }
-            >
-              <FontAwesomeIcon icon={faChevronDown} size="xs" />
-            </button>
-          </div>
-        </div>
-        <Button
-          variant="light"
-          className=""
-          size="sm"
-          onClick={() => elementAdd(this.props.node, this.props.editor, index)}
-        >
-          <FontAwesomeIcon icon={faPlus} />
-        </Button>
-        <Button
-          variant="warning"
-          className=""
-          size="sm"
-          onClick={() =>
-            elementRemove(this.props.node, this.props.editor, index)
-          }
-        >
-          <FontAwesomeIcon icon={faTrash} />
-        </Button>
-      </div>
-    );
-  }
-
-  getMappedOutput(oMap: Data.DataMap, index: number): JSX.Element {
-    if (oMap.hide) {
-      return <></>;
-    }
-
-    let control: Rete.Control | null = null;
-
-    // get name element
-    let nameElement: JSX.Element = <div></div>;
-    if (oMap.hasFixedName) {
-      // name element fixed - use static name, non editable
-      nameElement = <span className="me-1 ms-1">{oMap.nameDisplay}</span>;
-    } else if (oMap.hasNameControl && oMap.nameKey) {
-      // name element editable - display control
-      control = this.props.node.controls.get(oMap.nameKey) ?? null;
-      if (control) {
-        nameElement = Display.getControl(control, this.props.bindControl);
-      }
-    }
-
-    // create positional / nullable element
-    let dynamicElement: JSX.Element = <div></div>;
-    if (oMap.canMove) {
-      // get up/down buttons
-      dynamicElement = this.getPositionalButtons(index);
-    } else if (oMap.isNullable) {
-      // if item is nullable, display null/un-null button
-      let btnIcon = oMap.isNulled ? faMouse : faTimes;
-      dynamicElement = (
-        <Button
-          variant="secondary"
-          size="sm"
-          className="display-button"
-          onClick={() => this.nullButtonClick(oMap)}
-        >
-          <FontAwesomeIcon icon={btnIcon} />
-        </Button>
-      );
-    }
-
-    // get output socket
-    let socketElement = <div></div>;
-    let output: Rete.Output | null = null;
-    if (oMap.hasOutput && oMap.outputKey) {
-      output = this.props.node.outputs.get(oMap.outputKey) ?? null;
-      if (output) {
-        console.log(`nulled: ${oMap.isNulled}`);
-        socketElement = Display.getSocket(
-          output,
-          "output",
-          this.props.bindSocket,
-          {
-            visibility: oMap.isNulled ? "hidden" : "visible", // dont display if output nulled
-          }
-        );
-      }
-    }
-
-    // get data editing control
-    let dataElement = <div></div>;
-    if (oMap.hasDataControl && oMap.dataKey) {
-      control = this.props.node.controls.get(oMap.dataKey) ?? null;
-      if (
-        control &&
-        control instanceof ReteReactControl &&
-        typeof control.props === "object" &&
-        !Array.isArray(control.props)
-      ) {
-        // set display disabled prop if output connected or nulled
-        let _control = control as Controls.ControlTemplate<
-          any,
-          Controls.InputProps<any>
-        >;
-        let disabled = false;
-        if ((output && output.hasConnection()) || oMap.isNulled) {
-          disabled = true;
-        }
-        _control.props.display_disabled = disabled;
-
-        // encapsulate in div with key as type so that if control typ changes, react will re-render
-        dataElement = (
-          <div key={oMap?.schema?.type}>
-            {Display.getControl(control, this.props.bindControl)}
-          </div>
-        );
-
-        // re-render control - react will NOT re-render above on display_disabled change as it is not defined in Rete.Control props
-        if (_control.update) {
-          _control.update();
-        }
-      }
-    }
-
-    // get type select control
-    let selectElement = <div></div>;
-    if (oMap.hasSelectControl && oMap.selectKey) {
-      let selectControl = this.props.node.controls.get(oMap.selectKey);
-      if (selectControl) {
-        selectElement = Display.getControl(
-          selectControl,
-          this.props.bindControl
-        );
-      }
-    }
-
-    return (
-      <div className="dynamic-output" key={oMap.reactKey}>
-        {nameElement}
-        {dataElement}
-        {dynamicElement}
-        {selectElement}
-        {socketElement}
-      </div>
-    );
-  }
-
-  /** render elementary outputs with their mapped controls */
-  renderMappedOutputs(): JSX.Element[] {
-    let outputMaps = Data.getOutputMap(this.props.node);
-    return outputMaps.map((o, i) => this.getMappedOutput(o, i));
-  }
-
-  renderUnmappedControls(): JSX.Element[] {
-    let outputMaps = Data.getOutputMap(this.props.node);
-    return Array.from(this.props.node.controls.values())
-      .filter(
-        (ctrl) =>
-          !outputMaps.find((o) =>
-            [o.dataKey, o.nameKey, o.selectKey].includes(ctrl.key)
-          )
-      )
-      .map((c) => Display.getControl(c, this.props.bindControl));
-  }
-
-  render() {
-    return Display.renderComponent(
-      this.props,
-      this.state,
-      () => this.renderMappedOutputs(),
-      () => this.renderUnmappedControls()
-    );
-  }
-}
-
-/**
- * @param oMap output map instance
- * @param setData function to set data in output map instance
- * @returns function to create control handler
- */
-function _getControlHandler(
-  oMap: Data.DataMap,
-  setData: (oMap: Data.DataMap, value: any) => void
-): Controls.DataHandler {
-  return (
-    ctrl: ReteReactControl,
-    emitter: Rete.NodeEditor,
-    key: string,
-    data: any
-  ) => {
-    ctrl.props.value = data;
-    setData(oMap, data);
-    emitter.trigger("process");
-    ctrl.update && ctrl.update();
-  };
-}
-
-/**
- * get handler for value control
- * @param oMap output map instance
- * @returns function to create control handler to set "dataValue" property
- */
-const getValueHandler = (oMap: Data.DataMap) =>
-  _getControlHandler(
-    oMap,
-    (oMap: Data.DataMap, value: any) => (oMap.dataValue = value)
-  );
-
-/**
- * get handler for name control
- * @param oMap output map instance
- * @returns function to create control handler to set "nameValue" property
- */
-const getNameHandler = (oMap: Data.DataMap) =>
-  _getControlHandler(
-    oMap,
-    (oMap: Data.DataMap, value: any) => (oMap.nameValue = value)
-  );
 
 /** list of available types */
 export let componentsList: Array<string> = [];
 
-export class MyComponent extends BaseComponent {
+
+export class SchemaComponent extends BaseComponent {
   data = { component: DynamicDisplay };
   schema: CustomSchema;
-  socket: Rete.Socket | null;
+  socket: Rete.Socket | null;  // socket for parent connection
   constructor(name: string, schema: CustomSchema, socket: Rete.Socket | null) {
     super(name);
     componentsList.push(name);
     this.schema = schema;
     this.socket = socket;
   }
+  /** add parent input */
   addParent(node: Rete.Node): void {
     if (this.socket) {
-      node.addInput(new Rete.Input("parent", "Parent", this.socket)); // add parent node
+      node.addInput(new Rete.Input("parent", "Parent", this.socket));
     }
   }
+  /** get schema from node connection to input if exists */
   getConnectedSchema(node: Rete.Node): SomeJSONSchema | undefined {
     let connection = node
       .getConnections()
@@ -492,7 +79,7 @@ export class MyComponent extends BaseComponent {
       }
 
       outputMaps.forEach((o) => {
-        let coreName = getNextCoreName(node);
+        let coreName = Pos.getNextCoreName(node);
         MapInt.setElementaryMap(o, attrSchema, coreName);
         newMaps.push(o);
       });
@@ -510,7 +97,7 @@ export class MyComponent extends BaseComponent {
       // loop properties
       if (schema.properties) {
         Object.entries(schema.properties).forEach(([key, property], index) => {
-          let coreName = getNextCoreName(node);
+          let coreName = Pos.getNextCoreName(node);
           let oMap: Data.ObjectMap = {};
 
           // check if matching entry exists
@@ -540,7 +127,7 @@ export class MyComponent extends BaseComponent {
         // if additional properties are allowed, loop remaining data and add as dynamic outputs
         addButton = true;
         outputMaps.forEach((o) => {
-          let coreName = getNextCoreName(node); // get new core name
+          let coreName = Pos.getNextCoreName(node); // get new core name
           MapInt.setDynamicObjectMap(o, coreName, attrSchema);
           newMaps.push(o);
         });
@@ -558,7 +145,7 @@ export class MyComponent extends BaseComponent {
             value: 0, // value is press count
             buttonInner: "Add Item +",
           },
-          () => elementAdd(node, editor, Data.getOutputMap(node).length)
+          () => Pos.elementAdd(node, editor, Data.getOutputMap(node).length)
         )
       );
     }

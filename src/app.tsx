@@ -5,8 +5,7 @@ import * as Schema from "./jsonschema";
 import { ReteReactComponent as ReteComponent } from "rete-react-render-plugin";
 import { JSONValue, JSONTypeMap } from "./jsonschema";
 import "./styles.css";
-import { DisplayBase, getOutput } from "./components/display";
-import { MyComponent } from "./components/component";
+import { SchemaComponent } from "./components/component";
 import { BaseComponent, getConnectedData } from "./components/base";
 import { SomeJSONSchema } from "ajv/dist/types/json-schema";
 import { JsonStringPointer, JsonPointer } from "json-ptr";
@@ -71,27 +70,27 @@ export function init(
 
   // create stock components
   var components: Array<ReteComponent> = [
-    new MyComponent(
+    new SchemaComponent(
       JSONTypeMap["string"],
       Schema.stringSchema,
       Sockets.addSocket(JSONTypeMap["string"]).socket
     ),
-    new MyComponent(
+    new SchemaComponent(
       JSONTypeMap["number"],
       Schema.numberSchema,
       Sockets.addSocket(JSONTypeMap["number"]).socket
     ),
-    new MyComponent(
+    new SchemaComponent(
       JSONTypeMap["boolean"],
       Schema.boolSchema,
       Sockets.addSocket(JSONTypeMap["boolean"]).socket
     ),
-    new MyComponent(
+    new SchemaComponent(
       JSONTypeMap["array"],
       Schema.arraySchema,
       Sockets.addSocket(JSONTypeMap["array"]).socket
     ),
-    new MyComponent(
+    new SchemaComponent(
       JSONTypeMap["object"],
       sampleSchema, 
       Sockets.addSocket(JSONTypeMap["object"]).socket
@@ -110,7 +109,7 @@ export function init(
   // }
 
   // add root component
-  class RootComponent extends MyComponent {
+  class RootComponent extends SchemaComponent {
     addParent(node: Rete.Node): void {}
     internalBuilder(node: Rete.Node, editor: Rete.NodeEditor) {
       Data.getGeneralAttributes(node).componentSchema = {

@@ -60,6 +60,7 @@ export abstract class ControlTemplate<T, P extends InputProps<T>> extends ReteCo
     getControlsData(node)[key] = this.props.value;
   }
 }
+export type ControlTemplateAny = ControlTemplate<any, InputProps<any>>;
 
 /** input element only accepting numbers, when editing calls `props.valueChanger()` with the number in input */
 type NumberProps = InputProps<number>
