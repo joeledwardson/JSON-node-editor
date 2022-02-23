@@ -130,22 +130,41 @@ function setElementaryMap(
 ) {
 
   let schemaMap: {[key in string]: SomeJSONSchema} = {}
-  const addToMap = (schema: SomeJSONSchema) => { 
-    let custom: CustomSchema = schema as CustomSchema;
-    // check for named schema
-    if(custom.customNodeIdentifier) {
-      schemaMap[custom.customNodeIdentifier] = schema;
-    }
-    // otherwise check if type is valid
-    else if(typeof schema.type === "string" && schema.type in JSONTypeMap) {
+  const addToMap = (schema: SomeJSONSchema): void => { 
+    let namedId = Data.getNamedIdentifier(schema);
+    if(namedId && typeof namedId === "string") {
+      // check for named schema
+      schemaMap[namedId] = schema;
+      return;
+    } 
+
+    if(typeof schema.type === "string" && schema.type in JSONTypeMap) {
+      // check if type is valid
       let name = JSONTypeMap[schema.type];
       schemaMap[name] = schema;
-    }
+      return;
+    } 
+    
+    if(typeof schema.type === "object" && Array.isArray(schema.type)) {
+      // loop list of types
+      schema.type.forEach(t => {
+        if(typeof t === "string" && t in JSONTypeMap) {
+          // create new schema with type as a constant rather than an array
+          const newSchema: SomeJSONSchema = JSON.parse(JSON.stringify(schema));
+          let name = JSONTypeMap[t]; 
+          newSchema.type = t;
+          schemaMap[name] = newSchema;
+        }
+      });
+      return;
+    } 
 
     if(typeof schema.anyOf === "object" && Array.isArray(schema.anyOf)) {
+      // process anyOf array
       schema.anyOf.forEach(s => addToMap(s));
     }
     if(typeof schema.oneOf === "object" && Array.isArray(schema.oneOf)) {
+      // process oneOf array
       schema.oneOf.forEach(s => addToMap(s));
     }
   }
@@ -747,7 +766,6 @@ export let componentsList: Array<string> = [];
 
 
 export class MyComponent extends BaseComponent {
-  hasParent = true
   data = {component: DynamicDisplay}
   schema: CustomSchema;
   socket: Rete.Socket | null;

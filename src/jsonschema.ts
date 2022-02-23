@@ -1,12 +1,6 @@
 import { SomeJSONSchema } from "ajv/dist/types/json-schema";
-import * as Rete from "rete";
-import * as Sockets from "./sockets/sockets";
-import {
-  multiSocket,
-  sockets,
-  anySocket,
-  getTypeString,
-} from "./sockets/sockets";
+import { JsonPointer } from "json-ptr";
+
 
 export type CustomSchema = SomeJSONSchema & {
   customNodeIdentifier?: string;
@@ -61,6 +55,39 @@ export const getObject: (v: JSONValue) => JSONObject | null = (v: JSONValue) =>
 export function get_ref_name(ref_str: string): string | null {
   return /.*\/(?<name>.*)$/.exec(ref_str)?.groups?.name ?? null;
 }
+
+
+function _refResolve(value: any, cache: Object[], schema: Object): any | undefined {
+  if (!(value && typeof value === "object" && !Array.isArray(value))) {
+    // value is not an object
+    return value;
+  }
+  if (!value["$ref"]) {
+    // value is not a ref
+    return value;
+  }
+  let resolved = JsonPointer.get(schema, value["$ref"]);
+  if (resolved === undefined) {
+    // resolve ref failed
+    return value;
+  }
+  if(!(resolved && typeof resolved === "object")) {
+    // resolved value not an object, return it
+    return resolved;
+  }
+  if(cache.includes(resolved)) {
+    // circular reference, abort
+    return undefined;
+  }
+  // value is a ref, resolves to an object which is not in cache
+  cache.push(resolved);
+  return _refResolve(resolved, cache, schema);
+}
+
+function refResolve(value: any, schema: Object) {
+  return _refResolve(value, [], schema);
+}
+
 
 // /**
 //  * Get socket from JSON schema definition

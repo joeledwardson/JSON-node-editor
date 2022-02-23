@@ -31,7 +31,7 @@ export interface ObjectMap extends ElementaryMap {
   isNulled?: boolean;  // nullable only
 }
 
-export interface DataMap extends ObjectMap {};
+export interface DataMap extends ObjectMap {}
 
 
 
@@ -82,4 +82,11 @@ export interface GeneralAttributes {
 }
 export function getGeneralAttributes(node: Rete.Node): GeneralAttributes {
   return getDataAttribute<any>(node, "generalAttributes") as GeneralAttributes;
+}
+
+export function getNamedIdentifier(obj: { [key: string]: any }): any {
+  return obj["namedIdentifier"];
+}
+export function setNamedIdentifier(obj: { [key: string]: any }, name: string): void {
+  obj["namedIdentifier"] = name;
 }
