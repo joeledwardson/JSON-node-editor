@@ -236,3 +236,41 @@ So solution is to...
   - elementary output  type selection
 
 Whilst it would be easier to resolve references at the start, if they are circular this will break the whole flow - so they must be resolved on an ad-hoc basis to enable JSONifying
+
+## 22/02/22
+
+- [ ] How to access root schema from all nodes at any time?
+
+## 23/02/22
+
+So now that  `$ref`  references will be resolved dynamically, nodes will need access to the root schema.
+
+Give this, perhaps it would be better to use schema pointers to positions in the schema, rather than holding the schema in output maps.
+
+Could hold root schema in components - this would not be dynamic, and on changing the root schema would require all components to be updated.
+
+The only way around this would be to have an object that can be edited?
+
+The other issue is that if the custom keyword for base components can be edited then if the schema is changed and custom keywords components will need to be updated?
+
+Ok, note this for a future update
+
+- [ ] How to dynamically modify schema?
+- [ ] What happens if base position for schema is modified for already created `List`/`Object` nodes?
+- [ ] What happens in rete if components no longer exist in new schema?
+
+Ok so fresh problem: In the case of `type` as an array, how would one use JSON pointers, given that you would not know which type is selected?
+
+So could either
+
+1. use schema Objects and create objects where there is a type array, for each index value
+   1. This is simpler, but means creating more objects which could fail when JSONifying/ de-JSONifying to deep copy
+2. use schema pointers but have an additional `typeSelect` value which indicates which type have selected in `type` array
+   1. This means storing less data in the editor, as all you have is pointers
+   2. but more complex as have to store selection type
+
+Going to choose 1st option 
+
+- [x] Also, should be using the JSON type map for named nodes otherwise its ambiguous
+- [ ] Do we still need controls data attribute?
+- [ ] still need general connection functions? Just run builder on connection/disconnection

@@ -6,44 +6,44 @@ import { ReteReactComponent as ReteComponent } from "rete-react-render-plugin";
 import { JSONValue } from "./jsonschema";
 import "./styles.css";
 import { DisplayBase, getOutput } from "./components/display";
-import { MyComponent } from "./components/component";
+import { JSONTypeMap, MyComponent } from "./components/component";
 import { BaseComponent, getConnectedData } from "./components/base";
 import { SomeJSONSchema } from "ajv/dist/types/json-schema";
 import { JsonStringPointer, JsonPointer } from "json-ptr";
 
 // const addType = (newType: string) => componentsList.push(newType);
 
+
+
 function getDefinitions(
   schema: SomeJSONSchema,
   locations: JsonStringPointer[]
 ): Map<string, SomeJSONSchema> {
   let namedDefs: Map<string, SomeJSONSchema> = new Map();
+
+  const processEntry = (entry: { [key: string]: any }, key: string) => {
+    let typ = entry["type"];
+    if (typeof typ === "string") {
+      if (!["string", "number", "integer", "boolean", "array", "object"].includes(typ)) {
+        return;
+      }
+      let title = entry["title"];
+      if (typeof title === "string" && !namedDefs.has(title)) {
+        namedDefs.set(title, entry as SomeJSONSchema);
+        Data.setNamedIdentifier(entry, title);
+      } else if (!namedDefs.has(key)) {
+        namedDefs.set(key, entry as SomeJSONSchema);
+        Data.setNamedIdentifier(entry, key);
+      }
+    }
+  };
+
   locations.forEach((loc) => {
     let defs = JsonPointer.get(schema, loc);
     if (defs && typeof defs === "object" && !Array.isArray(defs)) {
       Object.entries(defs).forEach(([k, v]) => {
-        let obj = Schema.getObject(v);
-        if (obj && typeof obj["type"] === "string") {
-          if (
-            [
-              "string",
-              "number",
-              "integer",
-              "boolean",
-              "array",
-              "object",
-            ].includes(obj["type"])
-          ) {
-            if(typeof obj["title"] === "string" && !namedDefs.has(obj["title"])) {
-              namedDefs.set(obj["title"], obj as SomeJSONSchema);
-              obj["namedIdentifier"] = obj["title"];
-            } else if(!namedDefs.has(k)) {
-              namedDefs.set(k, obj as SomeJSONSchema);
-              obj["namedIdentifier"] = k;
-            }
-            
-            
-          }
+        if(v && typeof v === "object" && !Array.isArray(v)) {
+          processEntry(v, k);
         }
       });
     }
@@ -73,26 +73,30 @@ export function init(
   // create stock components
   var components: Array<ReteComponent> = [
     new MyComponent(
-      "Text",
+      JSONTypeMap["string"],
       Schema.stringSchema,
-      Sockets.addSocket("Text").socket
+      Sockets.addSocket(JSONTypeMap["string"]).socket
     ),
     new MyComponent(
-      "Number",
+      JSONTypeMap["number"],
       Schema.numberSchema,
-      Sockets.addSocket("Number").socket
+      Sockets.addSocket(JSONTypeMap["number"]).socket
     ),
     new MyComponent(
-      "Boolean",
+      JSONTypeMap["boolean"],
       Schema.boolSchema,
-      Sockets.addSocket("Boolean").socket
+      Sockets.addSocket(JSONTypeMap["boolean"]).socket
     ),
     new MyComponent(
-      "List",
+      JSONTypeMap["array"],
       Schema.arraySchema,
-      Sockets.addSocket("List").socket
+      Sockets.addSocket(JSONTypeMap["array"]).socket
     ),
-    new MyComponent("Object", sampleSchema, Sockets.addSocket("Object").socket),
+    new MyComponent(
+      JSONTypeMap["object"],
+      sampleSchema, 
+      Sockets.addSocket(JSONTypeMap["object"]).socket
+    ),
   ];
 
   // if(schema) {
