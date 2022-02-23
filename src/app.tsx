@@ -60,10 +60,11 @@ export function init(
     namedDefs = getDefinitions(schema, namedLocations);
   }
 
-  const sampleSchema: SomeJSONSchema = {
+  const sampleSchema: any = {
     type: "object",
     properties: {
       firstName: { type: "number" },
+      sampleConst: {const: "pls"}
     },
     required: [],
   };

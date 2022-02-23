@@ -1,29 +1,29 @@
-import { SomeJSONSchema } from "ajv/dist/types/json-schema";
 import { JsonPointer } from "json-ptr";
+import { JSONSchema7} from 'json-schema';
+export type MyJSONSchema = JSONSchema7;
 
-
-export type CustomSchema = SomeJSONSchema & {
+export type CustomSchema = MyJSONSchema & {
   customNodeIdentifier?: string;
   attributesNotDefined?: true;  // denotes for object/array that attribute schemas are not yet defined
 };
 
-export const stringSchema: SomeJSONSchema = { type: "string" };
-export const nullSchema: SomeJSONSchema = { type: "null", nullable: true };
-export const numberSchema: SomeJSONSchema = { type: "number" };
+export const stringSchema: MyJSONSchema = { type: "string" };
+export const nullSchema: MyJSONSchema = { type: "null" };
+export const numberSchema: MyJSONSchema = { type: "number" };
 export const objectSchema: CustomSchema = {
   type: "object",
   required: [],
   attributesNotDefined: true,
 };
-export const intSchema: SomeJSONSchema = { type: "integer" };
-export const boolSchema: SomeJSONSchema = { type: "boolean" };
+export const intSchema: MyJSONSchema = { type: "integer" };
+export const boolSchema: MyJSONSchema = { type: "boolean" };
 export const arraySchema: CustomSchema = {
   type: "array",
   items: { anyOf: [] },
   attributesNotDefined: true,
 };
 
-export const anySchema: SomeJSONSchema = {
+export const anySchema: MyJSONSchema = {
   anyOf: [
     stringSchema,
     numberSchema,
@@ -105,7 +105,7 @@ export const JSONTypeMap: { [key: string]: string } = {
 //  * @param property JSON Schema type definition
 //  * @returns Socket
 //  */
-// export function getJSONSocket(property: SomeJSONSchema | null | undefined, getInner: boolean = true): Rete.Socket | null {
+// export function getJSONSocket(property: MyJSONSchema | null | undefined, getInner: boolean = true): Rete.Socket | null {
 //   if( property === null || property === undefined ) {
 //     return anySocket;
 //   }
@@ -151,7 +151,7 @@ export const JSONTypeMap: { [key: string]: string } = {
 //         throw new Error('Currently do not support array item specification in list form')
 
 //       } else if(typeof property.items === "object" && !Array.isArray(property.items)) {
-//         let varItems = property["items"] as SomeJSONSchema;
+//         let varItems = property["items"] as MyJSONSchema;
 //         // inner definition has its own definitions - call function recursively
 //         let innerSocket = getJSONSocket(varItems, false);
 //         let name = `List[${innerSocket?.name ?? ""}]`;
@@ -170,7 +170,7 @@ export const JSONTypeMap: { [key: string]: string } = {
 //     if(property.additionalProperties !== null && typeof property.additionalProperties === "object" && !Array.isArray(property.additionalProperties)) {
 
 //       // additionalProperties defines the type of values for dictionary keys
-//       let ap: SomeJSONSchema = property.additionalProperties;
+//       let ap: MyJSONSchema = property.additionalProperties;
 //       let innerSocket = getJSONSocket(ap, false);
 //       let name = `Object[${innerSocket?.name ?? ""}]`;
 //       return multiSocket(["Object"], name, Sockets.objColour);

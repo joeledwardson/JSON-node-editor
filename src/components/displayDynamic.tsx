@@ -86,6 +86,18 @@ export class DynamicDisplay extends ReactRete.Node {
     );
   }
 
+  /** set control disabled prop if props are valid */
+  setControlDisabled(control: Rete.Control, disabled: boolean): void {
+    if(control instanceof ReteReactControl &&
+        typeof control.props === "object" &&
+        !Array.isArray(control.props)
+        ) {
+      // cast control to template form (to access "disabled" prop)
+      let _control = control as Controls.ControlTemplateAny;
+      _control.props.display_disabled = disabled;
+    }
+  }
+
   getMappedOutput(oMap: Data.DataMap, index: number): JSX.Element {
     let control: Rete.Control | null = null;
 
@@ -146,19 +158,10 @@ export class DynamicDisplay extends ReactRete.Node {
     } else if(oMap.hasDataControl && oMap.dataKey) {
       control = this.props.node.controls.get(oMap.dataKey) ?? null;
       // check props are a valid object
-      if (control &&
-        control instanceof ReteReactControl &&
-        typeof control.props === "object" &&
-        !Array.isArray(control.props)) {
-        // cast control to template form (to access "disabled" prop)
-        let _control = control as Controls.ControlTemplateAny;
-
+      if (control) {
         // set disabled true if has connection or is nulled
-        let disabled = false;
-        if ((output && output.hasConnection()) || oMap.isNulled) {
-          disabled = true;
-        }
-        _control.props.display_disabled = disabled;
+        let disabled = (output && output.hasConnection()) || oMap.isNulled;
+        this.setControlDisabled(control, Boolean(disabled));
 
         // encapsulate with key as type & disabled so that if control type changes or disables, react will re-render
         let key = `${oMap?.schema?.type} ${disabled}`;
@@ -168,17 +171,21 @@ export class DynamicDisplay extends ReactRete.Node {
           </div>
         );
       }
-    }
+    }1
 
     // get type select control
     let selectElement = <div></div>;
     if (oMap.hasSelectControl && oMap.selectKey) {
       let selectControl = this.props.node.controls.get(oMap.selectKey);
       if (selectControl) {
-        selectElement = Display.getControl(
+        // disable type select if nulled
+        let disabled = Boolean(oMap.isNulled)
+        this.setControlDisabled(selectControl, disabled);
+        // use disabled in key to prompt react to update
+        selectElement = <div key={`select ${disabled}`}>{Display.getControl(
           selectControl,
           this.props.bindControl
-        );
+        )}</div>
       }
     }
 

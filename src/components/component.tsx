@@ -5,8 +5,8 @@ import * as MapInt from './mapInterface';
 import * as Pos from './positional';
 import { anySchema, CustomSchema } from "../jsonschema";
 import { BaseComponent, getConnectedData } from "./base";
-import { SomeJSONSchema } from "ajv/dist/types/json-schema";
 import { DynamicDisplay } from "./displayDynamic";
+import { MyJSONSchema } from "../jsonschema";
 
 
 
@@ -31,7 +31,7 @@ export class SchemaComponent extends BaseComponent {
     }
   }
   /** get schema from node connection to input if exists */
-  getConnectedSchema(node: Rete.Node): SomeJSONSchema | undefined {
+  getConnectedSchema(node: Rete.Node): MyJSONSchema | undefined {
     let connection = node
       .getConnections()
       .find((c) => c.input.node === node && c.input.key === "parent");
@@ -73,8 +73,9 @@ export class SchemaComponent extends BaseComponent {
       newMaps.push(firstMap);
     } else if (typ === "array") {
       addButton = true;
-      let attrSchema: SomeJSONSchema = anySchema;
-      if (schema.attributesNotDefined !== true) {
+      let attrSchema: MyJSONSchema = anySchema;
+      if (schema.attributesNotDefined !== true && 
+        typeof schema["items"] === "object" && !Array.isArray(schema["items"])) {
         attrSchema = schema["items"];
       }
 
@@ -89,7 +90,7 @@ export class SchemaComponent extends BaseComponent {
       let attrSchema = anySchema;
       if (
         schema.attributesNotDefined !== true &&
-        schema.additionalProperties !== undefined
+        typeof schema.additionalProperties === "object"
       ) {
         attrSchema = schema.additionalProperties;
       }
@@ -116,7 +117,7 @@ export class SchemaComponent extends BaseComponent {
             oMap,
             key,
             required,
-            (property as SomeJSONSchema) ?? null,
+            (property as MyJSONSchema) ?? null,
             coreName
           );
           newMaps.push(oMap);

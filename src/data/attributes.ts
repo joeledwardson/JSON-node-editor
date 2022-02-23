@@ -1,6 +1,8 @@
 import * as Rete from 'rete';
 import { getDataAttribute, setDataAttribute } from "./access";
-import { SomeJSONSchema } from 'ajv/dist/types/json-schema';
+import { JSONSchema7} from 'json-schema';
+
+type MyJSONSchema = JSONSchema7;
 
 export interface CoreMap {
   coreName?: string;
@@ -9,7 +11,7 @@ export interface CoreMap {
   dataKey?: string;  // control key for data 
   hasFixedData?: boolean;  // true if data value fixed
   dataValue?: any;  // control value for data
-  schema?: SomeJSONSchema | null; // JSON schema for entry
+  schema?: MyJSONSchema | null; // JSON schema for entry
 }
 
 export interface ElementaryMap extends CoreMap {
@@ -18,7 +20,7 @@ export interface ElementaryMap extends CoreMap {
   nameDisplay?: string | null; // fixed name
   hasOutput?: boolean;
   outputKey?: string; // key for output
-  schemaMap?: {[key: string]: SomeJSONSchema} // type selection map of socket name => schema
+  schemaMap?: {[key: string]: MyJSONSchema} // type selection map of socket name => schema
   hasSelectControl?: boolean; 
   selectKey?: string;  // control key for type select
   selectValue?: string | null;  // control value for type select used for output socket
@@ -78,8 +80,8 @@ export var nodeConnectionFuns: {[key: string]: ConnectionFuncs} = {};
 /** get general attributes */
 export interface GeneralAttributes {
   outputTracker?: number
-  componentSchema?: SomeJSONSchema
-  attributeSchema?: SomeJSONSchema
+  componentSchema?: MyJSONSchema
+  attributeSchema?: MyJSONSchema
 }
 export function getGeneralAttributes(node: Rete.Node): GeneralAttributes {
   return getDataAttribute<any>(node, "generalAttributes") as GeneralAttributes;

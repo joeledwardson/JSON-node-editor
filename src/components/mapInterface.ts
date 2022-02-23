@@ -4,8 +4,7 @@ import * as Controls from "../controls/controls";
 import * as Data from "../data/attributes";
 import { ReteReactControl } from "rete-react-render-plugin";
 import { JSONTypeMap } from "../jsonschema";
-import { SomeJSONSchema } from "ajv/dist/types/json-schema";
-import { checkUnknownRules } from "ajv/dist/compile/util";
+import { MyJSONSchema } from "../jsonschema";
 
 export const getReactKey = (coreName: string) => `k-${coreName}`;  // generate react key
 export const getDataKey = (coreName: string) => `${coreName} input`; // generate data input control key
@@ -128,36 +127,29 @@ function getDataValue(value: any, typ: string, default_value: any): any {
 export function setCoreMap(
   oMap: Data.DataMap,
   coreName: string,
-  property: SomeJSONSchema | null,
+  property: MyJSONSchema | null,
   disableAdditional: boolean = true
 ) {
-  let dataValue: any = oMap.dataValue;
+  let dataValue: any = null;
   let hasFixedData = false;
   let hasControl = false;
 
   if (property !== null) {
-    let typ = property.type;
-    dataValue = getDataValue(dataValue, typ, property.default);
-    if(dataValue !== undefined) {
-      // type property valid
-      if(typ !== "null") {
-        // use data control if type non-null
-        hasControl = true;
-      }
+    if (property.const !== undefined) {
+      // const specified, fixed
+      dataValue = property.const;
+      hasFixedData = true;
     } else {
-      // type property invalid
-      if (property.const !== undefined) {
-        // const specified, fixed
-        dataValue = property.const;
-        hasFixedData = true;
-      } else {
-        // type unkown
-        dataValue = null;
+      let typ = property.type;
+      if(typeof typ === "string") {
+        // type is valid string, get data for matching type
+        dataValue = getDataValue(oMap.dataValue, typ, property.default);
+        if(typ !== "null") {
+          // use data control if type non-null
+          hasControl = true;
+        }
       }
     }
-  } else {
-    // schema null
-    dataValue = null;
   }
 
   oMap.coreName = coreName;
@@ -182,18 +174,30 @@ export function setCoreMap(
 /** set elementary attributes of mapped output */
 export function setElementaryMap(
   oMap: Data.ElementaryMap,
-  property: SomeJSONSchema | null,
+  property: MyJSONSchema | null,
   coreName: string,
   nameDisplay: string | null = null,
   canMove: boolean = true,
   hasFixedName: boolean = false
 ) {
-  let schemaMap: { [key in string]: SomeJSONSchema } = {};
-  const addToMap = (schema: SomeJSONSchema): void => {
+  let schemaMap: { [key in string]: MyJSONSchema } = {};
+  const addToMap = (schema: MyJSONSchema): void => {
     let namedId = Data.getNamedIdentifier(schema);
     if (namedId && typeof namedId === "string") {
       // check for named schema
       schemaMap[namedId] = schema;
+      return;
+    }
+
+    if(schema.const !== undefined) {
+      // increment index to produce "const" name until unique 
+      let i = 1;
+      let name = "";
+      do {
+        name = `Const ${i}`;
+      } while (name in schemaMap);
+      // assign const to schema
+      schemaMap[name] = schema;
       return;
     }
 
@@ -209,7 +213,7 @@ export function setElementaryMap(
       schema.type.forEach((t) => {
         if (typeof t === "string" && t in JSONTypeMap) {
           // create new schema with type as a constant rather than an array
-          const newSchema: SomeJSONSchema = JSON.parse(JSON.stringify(schema));
+          const newSchema: MyJSONSchema = JSON.parse(JSON.stringify(schema));
           let name = JSONTypeMap[t];
           newSchema.type = t;
           schemaMap[name] = newSchema;
@@ -220,18 +224,22 @@ export function setElementaryMap(
 
     if (typeof schema.anyOf === "object" && Array.isArray(schema.anyOf)) {
       // process anyOf array
-      schema.anyOf.forEach((s) => addToMap(s));
+      schema.anyOf.forEach((s) => {
+        if(typeof s === "object") addToMap(s)
+      });
     }
     if (typeof schema.oneOf === "object" && Array.isArray(schema.oneOf)) {
       // process oneOf array
-      schema.oneOf.forEach((s) => addToMap(s));
+      schema.oneOf.forEach((s) => {
+        if(typeof s === "object") addToMap(s)
+      });
     }
   };
   if (property) {
     addToMap(property);
   }
 
-  let schema: SomeJSONSchema | null = oMap.schema ?? null;
+  let schema: MyJSONSchema | null = oMap.schema ?? null;
   let selectValue: string | null = oMap.selectValue ?? null;
 
   if (selectValue && selectValue in schemaMap) {
@@ -267,14 +275,14 @@ export function setFixedObjectMap(
   oMap: Data.DataMap,
   key: string,
   required: string[],
-  property: SomeJSONSchema,
+  property: MyJSONSchema,
   coreName: string
 ) {
   let nullable = false;
   let isNulled = false;
 
-  if (!required.includes(key) || (property && property.nullable === true)) {
-    // property not in required or "nullable" as per schema
+  if (!required.includes(key) && !(property && typeof property === "object" && property.const !== undefined)) {
+    // property not in required
     nullable = true;
 
     if (oMap.isNulled === undefined) {
@@ -308,7 +316,7 @@ export function setFixedObjectMap(
 export function setDynamicObjectMap(
   oMap: Data.DataMap,
   coreName: string,
-  property: SomeJSONSchema | null
+  property: MyJSONSchema | null
 ) {
   setElementaryMap(oMap, property, coreName, null, true, false);
   oMap.hasNameControl = true;
