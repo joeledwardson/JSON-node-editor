@@ -87,10 +87,6 @@ export class DynamicDisplay extends ReactRete.Node {
   }
 
   getMappedOutput(oMap: Data.DataMap, index: number): JSX.Element {
-    if (oMap.hide) {
-      return <></>;
-    }
-
     let control: Rete.Control | null = null;
 
     // get name element
@@ -143,9 +139,11 @@ export class DynamicDisplay extends ReactRete.Node {
       }
     }
 
-    // get data editing control
+    // get data value/control
     let dataElement = <div></div>;
-    if (oMap.hasDataControl && oMap.dataKey) {
+    if(oMap.hasFixedData) {
+      dataElement = <div>{oMap.dataValue}</div>
+    } else if(oMap.hasDataControl && oMap.dataKey) {
       control = this.props.node.controls.get(oMap.dataKey) ?? null;
       // check props are a valid object
       if (control &&
@@ -162,17 +160,13 @@ export class DynamicDisplay extends ReactRete.Node {
         }
         _control.props.display_disabled = disabled;
 
-        // encapsulate in div with key as type so that if control type changes, react will re-render
+        // encapsulate with key as type & disabled so that if control type changes or disables, react will re-render
+        let key = `${oMap?.schema?.type} ${disabled}`;
         dataElement = (
-          <div key={oMap?.schema?.type}>
+          <div key={key}>
             {Display.getControl(control, this.props.bindControl)}
           </div>
         );
-
-        // re-render control - react will NOT re-render above on display_disabled change as it is not defined in Rete.Control props
-        if (_control.update) {
-          _control.update();
-        }
       }
     }
 

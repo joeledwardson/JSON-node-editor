@@ -5,16 +5,16 @@ import * as Data from "../data/attributes";
 import { ReteReactControl } from "rete-react-render-plugin";
 import { JSONTypeMap } from "../jsonschema";
 import { SomeJSONSchema } from "ajv/dist/types/json-schema";
+import { checkUnknownRules } from "ajv/dist/compile/util";
 
+export const getReactKey = (coreName: string) => `k-${coreName}`;  // generate react key
 export const getDataKey = (coreName: string) => `${coreName} input`; // generate data input control key
 export const getOutputKey = (coreName: string) => `${coreName} output`; // generate node output key
 export const getTypeKey = (coreName: string) => `${coreName} type`; // generate type select control key
 export const getNamekey = (coreName: string) => `${coreName} name`; // generate name control key
 
 /** get control data handler for name editing */
-const getNameHandler: (oMap: Data.DataMap) => Controls.DataHandler = (
-  oMap: Data.DataMap
-) => {
+function getNameHandler(oMap: Data.DataMap): Controls.DataHandler {
   return (
     ctrl: ReteReactControl,
     emitter: Rete.NodeEditor,
@@ -29,9 +29,7 @@ const getNameHandler: (oMap: Data.DataMap) => Controls.DataHandler = (
 };
 
 /** get control handler for data input editing */
-const getValueHandler: (oMap: Data.DataMap) => Controls.DataHandler = (
-  oMap: Data.DataMap
-) => {
+function getValueHandler(oMap: Data.DataMap): Controls.DataHandler {
   return (
     ctrl: ReteReactControl,
     emitter: Rete.NodeEditor,
@@ -46,10 +44,7 @@ const getValueHandler: (oMap: Data.DataMap) => Controls.DataHandler = (
 };
 
 /** get control handler for type selection */
-const getTypeSelectHandler: (
-  node: Rete.Node,
-  oMap: Data.DataMap
-) => Controls.DataHandler = (node: Rete.Node, oMap: Data.DataMap) => {
+function getTypeSelectHandler(node: Rete.Node, oMap: Data.DataMap): Controls.DataHandler {
   return (
     ctrl: ReteReactControl,
     editor: Rete.NodeEditor,
@@ -58,11 +53,19 @@ const getTypeSelectHandler: (
   ) => {
     ctrl.props.value = data;
     oMap.selectValue = data;
+
+    let schema = null;
     if (oMap.schemaMap && data in oMap.schemaMap) {
-      oMap.schema = oMap.schemaMap[data];
-    } else {
-      oMap.schema = null;
+      // set mapped schema if selected value exists in map
+      schema = oMap.schemaMap[data];
     }
+    // update core map for data control/value with new selected schema
+    if(oMap.coreName) {
+      setCoreMap(oMap, oMap.coreName, schema, false)
+    } else {
+      throw new Error(`map with new type value ${data} does not have core name`);
+    }
+    //re-create map items
     createMapItems(node, oMap, editor);
     editor.trigger("process");
     if (ctrl.update) {
@@ -74,65 +77,106 @@ const getTypeSelectHandler: (
   };
 };
 
-/** set core attributes of mapped output
- * - reactKey set to core name
- * - schema set to property
- * - if schema type valid for a control:
- *    - data control key set
- *    - data value copied from existing node data if valid, otherwise from property default or 0/blank string/false
+
+/** get mapped data value based on type
+ * try existing value, then default, then 0/""/false based on type
+ * if type is invalid, return undefined
  */
+function getDataValue(value: any, typ: string, default_value: any): any {
+  let checks: Array<{
+    use: () => boolean,
+    validator: (value: any) => boolean, 
+    get_default: () => any
+  }> = [
+    {
+      use: () => typ === "integer" || typ === "number",
+      validator: (val: any) => !(isNaN(val)),
+      get_default: () => 0
+    },
+    {
+      use: () => typ === "string",
+      validator: (val: any) => typeof val === "string",
+      get_default: () => ""
+    },
+    {
+      use: () => typ === "boolean",
+      validator: (val: any) => typeof val === "boolean",
+      get_default: () => false
+    },
+    {
+      use: () => typ === "null",
+      validator: () => false,
+      get_default: () => null,
+    }
+  ]
+  for(const check of checks) {
+    if(check.use()) {
+      if(check.validator(value)) {
+        return value;
+      } else if(check.validator(default_value)) {
+        return default_value;
+      } else {
+        return check.get_default();
+      }
+    }
+  }
+  return undefined;
+}
+
+
+/** set core attributes of mapped output */
 export function setCoreMap(
   oMap: Data.DataMap,
   coreName: string,
-  property: SomeJSONSchema | null
+  property: SomeJSONSchema | null,
+  disableAdditional: boolean = true
 ) {
-  let hide = false;
   let dataValue: any = oMap.dataValue;
+  let hasFixedData = false;
   let hasControl = false;
 
   if (property !== null) {
     let typ = property.type;
-    if (typ === "integer" || typ === "number") {
-      if (isNaN(dataValue)) {
-        dataValue = property.default ?? 0;
+    dataValue = getDataValue(dataValue, typ, property.default);
+    if(dataValue !== undefined) {
+      // type property valid
+      if(typ !== "null") {
+        // use data control if type non-null
+        hasControl = true;
       }
-      hasControl = true;
-    } else if (typ === "string") {
-      if (!(typeof dataValue === "string")) {
-        dataValue = property.default ?? "";
-      }
-      hasControl = true;
-    } else if (typ === "boolean") {
-      if (!(typeof dataValue === "boolean")) {
-        dataValue = property.default ?? "False";
-      }
-      hasControl = true;
-    } else if (typ === "null") {
-      dataValue = null;
-    } else if (property.const !== undefined) {
-      dataValue = property.const;
-      hide = true;
     } else {
-      dataValue = null;
+      // type property invalid
+      if (property.const !== undefined) {
+        // const specified, fixed
+        dataValue = property.const;
+        hasFixedData = true;
+      } else {
+        // type unkown
+        dataValue = null;
+      }
     }
   } else {
+    // schema null
     dataValue = null;
   }
 
-  oMap.reactKey = coreName;
-  oMap.hide = hide;
+  oMap.coreName = coreName;
+  oMap.reactKey = getReactKey(coreName);
   oMap.hasDataControl = hasControl;
   oMap.dataKey = getDataKey(coreName);
+  oMap.hasFixedData = hasFixedData;
   oMap.dataValue = dataValue;
   oMap.schema = property;
 
   // disable additional functions
-  oMap.canMove = false;
-  oMap.hasFixedName = false;
-  oMap.hasOutput = false;
-  oMap.hasSelectControl = false;
-  oMap.hasNameControl = false;
-  oMap.isNullable = false;
+  if(disableAdditional) {
+    oMap.canMove = false;
+    oMap.hasFixedName = false;
+    oMap.hasOutput = false;
+    oMap.hasSelectControl = false;
+    oMap.hasNameControl = false;
+    oMap.isNullable = false;
+  }
 }
 
 /** set elementary attributes of mapped output */
@@ -281,9 +325,6 @@ export function createMapItems(
   oMap: Data.DataMap,
   editor: Rete.NodeEditor
 ) {
-  if (oMap.hide) {
-    return;
-  }
 
   // remove control if exists
   const removeControl = (key: string | undefined | null) => {
@@ -348,7 +389,6 @@ export function createMapItems(
         // if control does not match specified type then remove it
         node.removeControl(control);
         if (node.update) node.update();
-        oMap.dataValue = null;
       }
     }
 

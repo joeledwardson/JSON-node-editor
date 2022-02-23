@@ -274,3 +274,11 @@ Going to choose 1st option
 - [x] Also, should be using the JSON type map for named nodes otherwise its ambiguous
 - [ ] Do we still need controls data attribute?
 - [ ] still need general connection functions? Just run builder on connection/disconnection
+
+So run into a problem of resetting data control values on type selection.
+
+Also, if type selection is const then don't want to hide it
+
+The opposite, want to display but dont allow editing - will need additional properties in map to facilitate this
+
+- [ ] Why does `rete-context-menu-plugin`  need vue?

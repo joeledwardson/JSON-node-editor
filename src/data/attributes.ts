@@ -3,10 +3,11 @@ import { getDataAttribute, setDataAttribute } from "./access";
 import { SomeJSONSchema } from 'ajv/dist/types/json-schema';
 
 export interface CoreMap {
+  coreName?: string;
   reactKey?: string; // key to use in react indexing
-  hide?: boolean; // dont display anything
-  hasDataControl?: boolean;
+  hasDataControl?: boolean; 
   dataKey?: string;  // control key for data 
+  hasFixedData?: boolean;  // true if data value fixed
   dataValue?: any;  // control value for data
   schema?: SomeJSONSchema | null; // JSON schema for entry
 }
