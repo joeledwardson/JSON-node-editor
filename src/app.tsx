@@ -3,14 +3,13 @@ import * as Data from "./data/attributes";
 import * as Sockets from "./sockets/sockets";
 import * as Schema from "./jsonschema";
 import { ReteReactComponent as ReteComponent } from "rete-react-render-plugin";
-import { JSONValue } from "./jsonschema";
+import { JSONValue, JSONTypeMap } from "./jsonschema";
 import "./styles.css";
 import { DisplayBase, getOutput } from "./components/display";
-import { JSONTypeMap, MyComponent } from "./components/component";
+import { MyComponent } from "./components/component";
 import { BaseComponent, getConnectedData } from "./components/base";
 import { SomeJSONSchema } from "ajv/dist/types/json-schema";
 import { JsonStringPointer, JsonPointer } from "json-ptr";
-
 // const addType = (newType: string) => componentsList.push(newType);
 
 

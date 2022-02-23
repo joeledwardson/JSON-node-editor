@@ -20,7 +20,7 @@ export interface ElementaryMap extends CoreMap {
   schemaMap?: {[key: string]: SomeJSONSchema} // type selection map of socket name => schema
   hasSelectControl?: boolean; 
   selectKey?: string;  // control key for type select
-  selectValue?: string | null;  // control value for type select
+  selectValue?: string | null;  // control value for type select used for output socket
 }
 
 export interface ObjectMap extends ElementaryMap {

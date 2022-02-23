@@ -88,6 +88,16 @@ function refResolve(value: any, schema: Object) {
   return _refResolve(value, [], schema);
 }
 
+export const JSONTypeMap: { [key: string]: string } = {
+  null: "None",
+  boolean: "Boolean",
+  object: "Object",
+  array: "List",
+  number: "Number",
+  integer: "Number",
+  string: "Text",
+};
+
 
 // /**
 //  * Get socket from JSON schema definition
