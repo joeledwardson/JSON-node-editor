@@ -28,10 +28,8 @@ export function getControl(ctrl: Rete.Control, bindControl: bindControl): JSX.El
   />
 }
 
-export function getOutput(output: Rete.Output, node: Rete.Node, bindControl: bindControl, bindSocket: bindSocket): JSX.Element {
-  // let ctrl = node.controls.get(getOutputControls(node)[output.key]);
+export function getOutput(output: Rete.Output, bindSocket: bindSocket): JSX.Element {
   return <div className="output" key={output.key}>
-    {/* {!output.hasConnection() && ctrl && getControl(ctrl, bindControl)} */}
     <div className="output-title">{output.name}</div>
     {getSocket(output, "output", bindSocket)}
   </div>
@@ -55,7 +53,7 @@ export function getInput(input: Rete.Input, bindControl: bindControl, bindSocket
 
 export function getOutputs<T extends ReactRete.NodeProps>(props: T): JSX.Element[] {
   return Array.from(props.node.outputs.values()).
-  map(o => getOutput(o, props.node, props.bindControl, props.bindSocket))
+  map(o => getOutput(o, props.bindSocket))
 }
 
 export function getControls<T extends ReactRete.NodeProps>(props: T): JSX.Element[] {

@@ -173,8 +173,9 @@ Just thinking about map items creation and re-creation:
   - [x] disable value control on connection - need to write the connection created / removed functions
 - [x] initial non-required item is showing mouse but control is not disabled
   - [x] Will need to combine checks for output connections and isNulled to disable value control (should also be checking for `isNullable` when looking at `isnulled`)
-- [ ] Allow named components from `$ref`
-  - [ ] need to build my own `$ref` parser - or not, https://www.npmjs.com/package/json-pointer exists!
+- [x] Allow named components from `$ref`
+  - [x] need to build my own `$ref` parser - or not, https://www.npmjs.com/package/json-pointer exists!
+  - [ ] components must dynamically resolve `$ref`s 
 - [ ] schema update on connection
   - [ ] change node schema and re-run builder
   - [ ] rather than removing all mapped outputs - clear any unused entries in existing map and re-run object creation so it replaces any controls/outputs

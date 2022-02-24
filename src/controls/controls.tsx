@@ -1,4 +1,4 @@
-import { ReteReactControl as ReteControlBase } from "rete-react-render-plugin";
+import { ReteReactControl as ReteControlBase, ReteReactControl } from "rete-react-render-plugin";
 import { Node, NodeEditor } from "rete";
 import { getControlsData } from "../data/attributes";
 import * as React from "react";
@@ -14,19 +14,6 @@ export type DataHandler = (ctrl: ReteControlBase, emitter: NodeEditor, key: stri
 
 
 
-/**
- * default function for value changes
- * set control instance props value so react control updates on re-render, and update node data
- * N.B. this function should be used over ctrlValProcess() to avoid entering infinite loop if control triggers emitter 'process'
- */
-export const ctrlValProcess: DataHandler = (ctrl: ReteControlBase, emitter: NodeEditor, key: string, data: any): void => {
-  ctrl.props.value = data;  // update props value used to update control value when re-rendering
-  getControlsData(ctrl.getNode())[key] = data;  //  put into node data objects for connections
-  emitter.trigger("process");  // trigger process on control change
-  ctrl.update && ctrl.update();  // re-render
-}
-
-
 /** props passed to control input React components */
 export interface InputProps<ValueType> {
     value: ValueType; // initial value for control
@@ -36,9 +23,20 @@ export interface InputProps<ValueType> {
 };
 
 /** get css classes for control groups combined with any additional class names */
-function getControlClasses(customClasses: string | undefined): string {
-  return 'control-input input-group ' + customClasses ?? '';
+function getControlClasses(customClasses?: string): string {
+  return 'control-input input-group ' + (customClasses ?? '');
 }
+
+export interface BaseProps {
+  display_disabled?: boolean;
+}
+// export abstract class ControlBase extends ReteControlBase {
+//   props: BaseProps
+//   constructor(key: string, props: BaseProps) {
+//     super(key);
+//     this.props = props;
+//   }
+// }
 
 
 /** 
@@ -47,7 +45,7 @@ function getControlClasses(customClasses: string | undefined): string {
   */
 export abstract class ControlTemplate<T, P extends InputProps<T>> extends ReteControlBase {
   props: P
-  constructor(key: string,  emitter: NodeEditor, node: Node, componentProps: P, dataHandler: DataHandler=ctrlValProcess) {
+  constructor(key: string,  emitter: NodeEditor, node: Node, componentProps: P, dataHandler: DataHandler) {
     super(key)
 
     // set props instance to be passed to react component on render
@@ -55,9 +53,6 @@ export abstract class ControlTemplate<T, P extends InputProps<T>> extends ReteCo
 
     // set value changer wrapped function
     this.props.valueChanger = (data: any) => dataHandler(this, emitter, key, data);
-
-    // set node data value based on initial value passed
-    getControlsData(node)[key] = this.props.value;
   }
 }
 export type ControlTemplateAny = ControlTemplate<any, InputProps<any>>;
@@ -84,6 +79,42 @@ export class NumberControl extends ControlTemplate<number, NumberProps> {
   component = NumberInput
 }
 
+// export interface NumberProps2 extends BaseProps {
+//   value: number;
+//   valueChanger: (value: number) => void;
+// }
+// export class NumberControl2 extends ReteReactControl {
+//   props: NumberProps2
+//   constructor(key: string, initialValue: number, dataHandler: DataHandler<Number>, emitter: NodeEditor) {
+//     super(key);
+//     this.props = {
+//       value: initialValue,
+//       valueChanger: (value: number) => dataHandler(this, emitter, key, value)
+//     }
+//   }
+//   component = class NumberInput extends React.Component<NumberProps2> {
+//     render() {
+//       let vc = this.props.valueChanger;
+//       const onChange = (e: React.FormEvent<HTMLInputElement>) => {
+//         let number = Number(e.currentTarget.value);
+//         if(!isNaN(number)) {
+//           if(vc) {
+//             vc(number);
+//           }
+//         }
+//       }
+//       return (
+//         <input 
+//           type="number"
+//           value={this.props.value}
+//           onChange={onChange}
+//           className={getControlClasses()}
+//           disabled={this.props.display_disabled ? true : undefined}
+//         />
+//       );
+//     }
+//   }
+// }
 
 /** autosizing textarea element, when editing calls `props.valueChanger()` with text in textarea element  */
 type TextProps = InputProps<string>
@@ -106,12 +137,46 @@ export class TextControl extends ControlTemplate<string, TextProps> {
   component = TextInput
 }
 
+export interface TextProps2 extends BaseProps {
+  value: string,
+  valueChanger: (value: string) => void
+}
 
+// class TextControl2 extends ReteReactControl {
+//   props: TextProps2
+//   constructor(key: string, initialValue: string, dataHandler: DataHandler<string>, emitter: NodeEditor) {
+//     super(key);
+//     this.props = {
+//       value: initialValue,
+//       valueChanger: (value: string) => dataHandler(this, emitter, key, value)
+//     }
+//   }
+//   component = class TextInput extends React.Component<TextProps2> {
+//     render() {
+//       let vc = this.props.valueChanger;
+//       const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+//         if(vc) {
+//           vc(e.currentTarget.value)
+//         } 
+//       }
+//       return (
+//         <TextareaAutosize
+//           className={getControlClasses()}
+//           value={this.props.value}
+//           disabled={this.props.display_disabled}
+//           rows={1}
+//           onChange={onChange}
+//           autoFocus
+//         />
+//       );
+//     }
+//   }
+// }
 
 /** select input where the options are passed in the constructor - on select change calls `props.valueChanger()` with key of option selected */
 /** value & label pairs displayed in select options */
 export type OptionLabel = {
-  label: any, 
+  label: string, 
   value: any
 }
 /** select element props also include options to display */
@@ -144,6 +209,10 @@ export class SelectControl extends ControlTemplate<string, SelectProps> {
   component = SelectInput
 }
 
+// export interface SelectProps2 extends BaseProps {
+//   options: Array<OptionLabel>
+// }
+
 
 type BoolProps = InputProps<boolean>;
 function getSelectProps(props: BoolProps): SelectProps {
@@ -159,7 +228,7 @@ function getSelectProps(props: BoolProps): SelectProps {
 }
 export class BoolControl extends ControlTemplate<string, SelectProps> {
   component = SelectInput
-  constructor(key: string,  emitter: NodeEditor, node: Node, componentProps: BoolProps, dataHandler: DataHandler=ctrlValProcess) {
+  constructor(key: string,  emitter: NodeEditor, node: Node, componentProps: BoolProps, dataHandler: DataHandler) {
     super(key, emitter, node, getSelectProps(componentProps), dataHandler);
   }
 }

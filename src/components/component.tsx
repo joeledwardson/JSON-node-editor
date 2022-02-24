@@ -7,7 +7,6 @@ import { anySchema, MyJSONSchema } from "../jsonschema";
 import { BaseComponent, getConnectedData } from "./base";
 import { DynamicDisplay } from "./displayDynamic";
 
-
 /** list of available types */
 export let componentsList: Array<string> = [];
 
@@ -21,12 +20,14 @@ export class SchemaComponent extends BaseComponent {
     this.schema = schema;
     this.socket = socket;
   }
+
   /** add parent input */
   addParent(node: Rete.Node): void {
     if (this.socket) {
       node.addInput(new Rete.Input("parent", "Parent", this.socket));
     }
   }
+  
   /** get schema from node connection to input if exists */
   getConnectedSchema(node: Rete.Node): MyJSONSchema | undefined {
     // find connection to "parent" input
@@ -48,6 +49,7 @@ export class SchemaComponent extends BaseComponent {
     }
     return undefined;
   }
+
   /** get output map for core type (null, boolean, number, string, integer) */
   getCoreMap(
     schema: MyJSONSchema,
@@ -66,6 +68,7 @@ export class SchemaComponent extends BaseComponent {
     MapInt.setCoreMap(firstMap, "input", schema);
     return firstMap;
   }
+
   /** get items schema for array type */
   getArrayAttrSchema(schema: MyJSONSchema): MyJSONSchema {
     if (
@@ -79,6 +82,7 @@ export class SchemaComponent extends BaseComponent {
       return anySchema;
     }
   }
+
   /** get output maps for array type */
   getArrayMaps(
     schema: MyJSONSchema,
@@ -102,6 +106,8 @@ export class SchemaComponent extends BaseComponent {
     });
     return newMaps;
   }
+
+  /** get items schema for object type */
   getObjectAttrSchema(schema: MyJSONSchema) {
     if (
       // schema.attributesNotDefined !== true &&
@@ -113,6 +119,8 @@ export class SchemaComponent extends BaseComponent {
       return anySchema;
     }
   }
+
+  /** get output maps for object type */
   getObjectMaps(
     schema: MyJSONSchema,
     attrSchema: MyJSONSchema,
@@ -174,7 +182,8 @@ export class SchemaComponent extends BaseComponent {
 
     return newMaps;
   }
-  needAddButton(schema: MyJSONSchema) {
+  /** "add item" button requirement checker */
+  needAddButton(schema: MyJSONSchema): boolean {
     return (
       (schema.type === "object" && schema.additionalProperties !== false) ||
       (schema.type === "array" &&
@@ -185,7 +194,11 @@ export class SchemaComponent extends BaseComponent {
             schema.additionalItems !== false)))
     );
   }
-  buildAddButton(node: Rete.Node, editor: Rete.NodeEditor): Controls.ButtonControl {
+  /** build "add item" button */
+  buildAddButton(
+    node: Rete.Node,
+    editor: Rete.NodeEditor
+  ): Controls.ButtonControl {
     return new Controls.ButtonControl(
       "add-button",
       editor,
@@ -195,11 +208,10 @@ export class SchemaComponent extends BaseComponent {
         buttonInner: "Add Item +",
       },
       () => Pos.elementAdd(node, editor, Data.getOutputMap(node).length)
-    )
+    );
   }
   internalBuilder(node: Rete.Node, editor: Rete.NodeEditor): void {
     this.addParent(node);
-
 
     // use component schema (on node connected this can be updated)
     let schema: MyJSONSchema = this.getConnectedSchema(node) ?? this.schema;
@@ -213,23 +225,31 @@ export class SchemaComponent extends BaseComponent {
       // type is basic
       newMaps.push(this.getCoreMap(schema, maps, node, editor));
     } else if (typ === "array") {
+      // array type
       attrSchema = this.getArrayAttrSchema(schema);
       let arrayMaps = this.getArrayMaps(schema, attrSchema, maps, node, editor);
       newMaps.push(...arrayMaps);
     }
     if (typ === "object") {
+      // object type
       attrSchema = this.getObjectAttrSchema(schema);
       let objMaps = this.getObjectMaps(schema, attrSchema, maps, node, editor);
       newMaps.push(...objMaps);
     }
 
-    if(this.needAddButton(schema)) {
+    if (this.needAddButton(schema)) {
       node.addControl(this.buildAddButton(node, editor));
     }
 
+    // set component and inner attributes schema
     let attrs = Data.getGeneralAttributes(node);
     attrs.componentSchema = schema;
     attrs.attributeSchema = attrSchema;
+
+    // remove unused map items
+    maps.forEach(m => MapInt.removeMapItems(node, m, editor));
+
+    // add new map items
     newMaps.forEach((oMap) => MapInt.createMapItems(node, oMap, editor));
     Data.setOutputMap(node, newMaps);
   }
@@ -244,8 +264,8 @@ export class SchemaComponent extends BaseComponent {
      */
     const getValue = (oMap: Data.DataMap) => {
       let output: Rete.Output | undefined = undefined;
-      if(oMap.outputKey) {
-        output = node.outputs.get(oMap.outputKey)
+      if (oMap.outputKey) {
+        output = node.outputs.get(oMap.outputKey);
       }
       if (output && output.hasConnection()) {
         return getConnectedData(output, editor);
@@ -276,10 +296,10 @@ export class SchemaComponent extends BaseComponent {
   }
 }
 
-
 export class RootComponent extends SchemaComponent {
-  addParent(node: Rete.Node): void {}  // root component has no parent
+  addParent(node: Rete.Node): void {} // root component has no parent
   internalBuilder(node: Rete.Node, editor: Rete.NodeEditor) {
+    // modify schema so that it is presented as mapped output named "data"
     this.schema = {
       type: "object",
       properties: {
@@ -291,6 +311,11 @@ export class RootComponent extends SchemaComponent {
     super.internalBuilder(node, editor);
   }
   getData(node: Rete.Node, editor: Rete.NodeEditor) {
-    return super.getData(node, editor)["data"] ?? null;
+    let dat = super.getData(node, editor);
+    if(dat && typeof dat === "object" && !Array.isArray(dat)) {
+      return dat["data"] ?? null;
+    } else {
+      return null;
+    }
   }
 }

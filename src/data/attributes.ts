@@ -1,8 +1,6 @@
 import * as Rete from 'rete';
 import { getDataAttribute, setDataAttribute } from "./access";
-import { JSONSchema7} from 'json-schema';
-
-type MyJSONSchema = JSONSchema7;
+import { MyJSONSchema } from '../jsonschema';
 
 export interface CoreMap {
   coreName?: string;
@@ -55,16 +53,6 @@ export function setControlsData(node: Rete.Node, data: {[key: string]: any}) {
 }
 
 
-// /** get JSON schemas mapped to selectable socket names */
-// export function setSocketSchemas(node: Rete.Node, newDefinitions: {[key: string]: JSONObject}): void {
-//   setDataAttribute(node, 'typeSocketMap', newDefinitions);
-// }
-// /** set JSON schemas mapped to selectable socket names */
-// export function getSocketSchemas(node: Rete.Node): {[key: string]: JSONObject} {
-//   return getDataAttribute<{[key: string]: JSONObject}>(node, 'typeSocketMap');
-// }
-
-
 /** 
  * connection processing function type
  * */
@@ -87,9 +75,3 @@ export function getGeneralAttributes(node: Rete.Node): GeneralAttributes {
   return getDataAttribute<any>(node, "generalAttributes") as GeneralAttributes;
 }
 
-export function getNamedIdentifier(obj: { [key: string]: any }): any {
-  return obj["namedIdentifier"];
-}
-export function setNamedIdentifier(obj: { [key: string]: any }, name: string): void {
-  obj["namedIdentifier"] = name;
-}

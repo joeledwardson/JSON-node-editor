@@ -182,7 +182,7 @@ export function setElementaryMap(
 ) {
   let schemaMap: { [key in string]: MyJSONSchema } = {};
   const addToMap = (schema: MyJSONSchema): void => {
-    let namedId = Data.getNamedIdentifier(schema);
+    let namedId = schema.customNodeIdentifier;
     if (namedId && typeof namedId === "string") {
       // check for named schema
       schemaMap[namedId] = schema;

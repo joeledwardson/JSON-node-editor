@@ -38,7 +38,7 @@ function getDefinitions(
         if(!namedDefs.has(name)) {
           // if title does not exist in map then use it
           namedDefs.set(name, entry);
-          Data.setNamedIdentifier(entry, name);
+          entry.customNodeIdentifier = name;
           done = true;
         }
       }
@@ -49,7 +49,7 @@ function getDefinitions(
         if (!namedDefs.has(name)) {
           // if key does not use in map then use it
           namedDefs.set(name, entry);
-          Data.setNamedIdentifier(entry, name);
+          entry.customNodeIdentifier = name;
         }
       }
     }

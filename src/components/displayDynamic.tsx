@@ -125,7 +125,7 @@ export class DynamicDisplay extends ReactRete.Node {
       dynamicElement = (
         <Button
           variant="secondary"
-          size="sm"
+          size="lg"
           className="display-button"
           onClick={() => this.nullButtonClick(oMap)}
         >
