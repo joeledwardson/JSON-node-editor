@@ -13,6 +13,8 @@ import Select from 'react-select';
 export type DataHandler = (ctrl: ReteControlBase, emitter: NodeEditor, key: string, data: any) => void;
 
 
+export type DataHandler2<T> = (ctrl: ReteControlBase, emitter: NodeEditor, key: string, data: T) => void;
+
 
 /** props passed to control input React components */
 export interface InputProps<ValueType> {
@@ -45,160 +47,190 @@ export interface BaseProps {
   */
 export abstract class ControlTemplate<T, P extends InputProps<T>> extends ReteControlBase {
   props: P
-  constructor(key: string,  emitter: NodeEditor, node: Node, componentProps: P, dataHandler: DataHandler) {
+  constructor(key: string,  emitter: NodeEditor, node: Node, componentProps: P, dataHandler: DataHandler2<T>) {
     super(key)
 
     // set props instance to be passed to react component on render
     this.props = componentProps;
 
     // set value changer wrapped function
-    this.props.valueChanger = (data: any) => dataHandler(this, emitter, key, data);
+    this.props.valueChanger = (data: T) => dataHandler(this, emitter, key, data);
   }
 }
 export type ControlTemplateAny = ControlTemplate<any, InputProps<any>>;
 
 /** input element only accepting numbers, when editing calls `props.valueChanger()` with the number in input */
 type NumberProps = InputProps<number>
-export class NumberInput extends React.Component<NumberProps> {
-  render() {
-    let vc = this.props.valueChanger;
-    return (
-      <input 
-        type="number"
-        value={this.props.value}
-        onChange={(e: React.FormEvent<HTMLInputElement>) => {
-          if(vc) vc(Number(e.currentTarget.value))
-        }}
-        className={getControlClasses(this.props.className)}
-        disabled={this.props.display_disabled ? true : undefined}
-      />
-    );
+export class NumberControl extends ControlTemplate<number, NumberProps> {
+  component = class NumberInput extends React.Component<NumberProps> {
+    render() {
+      let vc = this.props.valueChanger;
+      const onChange = (e: React.FormEvent<HTMLInputElement>) => {
+        let number = Number(e.currentTarget.value);
+        if(!isNaN(number)) {
+          if(vc) {
+            vc(number);
+          }
+        }
+      }
+      return (
+        <input 
+          type="number"
+          value={this.props.value}
+          onChange={onChange}
+          className={getControlClasses(this.props.className)}
+          disabled={this.props.display_disabled ? true : undefined}
+        />
+      );
+    }
   }
 }
-export class NumberControl extends ControlTemplate<number, NumberProps> {
-  component = NumberInput
-}
 
-// export interface NumberProps2 extends BaseProps {
-//   value: number;
-//   valueChanger: (value: number) => void;
-// }
-// export class NumberControl2 extends ReteReactControl {
-//   props: NumberProps2
-//   constructor(key: string, initialValue: number, dataHandler: DataHandler<Number>, emitter: NodeEditor) {
-//     super(key);
-//     this.props = {
-//       value: initialValue,
-//       valueChanger: (value: number) => dataHandler(this, emitter, key, value)
-//     }
-//   }
-//   component = class NumberInput extends React.Component<NumberProps2> {
-//     render() {
-//       let vc = this.props.valueChanger;
-//       const onChange = (e: React.FormEvent<HTMLInputElement>) => {
-//         let number = Number(e.currentTarget.value);
-//         if(!isNaN(number)) {
-//           if(vc) {
-//             vc(number);
-//           }
-//         }
-//       }
-//       return (
-//         <input 
-//           type="number"
-//           value={this.props.value}
-//           onChange={onChange}
-//           className={getControlClasses()}
-//           disabled={this.props.display_disabled ? true : undefined}
-//         />
-//       );
-//     }
-//   }
-// }
+export interface NumberProps2 extends BaseProps {
+  value: number;
+  valueChanger: (value: number) => void;
+}
+export class NumberControl2 extends ReteReactControl {
+  props: NumberProps2
+  constructor(key: string, initialValue: number, dataHandler: DataHandler2<Number>, emitter: NodeEditor) {
+    super(key);
+    this.props = {
+      value: initialValue,
+      valueChanger: (value: number) => dataHandler(this, emitter, key, value)
+    }
+  }
+  component = class NumberInput extends React.Component<NumberProps2> {
+    render() {
+      let vc = this.props.valueChanger;
+      const onChange = (e: React.FormEvent<HTMLInputElement>) => {
+        let number = Number(e.currentTarget.value);
+        if(!isNaN(number)) {
+          if(vc) {
+            vc(number);
+          }
+        }
+      }
+      return (
+        <input 
+          type="number"
+          value={this.props.value}
+          onChange={onChange}
+          className={getControlClasses()}
+          disabled={this.props.display_disabled ? true : undefined}
+        />
+      );
+    }
+  }
+}
 
 /** autosizing textarea element, when editing calls `props.valueChanger()` with text in textarea element  */
 type TextProps = InputProps<string>
-export class TextInput extends React.Component<TextProps> {
-  render() {
-    let vc = this.props.valueChanger;
-    return (
-      <TextareaAutosize
-        className={getControlClasses(this.props.className)}
-        value={this.props.value}
-        disabled={this.props.display_disabled}
-        rows={1}
-        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => vc && vc(e.currentTarget.value)}
-        autoFocus
-      />
-    );
-  }
-}
 export class TextControl extends ControlTemplate<string, TextProps> {
-  component = TextInput
+  component = class TextInput extends React.Component<TextProps> {
+    render() {
+      let vc = this.props.valueChanger;
+      const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        if(vc) {
+          vc(e.currentTarget.value);
+        }
+      }
+      return (
+        <textarea
+          className={getControlClasses(this.props.className)}
+          value={this.props.value}
+          disabled={this.props.display_disabled}
+          onChange={onChange}
+        />
+      );
+    }
+  }
 }
 
 export interface TextProps2 extends BaseProps {
   value: string,
   valueChanger: (value: string) => void
 }
-
-// class TextControl2 extends ReteReactControl {
-//   props: TextProps2
-//   constructor(key: string, initialValue: string, dataHandler: DataHandler<string>, emitter: NodeEditor) {
-//     super(key);
-//     this.props = {
-//       value: initialValue,
-//       valueChanger: (value: string) => dataHandler(this, emitter, key, value)
-//     }
-//   }
-//   component = class TextInput extends React.Component<TextProps2> {
-//     render() {
-//       let vc = this.props.valueChanger;
-//       const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-//         if(vc) {
-//           vc(e.currentTarget.value)
-//         } 
-//       }
-//       return (
-//         <TextareaAutosize
-//           className={getControlClasses()}
-//           value={this.props.value}
-//           disabled={this.props.display_disabled}
-//           rows={1}
-//           onChange={onChange}
-//           autoFocus
-//         />
-//       );
-//     }
-//   }
-// }
+class TextControl2 extends ReteReactControl {
+  props: TextProps2
+  constructor(key: string, initialValue: string, dataHandler: DataHandler2<string>, emitter: NodeEditor) {
+    super(key);
+    this.props = {
+      value: initialValue,
+      valueChanger: (value: string) => dataHandler(this, emitter, key, value)
+    }
+  }
+  component = class TextInput extends React.Component<TextProps2> {
+    render() {
+      let vc = this.props.valueChanger;
+      const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        if(vc) {
+          vc(e.currentTarget.value)
+        } 
+      }
+      return (
+        <TextareaAutosize
+          className={getControlClasses()}
+          value={this.props.value}
+          disabled={this.props.display_disabled}
+          rows={1}
+          onChange={onChange}
+          autoFocus
+        />
+      );
+    }
+  }
+}
 
 /** select input where the options are passed in the constructor - on select change calls `props.valueChanger()` with key of option selected */
 /** value & label pairs displayed in select options */
-export type OptionLabel = {
+export type OptionLabel<T> = {
   label: string, 
-  value: any
+  value: T
 }
 /** select element props also include options to display */
 export interface SelectProps extends InputProps<any> {
   options: Array<OptionLabel>
 }
-export class SelectInput extends React.Component<SelectProps> {
+function renderSelect(
+  valueChanger: (data: any) => void, 
+  value: any, 
+  className?: string, 
+  display_disabled?: boolean, 
+  options: Array<OptionLabel>
+  ) {
+  let selectedOption = options.find(o => o.value === value);
+  let vc = valueChanger;
+  const onChange = (opt: OptionLabel | null) => {
+    if(vc && opt) {
+      vc(opt.value);
+    }
+  }
+  return (
+    <Select
+      isMulti={false}
+      className={className} // dont apply width constrains to selects
+      value={selectedOption}
+      onChange={onChange}
+      options={options}
+      isDisabled={display_disabled}
+    />
+  )
+}
+class SelectInput extends React.Component<SelectProps> {
   render() {
-    var optionMap: {[key: string]: OptionLabel} = {};
-    this.props.options.forEach(opt => {optionMap[opt.value] = opt});
+    let selectedOption = this.props.options.find(o => o.value === this.props.value);
     let vc = this.props.valueChanger;
+    const onChange = (opt: OptionLabel | null) => {
+      if(vc && opt) {
+        vc(opt.value);
+      }
+    }
     return (
       <Select
         isMulti={false}
         className={this.props.className} // dont apply width constrains to selects
-        value={optionMap[this.props.value]}
-        onChange={(newValue: {value: any, label: any} | null) => {
-          if(vc) {
-            if(newValue) vc(newValue.value)
-            else vc(null)
-          }
-        }}
+        value={selectedOption}
+        onChange={onChange}
         options={this.props.options}
         isDisabled={this.props.display_disabled}
       />
@@ -206,12 +238,51 @@ export class SelectInput extends React.Component<SelectProps> {
   }
 }
 export class SelectControl extends ControlTemplate<string, SelectProps> {
-  component = SelectInput
+  component = class SelectInput {
+    render() {
+      return renderSelect(this.props)
+    }
+  }
 }
 
-// export interface SelectProps2 extends BaseProps {
-//   options: Array<OptionLabel>
-// }
+export interface SelectProps2<T> extends BaseProps {
+  value: any,
+  options: Array<OptionLabel<T>>,
+  valueChanger: (value: T) => void
+}
+class SelectInput2<T> extends React.Component<SelectProps2<T>> {
+  render() {
+    let vc = this.props.valueChanger;
+    let selectedOption = this.props.options.find(o => o.value === this.props.value);
+    const onChange = (opt: OptionLabel<T> | null) => {
+      if(vc && opt) {
+        vc(opt.value);
+      }
+    }
+    return (
+      <Select
+        isMulti={false}
+        className={getControlClasses()} // dont apply width constrains to selects
+        value={selectedOption}
+        onChange={onChange}
+        options={this.props.options}
+        isDisabled={this.props.display_disabled}
+      />
+    )
+  }
+}
+class SelectControl2 extends ReteReactControl {
+  props: SelectProps2<any>
+
+  constructor(key: string, initialValue: any, dataHandler: DataHandler2<any>, emitter: NodeEditor, options: Array<OptionLabel<any>>) {
+    super(key);
+    this.props = {
+      value: initialValue,
+      options: options,
+      valueChanger: (value: any) => dataHandler(this, emitter, key, value),
+    }
+  }
+}
 
 
 type BoolProps = InputProps<boolean>;
@@ -226,8 +297,15 @@ function getSelectProps(props: BoolProps): SelectProps {
     }
   ]}
 }
-export class BoolControl extends ControlTemplate<string, SelectProps> {
-  component = SelectInput
+export class BoolControl2 extends SelectControl {
+  constructor(key: string,  emitter: NodeEditor, node: Node, componentProps: SelectProps, dataHandler: DataHandler) {
+    super(key, emitter, node, componentProps, dataHandler);
+    this.props.
+  }
+}
+
+export class BoolControl extends ControlTemplate<boolean, SelectProps> {
+  component = SelectInput;
   constructor(key: string,  emitter: NodeEditor, node: Node, componentProps: BoolProps, dataHandler: DataHandler) {
     super(key, emitter, node, getSelectProps(componentProps), dataHandler);
   }

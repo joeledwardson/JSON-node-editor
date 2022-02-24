@@ -292,4 +292,4 @@ Only thing that uses it is the "add item" button which doesn't need data
 ## 24/02/22
 
 - [x] What happens if an object in schema is a `$ref` but that is actually just data? No data contained in schema so no problem
-
+- [ ] Need to modify select controls props on schema updating - and name control props
