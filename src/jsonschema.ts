@@ -4,23 +4,21 @@ export type MyJSONSchema = JSONSchema7;
 
 export type CustomSchema = MyJSONSchema & {
   customNodeIdentifier?: string;
-  attributesNotDefined?: true;  // denotes for object/array that attribute schemas are not yet defined
+  // attributesNotDefined?: true;  // denotes for object/array that attribute schemas are not yet defined
 };
 
 export const stringSchema: MyJSONSchema = { type: "string" };
 export const nullSchema: MyJSONSchema = { type: "null" };
 export const numberSchema: MyJSONSchema = { type: "number" };
-export const objectSchema: CustomSchema = {
+export const objectSchema: MyJSONSchema = {
   type: "object",
-  required: [],
-  attributesNotDefined: true,
+  // attributesNotDefined: true,
 };
 export const intSchema: MyJSONSchema = { type: "integer" };
 export const boolSchema: MyJSONSchema = { type: "boolean" };
-export const arraySchema: CustomSchema = {
+export const arraySchema: MyJSONSchema = {
   type: "array",
-  items: { anyOf: [] },
-  attributesNotDefined: true,
+  // attributesNotDefined: true,
 };
 
 export const anySchema: MyJSONSchema = {
@@ -79,12 +77,12 @@ function _refResolve(value: any, cache: Object[], schema: Object): any | undefin
     // circular reference, abort
     return undefined;
   }
-  // value is a ref, resolves to an object which is not in cache
+  // put resolved object into cache
   cache.push(resolved);
   return _refResolve(resolved, cache, schema);
 }
 
-function refResolve(value: any, schema: Object) {
+export function refResolve(value: any, schema: Object) {
   return _refResolve(value, [], schema);
 }
 
