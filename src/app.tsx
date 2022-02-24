@@ -3,44 +3,66 @@ import * as Data from "./data/attributes";
 import * as Sockets from "./sockets/sockets";
 import * as Schema from "./jsonschema";
 import { ReteReactComponent as ReteComponent } from "rete-react-render-plugin";
-import { JSONValue, JSONTypeMap } from "./jsonschema";
+import { JSONValue, JSONTypeMap, MyJSONSchema } from "./jsonschema";
 import "./styles.css";
-import { SchemaComponent } from "./components/component";
+import { RootComponent, SchemaComponent } from "./components/component";
 import { BaseComponent, getConnectedData } from "./components/base";
-import { SomeJSONSchema } from "ajv/dist/types/json-schema";
 import { JsonStringPointer, JsonPointer } from "json-ptr";
-// const addType = (newType: string) => componentsList.push(newType);
 
+/** process named identifier to avoid conflicts with existing nodes */
+function processName(name: string): string {
+  return `#${name}`;
+}
 
-
+/** get map of node name to schema definition from specified locations */
 function getDefinitions(
-  schema: SomeJSONSchema,
+  schema: Schema.MyJSONSchema,
   locations: JsonStringPointer[]
-): Map<string, SomeJSONSchema> {
-  let namedDefs: Map<string, SomeJSONSchema> = new Map();
+): Map<string, Schema.MyJSONSchema> {
+  let namedDefs: Map<string, Schema.MyJSONSchema> = new Map();
 
-  const processEntry = (entry: { [key: string]: any }, key: string) => {
+  const processEntry = (entry: MyJSONSchema, key: string) => {
     let typ = entry["type"];
     if (typeof typ === "string") {
+      // check type is valid
       if (!["string", "number", "integer", "boolean", "array", "object"].includes(typ)) {
         return;
       }
+      let done = false;
+      let name = "";
+      
+      // try to use "title" property for node name
       let title = entry["title"];
-      if (typeof title === "string" && !namedDefs.has(title)) {
-        namedDefs.set(title, entry as SomeJSONSchema);
-        Data.setNamedIdentifier(entry, title);
-      } else if (!namedDefs.has(key)) {
-        namedDefs.set(key, entry as SomeJSONSchema);
-        Data.setNamedIdentifier(entry, key);
+      if (typeof title === "string") {
+        name = processName(title);
+        if(!namedDefs.has(name)) {
+          // if title does not exist in map then use it
+          namedDefs.set(name, entry);
+          Data.setNamedIdentifier(entry, name);
+          done = true;
+        }
+      }
+
+      // if "title" did not work, try to use key instead
+      if(!done) {
+        name = processName(key);
+        if (!namedDefs.has(name)) {
+          // if key does not use in map then use it
+          namedDefs.set(name, entry);
+          Data.setNamedIdentifier(entry, name);
+        }
       }
     }
   };
 
   locations.forEach((loc) => {
+    // get location in schema
     let defs = JsonPointer.get(schema, loc);
     if (defs && typeof defs === "object" && !Array.isArray(defs)) {
+      // location is a valid object
       Object.entries(defs).forEach(([k, v]) => {
         if(v && typeof v === "object" && !Array.isArray(v)) {
+          // definition is a valid object, process it
           processEntry(v, k);
         }
       });
@@ -50,24 +72,15 @@ function getDefinitions(
 }
 
 export function init(
-  schema: SomeJSONSchema | null,
+  schema: Schema.MyJSONSchema | null,
   editor: Rete.NodeEditor,
   engine: Rete.Engine,
   namedLocations: JsonStringPointer[] = ["#/definitions", "#/$defs"]
 ) {
-  let namedDefs: Map<string, SomeJSONSchema> = new Map();
+  let namedDefs: Map<string, Schema.MyJSONSchema> = new Map();
   if (schema) {
     namedDefs = getDefinitions(schema, namedLocations);
   }
-
-  const sampleSchema: any = {
-    type: "object",
-    properties: {
-      firstName: { type: "number" },
-      sampleConst: {const: "pls"}
-    },
-    required: [],
-  };
 
   // create stock components
   var components: Array<ReteComponent> = [
@@ -93,41 +106,19 @@ export function init(
     ),
     new SchemaComponent(
       JSONTypeMap["object"],
-      sampleSchema, 
+      Schema.objectSchema, 
       Sockets.addSocket(JSONTypeMap["object"]).socket
     ),
   ];
 
-  // if(schema) {
-  //   // add to socket and type lists for each schema definition
-  //   // n.b. this must be done before comopnent creation so that they dont try to access each others sockets before creation!
-  //   Object.keys(schema).forEach(key => {
-  //     addSocket(key);
-  //   });
-
-  //   // create dynamic components for each schema definition
-  //   Object.entries(schema).forEach(([key, spec]) => components.push(new DynamicComponent(key, spec)));
-  // }
+  // add named components
+  namedDefs.forEach((namedSchema, key) => {
+    let socket = Sockets.addSocket(key).socket;
+    components.push(new SchemaComponent(key, namedSchema, socket));
+  })
 
   // add root component
-  class RootComponent extends SchemaComponent {
-    addParent(node: Rete.Node): void {}
-    internalBuilder(node: Rete.Node, editor: Rete.NodeEditor) {
-      Data.getGeneralAttributes(node).componentSchema = {
-        type: "object",
-        properties: {
-          data: this.schema as any,
-        },
-        required: ["data"],
-        additionalProperties: false,
-      };
-      super.internalBuilder(node, editor);
-    }
-    getData(node: Rete.Node, editor: Rete.NodeEditor) {
-      return super.getData(node, editor)["data"] ?? null;
-    }
-  }
-  components.push(new RootComponent("root", sampleSchema, null));
+  components.push(new RootComponent("root", schema ?? Schema.anySchema, null));
 
   // combine each socket with the "any" socket
   Sockets.sockets.forEach((s) => Sockets.anySocket.combineWith(s.socket));

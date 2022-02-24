@@ -1,8 +1,7 @@
 import { JsonPointer } from "json-ptr";
 import { JSONSchema7} from 'json-schema';
-export type MyJSONSchema = JSONSchema7;
-
-export type CustomSchema = MyJSONSchema & {
+type MyBaseSchema = JSONSchema7;
+export type MyJSONSchema = MyBaseSchema & {
   customNodeIdentifier?: string;
   // attributesNotDefined?: true;  // denotes for object/array that attribute schemas are not yet defined
 };

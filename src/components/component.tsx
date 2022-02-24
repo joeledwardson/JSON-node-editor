@@ -3,19 +3,19 @@ import * as Controls from "../controls/controls";
 import * as Data from "../data/attributes";
 import * as MapInt from "./mapInterface";
 import * as Pos from "./positional";
-import { anySchema, CustomSchema } from "../jsonschema";
+import { anySchema, MyJSONSchema } from "../jsonschema";
 import { BaseComponent, getConnectedData } from "./base";
 import { DynamicDisplay } from "./displayDynamic";
-import { MyJSONSchema } from "../jsonschema";
+
 
 /** list of available types */
 export let componentsList: Array<string> = [];
 
 export class SchemaComponent extends BaseComponent {
   data = { component: DynamicDisplay };
-  schema: CustomSchema;
+  schema: MyJSONSchema;
   socket: Rete.Socket | null; // socket for parent connection
-  constructor(name: string, schema: CustomSchema, socket: Rete.Socket | null) {
+  constructor(name: string, schema: MyJSONSchema, socket: Rete.Socket | null) {
     super(name);
     componentsList.push(name);
     this.schema = schema;
@@ -202,7 +202,7 @@ export class SchemaComponent extends BaseComponent {
 
 
     // use component schema (on node connected this can be updated)
-    let schema: CustomSchema = this.getConnectedSchema(node) ?? this.schema;
+    let schema: MyJSONSchema = this.getConnectedSchema(node) ?? this.schema;
     let typ = schema.type as string;
 
     let maps = Data.getOutputMap(node);
@@ -273,5 +273,24 @@ export class SchemaComponent extends BaseComponent {
     } else {
       return null;
     }
+  }
+}
+
+
+export class RootComponent extends SchemaComponent {
+  addParent(node: Rete.Node): void {}  // root component has no parent
+  internalBuilder(node: Rete.Node, editor: Rete.NodeEditor) {
+    this.schema = {
+      type: "object",
+      properties: {
+        data: this.schema,
+      },
+      required: ["data"],
+      additionalProperties: false,
+    };
+    super.internalBuilder(node, editor);
+  }
+  getData(node: Rete.Node, editor: Rete.NodeEditor) {
+    return super.getData(node, editor)["data"] ?? null;
   }
 }

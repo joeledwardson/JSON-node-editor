@@ -281,9 +281,14 @@ Also, if type selection is const then don't want to hide it
 
 The opposite, want to display but dont allow editing - will need additional properties in map to facilitate this
 
-- [ ] Why does `rete-context-menu-plugin`  need vue?
+- [x] Why does `rete-context-menu-plugin`  need vue?
 Context menu plugin is rendered using vue but doesn't seem to fight react.
 Just need to make sure vue isn't in development mode when in production
 - [ ] can remove data control default handler and remove controls data attribute entirely?
 Only thing that uses it is the "add item" button which doesn't need data
 - [ ] do really need template values for controls? Feel like any should suffice
+
+## 24/02/22
+
+- [x] What happens if an object in schema is a `$ref` but that is actually just data? No data contained in schema so no problem
+
