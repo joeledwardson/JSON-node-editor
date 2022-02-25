@@ -199,14 +199,10 @@ export class SchemaComponent extends BaseComponent {
     node: Rete.Node,
     editor: Rete.NodeEditor
   ): Controls.ButtonControl {
+    let props: Controls.ButtonInputs = {buttonInner: "Add Item +"}
     return new Controls.ButtonControl(
       "add-button",
-      editor,
-      node,
-      {
-        value: 0, // value is press count
-        buttonInner: "Add Item +",
-      },
+      props,
       () => Pos.elementAdd(node, editor, Data.getOutputMap(node).length)
     );
   }

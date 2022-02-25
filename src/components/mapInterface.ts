@@ -12,44 +12,21 @@ export const getOutputKey = (coreName: string) => `${coreName} output`; // gener
 export const getTypeKey = (coreName: string) => `${coreName} type`; // generate type select control key
 export const getNamekey = (coreName: string) => `${coreName} name`; // generate name control key
 
-/** get control data handler for name editing */
-function getNameHandler(oMap: Data.DataMap): Controls.DataHandler {
-  return (
-    ctrl: ReteReactControl,
-    emitter: Rete.NodeEditor,
-    key: string,
-    data: any
-  ) => {
-    ctrl.props.value = data;
-    oMap.nameValue = data;
-    emitter.trigger("process");
-    ctrl.update && ctrl.update();
-  };
-};
 
-/** get control handler for data input editing */
-function getValueHandler(oMap: Data.DataMap): Controls.DataHandler {
-  return (
-    ctrl: ReteReactControl,
-    emitter: Rete.NodeEditor,
-    key: string,
-    data: any
-  ) => {
-    ctrl.props.value = data;
-    oMap.dataValue = data;
-    emitter.trigger("process");
-    ctrl.update && ctrl.update();
-  };
-};
+type ValueControl = Controls.TextControl | Controls.NumberControl | Controls.BoolControl;
+function getHandler<T, C extends ValueControl>(oMap: Data.DataMap, editor: Rete.NodeEditor) {
+  return (ctrl: C, value: T) => {
+    ctrl.props.value = value;
+    oMap.dataValue = value;
+    editor.trigger("process");
+    if(ctrl.update) ctrl.update();
+  }
+}
+
 
 /** get control handler for type selection */
-function getTypeSelectHandler(node: Rete.Node, oMap: Data.DataMap): Controls.DataHandler {
-  return (
-    ctrl: ReteReactControl,
-    editor: Rete.NodeEditor,
-    key: string,
-    data: any
-  ) => {
+function getTypeSelectHandler(node: Rete.Node, oMap: Data.DataMap, editor: Rete.NodeEditor) {
+  return (ctrl: Controls.SelectControl, data: any) => {
     ctrl.props.value = data;
     oMap.selectValue = data;
 
@@ -210,7 +187,7 @@ export function setElementaryMap(
 
     if (typeof schema.type === "object" && Array.isArray(schema.type)) {
       // loop list of types
-      schema.type.forEach((t) => {
+      schema.type.forEach((t: any) => {
         if (typeof t === "string" && t in JSONTypeMap) {
           // create new schema with type as a constant rather than an array
           const newSchema: MyJSONSchema = JSON.parse(JSON.stringify(schema));
@@ -224,13 +201,13 @@ export function setElementaryMap(
 
     if (typeof schema.anyOf === "object" && Array.isArray(schema.anyOf)) {
       // process anyOf array
-      schema.anyOf.forEach((s) => {
+      schema.anyOf.forEach((s: MyJSONSchema) => {
         if(typeof s === "object") addToMap(s)
       });
     }
     if (typeof schema.oneOf === "object" && Array.isArray(schema.oneOf)) {
       // process oneOf array
-      schema.oneOf.forEach((s) => {
+      schema.oneOf.forEach((s: MyJSONSchema) => {
         if(typeof s === "object") addToMap(s)
       });
     }
@@ -352,13 +329,17 @@ export function createMapItems(
     // name control required
     if (!node.controls.get(oMap.nameKey)) {
       // add control with same key as output and blank value
+      const handler = (ctrl: Controls.TextControl, value: string) => {
+        ctrl.props.value = value;
+        oMap.nameValue = value;
+        editor.trigger("process");
+        if(ctrl.update) ctrl.update();
+      }
       node.addControl(
         new Controls.TextControl(
           oMap.nameKey,
-          editor,
-          node,
           { value: oMap.nameValue || "" },
-          getNameHandler(oMap)
+          handler
         )
       );
     }
@@ -406,30 +387,24 @@ export function createMapItems(
         node.addControl(
           new Controls.TextControl(
             oMap.dataKey,
-            editor,
-            node,
             { value: oMap.dataValue, display_disabled: oMap.isNulled },
-            getValueHandler(oMap)
+            getHandler<string, Controls.TextControl>(oMap, editor),
           )
         );
       } else if (typ === "number" || typ === "integer") {
         node.addControl(
           new Controls.NumberControl(
             oMap.dataKey,
-            editor,
-            node,
             { value: oMap.dataValue, display_disabled: oMap.isNulled },
-            getValueHandler(oMap)
+            getHandler<number, Controls.NumberControl>(oMap, editor)
           )
         );
       } else if (typ === "boolean") {
         node.addControl(
           new Controls.BoolControl(
             oMap.dataKey,
-            editor,
-            node,
             { value: oMap.dataValue, display_disabled: oMap.isNulled },
-            getValueHandler(oMap)
+            getHandler<boolean, Controls.BoolControl>(oMap, editor)
           )
         );
       }
@@ -448,11 +423,16 @@ export function createMapItems(
       }
     );
     // generate type select control
-    let control = new Controls.SelectControl(oMap.selectKey, editor, node, {
+    let props: Controls.SelectInputs = {
       value: oMap.selectValue,
-      options: options,
-    }, getTypeSelectHandler(node, oMap));
-    node.addControl(control);
+      options: options
+    }
+    let control = new Controls.SelectControl(
+      oMap.selectKey,
+      props,
+     getTypeSelectHandler(node, oMap, editor)
+     );
+     node.addControl(control);
   }
 
   // remove output if unrequired

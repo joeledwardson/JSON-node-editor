@@ -93,8 +93,7 @@ export class DynamicDisplay extends ReactRete.Node {
         !Array.isArray(control.props)
         ) {
       // cast control to template form (to access "disabled" prop)
-      let _control = control as Controls.ControlTemplateAny;
-      _control.props.display_disabled = disabled;
+      (control.props as Controls.BaseProps).display_disabled = disabled;
     }
   }
 
