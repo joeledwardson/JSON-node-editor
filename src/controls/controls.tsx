@@ -74,6 +74,7 @@ export class TextControl extends ReteReactControl {
       }
       return (
         <TextareaAutosize
+          style={{resize: "none"}}
           className={getControlClasses()}
           value={this.props.value}
           disabled={this.props.display_disabled}
