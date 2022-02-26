@@ -7,8 +7,6 @@ import { anySchema, MyJSONSchema } from "../jsonschema";
 import { BaseComponent, getConnectedData } from "./base";
 import { DynamicDisplay } from "./displayDynamic";
 
-/** list of available types */
-export let componentsList: Array<string> = [];
 
 export class SchemaComponent extends BaseComponent {
   data = { component: DynamicDisplay };
@@ -16,7 +14,6 @@ export class SchemaComponent extends BaseComponent {
   socket: Rete.Socket | null; // socket for parent connection
   constructor(name: string, schema: MyJSONSchema, socket: Rete.Socket | null) {
     super(name);
-    componentsList.push(name);
     this.schema = schema;
     this.socket = socket;
   }
@@ -182,7 +179,15 @@ export class SchemaComponent extends BaseComponent {
 
     return newMaps;
   }
-  /** "add item" button requirement checker */
+  /** "add item" button requirement checker
+   * for JSON objects, if additional properties is a schema or undefined then additional properties are allowed
+   *  The only case where additional properties are not allowed if `additionalProperties` is false
+   * 
+   * For JSON arrays, where `items` is a schema object (or undefined) this is used for all items hence additional items are allowed
+   *  If `items` is an array of schemas then it is a tuple. In this case:
+   *    If `additionalItems` is undefined or a valid schema then additional items are allowed
+   *    If `additionalItemd` then only tuple properties are allowed
+   */
   needAddButton(schema: MyJSONSchema): boolean {
     return (
       (schema.type === "object" && schema.additionalProperties !== false) ||
@@ -194,7 +199,7 @@ export class SchemaComponent extends BaseComponent {
             schema.additionalItems !== false)))
     );
   }
-  /** build "add item" button */
+  /** build "add item" button for additional properties/items */
   buildAddButton(
     node: Rete.Node,
     editor: Rete.NodeEditor
@@ -307,6 +312,7 @@ export class RootComponent extends SchemaComponent {
     super.internalBuilder(node, editor);
   }
   getData(node: Rete.Node, editor: Rete.NodeEditor) {
+    // data is expected to an object with a single entry with key "data", otherwise return null
     let dat = super.getData(node, editor);
     if(dat && typeof dat === "object" && !Array.isArray(dat)) {
       return dat["data"] ?? null;

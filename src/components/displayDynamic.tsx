@@ -20,12 +20,13 @@ import { Button } from "react-bootstrap";
 export class DynamicDisplay extends ReactRete.Node {
   /** process object member null button click -  */
   nullButtonClick(oMap: Data.ObjectMap): void {
-    // ignore click if output has a connection
-    let output: Rete.Output | null = null;
+    // get output if exists
+    let output: Rete.Output | undefined = undefined;
     if (oMap.outputKey) {
-      output = this.props.node.outputs.get(oMap.outputKey) ?? null;
+      output = this.props.node.outputs.get(oMap.outputKey);
     }
-
+    
+    // ignore click if output has a connection
     if (output && output.hasConnection()) {
       return;
     }
@@ -47,6 +48,7 @@ export class DynamicDisplay extends ReactRete.Node {
     this.props.editor.trigger("process");
   }
 
+  /** get up/down & (add item)/(delete item) buttons */
   getPositionalButtons(index: number): JSX.Element {
     return (
       <div className="output-item-controls">

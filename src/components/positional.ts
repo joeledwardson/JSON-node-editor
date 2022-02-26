@@ -53,8 +53,10 @@ export function getNextCoreName(node: Rete.Node): string {
   let newMap: Data.ElementaryMap = {};
 
   if (attrs.componentSchema?.type === "object") {
+    // if type is object, add dynamic output with name control
     MapInt.setDynamicObjectMap(newMap, coreName, attrs?.attributeSchema || null);
   } else {
+    // type is array, add new output without name control
     MapInt.setElementaryMap(newMap, attrs?.attributeSchema || null, coreName);
   }
 

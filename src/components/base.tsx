@@ -23,12 +23,16 @@ export abstract class BaseComponent extends ReteReactComponent {
   }
 }
 
+
+/** get data from node connected to an output */
 export function getConnectedData(output: Rete.Output, editor: Rete.NodeEditor): JSONValue {
-  let otherNode = output.connections[0].input.node;
-  if(otherNode) {
-    let otherComponent = editor.components.get(otherNode.name) as BaseComponent;
-    if(otherComponent.getData) {
-      return otherComponent.getData(otherNode, editor);
+  if(output.connections.length > 0) {
+    let otherNode = output.connections[0].input.node;
+    if(otherNode) {
+      let otherComponent = editor.components.get(otherNode.name) as BaseComponent;
+      if(otherComponent.getData) {
+        return otherComponent.getData(otherNode, editor);
+      }
     }
   }
   return null

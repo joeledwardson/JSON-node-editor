@@ -301,6 +301,7 @@ Controls successfully refactored finally, and schema types as well
 Had a problem where react textarea autosize conflicts if user tries to modify size as it moves the node
 
 - [ ] can use `resize=none` in props to disable user access
+- [ ] multi socket function redundant?
 
 Other outstanding task list from above
 
@@ -310,3 +311,8 @@ Other outstanding task list from above
   - [ ] change node schema and re-run builder
 - [ ] lists with named tuples
 - [ ] enums
+
+## 26/02/22
+
+- [ ] `react select` has `value` as well as `label` where value can be an object, so rather than indexing a schema map in node data for type select could just use the values stored in the select?
+- [ ] Value check for integers?

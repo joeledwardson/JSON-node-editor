@@ -73,7 +73,7 @@ export class TextControl extends ReteReactControl {
         this.props.valueChanger(e.currentTarget.value);
       }
       return (
-        <textarea
+        <TextareaAutosize
           className={getControlClasses()}
           value={this.props.value}
           disabled={this.props.display_disabled}
@@ -176,10 +176,10 @@ export class ButtonControl extends ReteReactControl {
     render() {
       return (
         <Button
-          //  className={this.props.className}  // dont apply width constraint to buttons
-           disabled={this.props.display_disabled}
-           onClick={() => this.props.valueChanger()}
-           size="sm"
+          className={getControlClasses()}
+          disabled={this.props.display_disabled}
+          onClick={() => this.props.valueChanger()}
+          size="sm"
         >{this.props.buttonInner}</Button>
       );
     }

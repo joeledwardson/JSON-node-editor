@@ -12,12 +12,15 @@ export const getNamekey = (coreName: string) => `${coreName} name`; // generate 
 
 
 type ValueControl = Controls.TextControl | Controls.NumberControl | Controls.BoolControl;
+/** get control handler for value input */
 function getHandler<T, C extends ValueControl>(oMap: Data.DataMap, editor: Rete.NodeEditor) {
   return (ctrl: C, value: T) => {
-    ctrl.props.value = value;
-    oMap.dataValue = value;
-    editor.trigger("process");
-    if(ctrl.update) ctrl.update();
+    ctrl.props.value = value;  // update props value for react component
+    oMap.dataValue = value;  // set data map value
+    editor.trigger("process");  // trigger editor JSON data update 
+    if(ctrl.update) {
+      ctrl.update(); // re-render control
+    }
   }
 }
 
@@ -41,60 +44,43 @@ function getTypeSelectHandler(node: Rete.Node, oMap: Data.DataMap, editor: Rete.
     }
     //re-create map items
     createMapItems(node, oMap, editor);
+    // trigger editor JSON data values
     editor.trigger("process");
     if (ctrl.update) {
-      ctrl.update();
+      ctrl.update();  // re-render control
     }
     if (node.update) {
-      node.update();
+      node.update();  // re-render node
     }
   };
 };
 
 
-/** get mapped data value based on type
- * try existing value, then default, then 0/""/false based on type
- * if type is invalid, return undefined
- */
-function getDataValue(value: any, typ: MyTypeName, default_value: any): any {
-  let checks: Array<{
-    use: () => boolean,
-    validator: (value: any) => boolean, 
-    get_default: () => any
-  }> = [
-    {
-      use: () => typ === "integer" || typ === "number",
-      validator: (val: any) => !(isNaN(val)),
-      get_default: () => 0
-    },
-    {
-      use: () => typ === "string",
-      validator: (val: any) => typeof val === "string",
-      get_default: () => ""
-    },
-    {
-      use: () => typ === "boolean",
-      validator: (val: any) => typeof val === "boolean",
-      get_default: () => false
-    },
-    {
-      use: () => typ === "null",
-      validator: () => false,
-      get_default: () => null,
-    }
-  ]
-  for(const check of checks) {
-    if(check.use()) {
-      if(check.validator(value)) {
-        return value;
-      } else if(check.validator(default_value)) {
-        return default_value;
-      } else {
-        return check.get_default();
-      }
-    }
-  }
-  return undefined;
+type TypeChecker = {
+  validator?: (value: any) => boolean,
+  get_default?: () => any,
+} 
+/** type checks for data controls (null/array/object have no controls) */
+let checks: {[key in MyTypeName]: TypeChecker} = {
+  "integer": {
+    validator: (val: any) => !(isNaN(val)),
+    get_default: () => 0,
+  },
+  "number": {
+    validator: (val: any) => !(isNaN(val)),
+    get_default: () => 0,
+  },
+  "string": {
+    validator: (val: any) => typeof val === "string",
+    get_default: () => ""
+  },
+  "boolean": {
+    validator: (val: any) => typeof val === "boolean",
+    get_default: () => false
+  },
+  "null": {},
+  "array": {},
+  "object": {}
 }
 
 
@@ -105,7 +91,7 @@ export function setCoreMap(
   property: MyJSONSchema | null,
   disableAdditional: boolean = true
 ) {
-  let dataValue: any = null;
+  let dataValue: any = null;  // reset data value to null 
   let hasFixedData = false;
   let hasControl = false;
 
@@ -116,14 +102,30 @@ export function setCoreMap(
       hasFixedData = true;
     } else {
       let typ = property.type;
-      if(typeof typ === "string") {
-        // type is valid string, get data for matching type
-        dataValue = getDataValue(oMap.dataValue, typ, property.default);
-        if(typ !== "null") {
-          // use data control if type non-null
+      // check type is specified and a valid string (not array)
+      if(typ && !Array.isArray(typ)) {
+        // get validator and default functions for specified type
+        let validator = checks[typ]?.validator; 
+        let get_default = checks[typ]?.get_default;
+        if(validator) {
+          if(validator(oMap.dataValue)) {
+            // existing data value in map is valid, use it
+            dataValue = oMap.dataValue;
+          } else if(validator(property.default)) {
+            // default in schema is valid, use it
+            dataValue = property.default;
+          } else if(get_default) {
+            // use default value function
+            dataValue = get_default();
+          }
+        }
+
+        if(typ === "string" || typ === "boolean" || typ === "number" || typ === "integer") {
+          // array/object/null types do not have controls (array/object data is via conenction to outputs)
           hasControl = true;
         }
       }
+
     }
   }
 
