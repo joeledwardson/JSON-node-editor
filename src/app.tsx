@@ -122,9 +122,6 @@ export function init(
   // add root component
   components.push(new RootComponent("root", schema ?? Schema.anySchema, null));
 
-  // combine each socket with the "any" socket
-  Sockets.sockets.forEach((s) => Sockets.anySocket.combineWith(s.socket));
-
   // register each component to engine and editor
   components.forEach((c) => {
     editor.register(c);
