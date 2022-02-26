@@ -8,6 +8,7 @@ import "./styles.css";
 import { RootComponent, SchemaComponent } from "./components/component";
 import { BaseComponent, getConnectedData } from "./components/base";
 import { JsonStringPointer, JsonPointer } from "json-ptr";
+import { JSONSchema7 } from "json-schema";
 
 /** process named identifier to avoid conflicts with existing nodes */
 function processName(name: string): string {
@@ -71,8 +72,9 @@ function getDefinitions(
   return namedDefs;
 }
 
+
 export function init(
-  schema: Schema.MyJSONSchema | null,
+  schema: JSONSchema7 | null,
   editor: Rete.NodeEditor,
   engine: Rete.Engine,
   namedLocations: JsonStringPointer[] = ["#/definitions", "#/$defs"]

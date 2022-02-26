@@ -178,7 +178,7 @@ Just thinking about map items creation and re-creation:
   - [ ] components must dynamically resolve `$ref`s 
 - [ ] schema update on connection
   - [ ] change node schema and re-run builder
-  - [ ] rather than removing all mapped outputs - clear any unused entries in existing map and re-run object creation so it replaces any controls/outputs
+  - [x] rather than removing all mapped outputs - clear any unused entries in existing map and re-run object creation so it replaces any controls/outputs
   - [x] build function should remove unused parts (name/output etc)
 - [ ] lists with named tuples
 - [ ] How to resolve custom names in definitions? I.e. schemas can have any name `#/$defs/` or `#/definitions/`, so need to be able to recognise that?
@@ -273,7 +273,7 @@ So could either
 Going to choose 1st option 
 
 - [x] Also, should be using the JSON type map for named nodes otherwise its ambiguous
-- [ ] Do we still need controls data attribute?
+- [x] Do we still need controls data attribute?
 - [ ] still need general connection functions? Just run builder on connection/disconnection
 
 So run into a problem of resetting data control values on type selection.
@@ -285,11 +285,28 @@ The opposite, want to display but dont allow editing - will need additional prop
 - [x] Why does `rete-context-menu-plugin`  need vue?
 Context menu plugin is rendered using vue but doesn't seem to fight react.
 Just need to make sure vue isn't in development mode when in production
-- [ ] can remove data control default handler and remove controls data attribute entirely?
+- [x] can remove data control default handler and remove controls data attribute entirely?
 Only thing that uses it is the "add item" button which doesn't need data
-- [ ] do really need template values for controls? Feel like any should suffice
+- [x] do really need template values for controls? Feel like any should suffice
 
 ## 24/02/22
 
 - [x] What happens if an object in schema is a `$ref` but that is actually just data? No data contained in schema so no problem
-- [ ] Need to modify select controls props on schema updating - and name control props
+- [x] Need to modify select controls props on schema updating - and name control props
+
+## 25/02/22
+
+Controls successfully refactored finally, and schema types as well
+
+Had a problem where react textarea autosize conflicts if user tries to modify size as it moves the node
+
+- [ ] can use `resize=none` in props to disable user access
+
+Other outstanding task list from above
+
+- [ ] How to access root schema from all nodes at any time?
+  - [ ] components must dynamically resolve `$ref`s 
+- [ ] schema update on connection
+  - [ ] change node schema and re-run builder
+- [ ] lists with named tuples
+- [ ] enums

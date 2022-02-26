@@ -2,9 +2,7 @@ import * as Rete from "rete";
 import * as Sockets from "../sockets/sockets";
 import * as Controls from "../controls/controls";
 import * as Data from "../data/attributes";
-import { ReteReactControl } from "rete-react-render-plugin";
-import { JSONTypeMap } from "../jsonschema";
-import { MyJSONSchema } from "../jsonschema";
+import { JSONTypeMap, MyTypeName, MyJSONSchema } from "../jsonschema";
 
 export const getReactKey = (coreName: string) => `k-${coreName}`;  // generate react key
 export const getDataKey = (coreName: string) => `${coreName} input`; // generate data input control key
@@ -58,7 +56,7 @@ function getTypeSelectHandler(node: Rete.Node, oMap: Data.DataMap, editor: Rete.
  * try existing value, then default, then 0/""/false based on type
  * if type is invalid, return undefined
  */
-function getDataValue(value: any, typ: string, default_value: any): any {
+function getDataValue(value: any, typ: MyTypeName, default_value: any): any {
   let checks: Array<{
     use: () => boolean,
     validator: (value: any) => boolean, 
@@ -178,36 +176,34 @@ export function setElementaryMap(
       return;
     }
 
-    if (typeof schema.type === "string" && schema.type in JSONTypeMap) {
+    if (schema.type && !Array.isArray(schema.type)) {
       // check if type is valid
       let name = JSONTypeMap[schema.type];
       schemaMap[name] = schema;
       return;
     }
 
-    if (typeof schema.type === "object" && Array.isArray(schema.type)) {
+    if (schema.type && Array.isArray(schema.type)) {
       // loop list of types
-      schema.type.forEach((t: any) => {
-        if (typeof t === "string" && t in JSONTypeMap) {
-          // create new schema with type as a constant rather than an array
-          const newSchema: MyJSONSchema = JSON.parse(JSON.stringify(schema));
-          let name = JSONTypeMap[t];
-          newSchema.type = t;
-          schemaMap[name] = newSchema;
-        }
+      schema.type.forEach((t) => {
+        // create new schema with type as a constant rather than an array
+        const newSchema: MyJSONSchema = JSON.parse(JSON.stringify(schema));
+        let name = JSONTypeMap[t];
+        newSchema.type = t;
+        schemaMap[name] = newSchema;
       });
       return;
     }
 
-    if (typeof schema.anyOf === "object" && Array.isArray(schema.anyOf)) {
+    if (schema.anyOf) {
       // process anyOf array
-      schema.anyOf.forEach((s: MyJSONSchema) => {
+      schema.anyOf.forEach((s) => {
         if(typeof s === "object") addToMap(s)
       });
     }
-    if (typeof schema.oneOf === "object" && Array.isArray(schema.oneOf)) {
+    if (schema.oneOf) {
       // process oneOf array
-      schema.oneOf.forEach((s: MyJSONSchema) => {
+      schema.oneOf.forEach((s) => {
         if(typeof s === "object") addToMap(s)
       });
     }
@@ -352,13 +348,9 @@ export function createMapItems(
   if (oMap.hasDataControl && oMap.dataKey) {
     let newControl = true; // assume we need a new value control
     let control = node.controls.get(oMap.dataKey); // get existing control instance
-    let typ: string | null = null;
+    let typ: MyTypeName | null = null;
 
-    if (
-      oMap.schema &&
-      oMap.schema?.type &&
-      typeof oMap.schema?.type === "string"
-    ) {
+    if (oMap.schema && oMap.schema.type && !Array.isArray(oMap.schema.type)) {
       // type is a valid string
       typ = oMap.schema?.type;
     }
@@ -504,3 +496,4 @@ export function removeMapItems(
     }
   }
 }
+
