@@ -211,13 +211,13 @@ export class SchemaComponent extends BaseComponent {
 
     // use component schema (on node connected this can be updated)
     let schema: MyJSONSchema = this.getConnectedSchema(node) ?? this.schema;
-    let typ = schema.type as string;
+    let typ = schema.type;
 
     let maps = Data.getOutputMap(node);
     let newMaps: Data.DataMap[] = []; // new output map
     let attrSchema: MyJSONSchema | undefined = undefined;
 
-    if (["null", "boolean", "number", "integer", "string"].includes(typ)) {
+    if (typ && !Array.isArray(typ) && ["null", "boolean", "number", "integer", "string"].includes(typ)) {
       // type is basic
       newMaps.push(this.getCoreMap(schema, maps, node, editor));
     } else if (typ === "array") {
