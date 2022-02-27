@@ -12,15 +12,18 @@ export class SchemaComponent extends BaseComponent {
   data = { component: DynamicDisplay };
   schema: MyJSONSchema;
   socket: Rete.Socket | null; // socket for parent connection
-  constructor(name: string, schema: MyJSONSchema, socket: Rete.Socket | null) {
+  allowOverride: boolean;  // allow schema overide from connections
+  
+  constructor(name: string, schema: MyJSONSchema, socket: Rete.Socket | null, allowOverride: boolean) {
     super(name);
     this.schema = schema;
     this.socket = socket;
+    this.allowOverride = allowOverride;
   }
 
   /** add parent input */
   addParent(node: Rete.Node): void {
-    if (this.socket) {
+    if (this.socket && !node.inputs.has("parent")) {
       node.addInput(new Rete.Input("parent", "Parent", this.socket));
     }
   }
@@ -202,11 +205,12 @@ export class SchemaComponent extends BaseComponent {
   /** build "add item" button for additional properties/items */
   buildAddButton(
     node: Rete.Node,
-    editor: Rete.NodeEditor
+    editor: Rete.NodeEditor,
+    key: string
   ): Controls.ButtonControl {
     let props: Controls.ButtonInputs = {buttonInner: "Add Item +"}
     return new Controls.ButtonControl(
-      "add-button",
+      key,
       props,
       () => Pos.elementAdd(node, editor, Data.getOutputMap(node).length)
     );
@@ -214,8 +218,14 @@ export class SchemaComponent extends BaseComponent {
   internalBuilder(node: Rete.Node, editor: Rete.NodeEditor): void {
     this.addParent(node);
 
-    // use component schema (on node connected this can be updated)
-    let schema: MyJSONSchema = this.getConnectedSchema(node) ?? this.schema;
+    // use connected schema over based schema if allowed and connection valid
+    let schema: MyJSONSchema = this.schema;
+    if(this.allowOverride) {
+      let connectedSchema = this.getConnectedSchema(node);
+      if(connectedSchema) {
+        schema = connectedSchema;
+      }
+    }
     let typ = schema.type;
 
     let maps = Data.getOutputMap(node);
@@ -238,8 +248,14 @@ export class SchemaComponent extends BaseComponent {
       newMaps.push(...objMaps);
     }
 
-    if (this.needAddButton(schema)) {
-      node.addControl(this.buildAddButton(node, editor));
+    let buttonKey = "add-button";
+    let needButton = this.needAddButton(schema); 
+    let button = node.controls.get(buttonKey);
+
+    if (needButton && !button) {
+      node.addControl(this.buildAddButton(node, editor, buttonKey));
+    } else if(!needButton && button) {
+      node.removeControl(button);
     }
 
     // set component and inner attributes schema

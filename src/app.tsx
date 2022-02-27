@@ -85,42 +85,28 @@ export function init(
   }
 
   // create stock components
+  const newBaseComponent = (typ: Schema.MyTypeName, schema: MyJSONSchema) => new SchemaComponent(
+    JSONTypeMap[typ],
+    schema,
+    Sockets.addSocket(JSONTypeMap[typ]).socket,
+    true
+  )
   var components: Array<ReteComponent> = [
-    new SchemaComponent(
-      JSONTypeMap["string"],
-      Schema.stringSchema,
-      Sockets.addSocket(JSONTypeMap["string"]).socket
-    ),
-    new SchemaComponent(
-      JSONTypeMap["number"],
-      Schema.numberSchema,
-      Sockets.addSocket(JSONTypeMap["number"]).socket
-    ),
-    new SchemaComponent(
-      JSONTypeMap["boolean"],
-      Schema.boolSchema,
-      Sockets.addSocket(JSONTypeMap["boolean"]).socket
-    ),
-    new SchemaComponent(
-      JSONTypeMap["array"],
-      Schema.arraySchema,
-      Sockets.addSocket(JSONTypeMap["array"]).socket
-    ),
-    new SchemaComponent(
-      JSONTypeMap["object"],
-      Schema.objectSchema, 
-      Sockets.addSocket(JSONTypeMap["object"]).socket
-    ),
+    newBaseComponent("string", Schema.stringSchema),
+    newBaseComponent("number", Schema.numberSchema),
+    newBaseComponent("boolean", Schema.boolSchema),
+    newBaseComponent("array", Schema.arraySchema),
+    newBaseComponent("object", Schema.objectSchema)
   ];
 
   // add named components
   namedDefs.forEach((namedSchema, key) => {
     let socket = Sockets.addSocket(key).socket;
-    components.push(new SchemaComponent(key, namedSchema, socket));
+    components.push(new SchemaComponent(key, namedSchema, socket, false));
   })
 
   // add root component
-  components.push(new RootComponent("root", schema ?? Schema.anySchema, null));
+  components.push(new RootComponent("root", schema ?? Schema.anySchema, null, false));
 
   // register each component to engine and editor
   components.forEach((c) => {
@@ -128,32 +114,24 @@ export function init(
     engine.register(c);
   });
 
+  const updateConnectionNode = (conn: Rete.Connection) => {
+    if(conn.input.node) {
+      let component = editor.getComponent(conn.input.node.name);
+      if(component instanceof SchemaComponent) {
+        if(component.allowOverride) {
+          component.internalBuilder(conn.input.node, editor);
+          conn.input.node.update();
+        }
+      }
+    }
+  } 
+
   editor.on(["connectioncreated"], async (connection: Rete.Connection) => {
-    // await engine.abort();
-    // // run connection created processor on output node if function is defined
-    // let oFuncs = Data.nodeConnectionFuns[connection.output.node.name];
-    // if (oFuncs && oFuncs.created) {
-    //   oFuncs.created(connection, editor, false);
-    // }
-    // // run connection created processor on input node if function is defined
-    // let iFuncs = Data.nodeConnectionFuns[connection.input.node.name];
-    // if (iFuncs && iFuncs.created) {
-    //   iFuncs.created(connection, editor, true);
-    // }
+    updateConnectionNode(connection);
   });
 
   editor.on(["connectionremoved"], async (connection: Rete.Connection) => {
-    // await engine.abort();
-    // // run connection removed processor on output node if function is defined
-    // let oFuncs = Data.nodeConnectionFuns[connection.output.node.name];
-    // if (oFuncs && oFuncs.removed) {
-    //   oFuncs.removed(connection, editor, false);
-    // }
-    // // run connection created processor on input node if function is defined
-    // let iFuncs = Data.nodeConnectionFuns[connection.input.node.name];
-    // if (iFuncs && iFuncs.removed) {
-    //   iFuncs.removed(connection, editor, true);
-    // }
+    updateConnectionNode(connection);
   });
 
   // on connection added

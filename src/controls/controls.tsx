@@ -79,6 +79,7 @@ export class TextControl extends ReteReactControl {
           value={this.props.value}
           disabled={this.props.display_disabled}
           onChange={onChange}
+          rows={1}
         />
       );
     }

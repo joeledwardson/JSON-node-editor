@@ -300,19 +300,24 @@ Controls successfully refactored finally, and schema types as well
 
 Had a problem where react textarea autosize conflicts if user tries to modify size as it moves the node
 
-- [ ] can use `resize=none` in props to disable user access
-- [ ] multi socket function redundant?
+- [x] can use `resize=none` in props to disable user access
+- [x] multi socket function redundant?
 
 Other outstanding task list from above
 
 - [ ] How to access root schema from all nodes at any time?
   - [ ] components must dynamically resolve `$ref`s 
-- [ ] schema update on connection
-  - [ ] change node schema and re-run builder
+- [x] schema update on connection
+  - [x] change node schema and re-run builder
 - [ ] lists with named tuples
 - [ ] enums
 
 ## 26/02/22
 
-- [ ] `react select` has `value` as well as `label` where value can be an object, so rather than indexing a schema map in node data for type select could just use the values stored in the select?
+- [x] `react select` has `value` as well as `label` where value can be an object, so rather than indexing a schema map in node data for type select could just use the values stored in the select?
+  - Need the `schema map` instance so the control knows where to get the map on creation
 - [ ] Value check for integers?
+
+## 27/02/22
+
+- [ ] schema now updates by re-running builder - could do with warnings for objects with duplicate named components
