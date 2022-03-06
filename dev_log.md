@@ -321,3 +321,7 @@ Other outstanding task list from above
 ## 27/02/22
 
 - [ ] schema now updates by re-running builder - could do with warnings for objects with duplicate named components
+
+## 04/03/22
+
+- [ ] working on `scss` to clean up display, but should figure out how to use variables and extend scss classes to clean up code
