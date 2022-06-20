@@ -5,12 +5,22 @@
     font-weight: bold;
 }
 
+.node {
+    width: min-content;
+    color: black !important;
+}
+
 .output {
     display: flex;
     justify-content: flex-end;
     align-items: center;
     min-height: 2rem;
 
+}
+
+.control {
+    // override default retejs styles
+    padding: 0.3rem 0.3rem !important;
 }
 
 .dynamic-outputs-container {
@@ -20,6 +30,14 @@
     justify-items: center;
     .control {
         padding: 0;
+    }
+    span {
+        font-size: 0.7rem;
+        text-align: right;
+        padding-left: 0.3rem;
+    }
+    span {
+        border: 1px;
     }
 }
 
@@ -57,20 +75,20 @@
     align-items: center;
 
     // add right margin between inputs
-    > div, button, textarea {
-        @extend .me-1;
-    }
+    // div, button, textarea {
+    //     padding: 0.2rem;
+    // }
 
-    > :first-child {
-        @extend .ms-3;
-    }
+    // :first-child {
+    //     padding: 0.2rem;
+    // }
 
     .output-item-arrows {
         display: flex;
         flex-direction: column; 
 
         button {
-            padding: 0.1rem 0.3rem;
+            // padding: 0.1rem 0.3rem;
             opacity: 0.5
         }
 
@@ -96,6 +114,7 @@
 .control-input {
     // @extend .bold-input;
     width: 5rem !important;
+    font-size: 0.7rem;
 }
 
 .dict-key-input {

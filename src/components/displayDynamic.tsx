@@ -74,7 +74,7 @@ export class DynamicDisplay extends ReactRete.Node {
           size="sm"
           onClick={() => Pos.elementAdd(this.props.node, this.props.editor, index)}
         >
-          <FontAwesomeIcon icon={faPlus} />
+          <FontAwesomeIcon icon={faPlus} size="xs" />
         </Button>
         <Button
           variant="warning"
@@ -82,7 +82,7 @@ export class DynamicDisplay extends ReactRete.Node {
           size="sm"
           onClick={() => Pos.elementRemove(this.props.node, this.props.editor, index)}
         >
-          <FontAwesomeIcon icon={faTrash} />
+          <FontAwesomeIcon icon={faTrash} size="xs" />
         </Button>
       </div>
     );
@@ -106,7 +106,7 @@ export class DynamicDisplay extends ReactRete.Node {
     let nameElement: JSX.Element = <div></div>;
     if (oMap.hasFixedName) {
       // name element fixed - use static name, non editable
-      nameElement = <span className="me-1 ms-1">{oMap.nameDisplay}</span>;
+      nameElement = <span>{oMap.nameDisplay}</span>;
     } else if (oMap.hasNameControl && oMap.nameKey) {
       // name element editable - display control
       control = this.props.node.controls.get(oMap.nameKey) ?? null;
@@ -126,12 +126,13 @@ export class DynamicDisplay extends ReactRete.Node {
       dynamicElement = (
         <Button
           variant="secondary"
-          size="lg"
+          size="sm"
           className="display-button"
           onClick={() => this.nullButtonClick(oMap)}
         >
-          <FontAwesomeIcon icon={btnIcon} />
+          <FontAwesomeIcon icon={btnIcon} size={"xs"} />
         </Button>
+        
       );
     }
 
@@ -141,14 +142,16 @@ export class DynamicDisplay extends ReactRete.Node {
     if (oMap.hasOutput && oMap.outputKey) {
       output = this.props.node.outputs.get(oMap.outputKey) ?? null;
       if (output) {
-        socketElement = Display.getSocket(
-          output,
-          "output",
-          this.props.bindSocket,
-          {
-            visibility: oMap.isNulled ? "hidden" : "visible", // dont display if output nulled
-          }
-        );
+        socketElement = <div>
+          {Display.getSocket(
+            output,
+            "output",
+            this.props.bindSocket,
+            {
+              visibility: oMap.isNulled ? "hidden" : "visible", // dont display if output nulled
+            }
+          )}
+        </div>
       }
     }
 
@@ -189,22 +192,23 @@ export class DynamicDisplay extends ReactRete.Node {
         )}</div>
       }
     }
-
-    return (
-      <div className="dynamic-output" key={oMap.reactKey}>
-        {nameElement}
-        {dataElement}
-        {dynamicElement}
-        {selectElement}
-        {socketElement}
-      </div>
-    );
+    
+    return <>
+      {nameElement}
+      {dataElement}
+      {dynamicElement}
+      {selectElement}
+      {socketElement}
+    </>
   }
 
   /** render elementary outputs with their mapped controls */
-  renderMappedOutputs(): JSX.Element[] {
+  renderMappedOutputs(): JSX.Element {
     let outputMaps = Data.getOutputMap(this.props.node);
-    return outputMaps.map((o, i) => this.getMappedOutput(o, i));
+    return <div className="dynamic-outputs-container">
+      {outputMaps.map((o, i) => this.getMappedOutput(o, i))}
+    </div>
+
   }
 
   renderUnmappedControls(): JSX.Element[] {

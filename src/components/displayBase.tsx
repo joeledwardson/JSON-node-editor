@@ -51,9 +51,13 @@ export function getInput(input: Rete.Input, bindControl: bindControl, bindSocket
   </div>
 }
 
-export function getOutputs<T extends ReactRete.NodeProps>(props: T): JSX.Element[] {
-  return Array.from(props.node.outputs.values()).
-  map(o => getOutput(o, props.bindSocket))
+export function getOutputs<T extends ReactRete.NodeProps>(props: T): JSX.Element {
+  return <div className="dynamic-outputs-container">
+    {
+      Array.from(props.node.outputs.values()).
+      map(o => getOutput(o, props.bindSocket))
+    }
+  </div>
 }
 
 export function getControls<T extends ReactRete.NodeProps>(props: T): JSX.Element[] {
