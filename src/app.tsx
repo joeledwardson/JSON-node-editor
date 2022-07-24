@@ -4,7 +4,8 @@ import * as Sockets from "./sockets/sockets";
 import * as Schema from "./jsonschema";
 import { ReteReactComponent as ReteComponent } from "rete-react-render-plugin";
 import { JSONValue, JSONTypeMap, MyJSONSchema } from "./jsonschema";
-import "./styles.css";
+import "./styles/styles.scss";
+import "./app.scss"
 import { RootComponent, SchemaComponent } from "./components/component";
 import { BaseComponent, getConnectedData } from "./components/base";
 import { JsonStringPointer, JsonPointer } from "json-ptr";

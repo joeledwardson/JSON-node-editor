@@ -175,7 +175,7 @@ export class DynamicDisplay extends ReactRete.Node {
           </div>
         );
       }
-    }1
+    }
 
     // get type select control
     let selectElement = <div></div>;
