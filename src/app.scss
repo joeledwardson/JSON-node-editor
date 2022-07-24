@@ -1,0 +1,41 @@
+body, #root {
+    width: 100vw;
+    height: 100vh;
+    padding: 0;
+    margin: 0;
+}
+
+.root-container {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;   
+
+}
+
+.content-container {
+    flex-grow: 1;  // content holders fill space vertically
+    overflow: hidden;  // dont allow react-json to expand below screen
+    display: flex;
+    flex-direction: row;
+
+    .editor-holder {
+        width: 50%;
+        margin-left: 1rem;
+        margin-right: 1rem;
+        .editor-div {
+            height: 100%;
+        }
+    }
+    .text-holder {
+        flex-grow: 1; // fill space horizontally
+        display: flex;
+        flex-direction: column;
+        padding-left: 1rem;
+        padding-right: 1rem;
+
+        .text-json {
+            flex-grow: 1;
+        }
+    }
+}
